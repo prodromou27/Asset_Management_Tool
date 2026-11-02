@@ -1,6 +1,6 @@
 # Current Task: 003 | Core Asset Management
 
-Status: **In progress** (started 2026-11-02 on branch DEV).
+Status: **Provisionally Complete / Pending Docker host verification** (2026-11-02, branch DEV).
 
 **Read:** AGENTS.md, docs/00, 01, 03, 04, 07, 08 (backlog list for 003).
 
@@ -24,6 +24,51 @@ LibreNMS/discovery, EOL data, licensing, dynamic groups, agents, import/export j
 - No hard delete; archived assets hidden by default and read-only until restored.
 - IP, MAC, serial and hostname optional; no global uniqueness on them.
 - PostgreSQL CI green; OpenAPI and generated frontend types in sync.
+
+## Outcome (2026-11-02)
+
+Commits on DEV: `7a6b87e` (backend), `df9458a` (frontend + docs).
+
+**Migrations:** `accounts.0003_asset_permissions_and_site_scope` (User.all_sites, 7 new
+permissions, role grants, existing System Admins → all sites), `organizations.0001_initial`
+(Site, Location, Department, UserSiteGrant), `assets.0001_initial` (AssetCategory,
+CustomFieldDefinition, Asset, AssetInterface, AssetIPAddress, AssetHostname,
+AssetHistoryEntry), `assets.0002_seed_categories`, `assets.0003_history_append_only_trigger`.
+All reversible (verified to zero and back, SQLite and PostgreSQL).
+
+**Endpoints (19 new paths, 36 total):** `/assets/` (GET list with filters/ordering, POST),
+`/assets/{id}/` (GET, PATCH + If-Match), `/assets/{id}/classification/` (POST + If-Match),
+`/assets/{id}/classification/preview/`, `/assets/{id}/archive/`, `/assets/{id}/restore/`,
+`/assets/{id}/history/`, `/asset-categories/` (+ `{id}/`, `{id}/fields/?effective=`),
+`/custom-fields/{id}/`, `/sites/` (+ `{id}/`), `/locations/` (+ `{id}/`), `/departments/`
+(+ `{id}/`), `/users/lookup/`; `/users/{id}/` PATCH now takes `all_sites`, `site_ids`.
+
+**UI:** Assets list, asset detail (Overview/Network/History tabs, 3 status dimensions,
+reclassify/archive/restore dialogs), asset create/edit, Categories & fields, Sites &
+locations & departments, Site access panel on user detail.
+
+**Verification:**
+- GitHub CI run 41517885491 (PostgreSQL 16 + Redis 7): backend **217 passed, 0 skipped**;
+  migrations apply/reverse/re-apply; OpenAPI valid and in sync; `check --deploy` clean;
+  frontend types in sync, lint, typecheck, **57 tests**, build; Compose dev/prod valid,
+  prod only 443, images build.
+- Workstation (SQLite test-only): backend 213 passed, 4 skipped (PostgreSQL-only).
+- Not run: Docker dev stack, Playwright e2e, manual browser check of the new screens.
+
+**Unresolved / assumptions** (docs/17): ASM-08 owners must be user accounts; ASM-09 no
+field masks yet; ASM-10 custom values in JSONB with typed validation; ASM-11 free-text
+manufacturer/model; ASM-12 manual-only network edits. Department scoping not
+implemented. No bulk edit/import/export (Tasks 013–014). Owner lookup capped at 200
+active users.
+
+## Pending verification (Docker host) — Tasks 001–003
+
+Same list as Task 002 below, plus: create sites/locations, grant a user one site, sign in
+as that user and confirm assets of other sites are absent from list, search and direct
+URLs; register, edit, reclassify, archive and restore an asset and check its History tab.
+
+Proposed next task: **004 | Source observations, identity matching and manual field
+locks** (tasks/BACKLOG.md). Do not start it automatically.
 
 ---
 
