@@ -19,7 +19,6 @@ if os.environ.get("ITAM_TEST_DB_SQLITE") == "1":
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": BASE_DIR / "test.sqlite3",  # noqa: F405
     }
-else:
-    DATABASES["default"]["NAME"] = "itam_test"  # noqa: F405
+# Otherwise PostgreSQL from POSTGRES_* env; pytest-django creates its own test_<name> DB.
 
 CACHES = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}}
