@@ -34,12 +34,24 @@ _DEFAULT_CODES = {
 }
 
 
-def _flatten(detail):
-    if isinstance(detail, list):
-        return [str(item) for item in detail]
+def _flatten(detail, prefix: str = "") -> dict[str, list[str]]:
+    """Flatten nested DRF errors to dotted paths, e.g. {"hostnames.0.hostname": [...]}."""
+    out: dict[str, list[str]] = {}
+    key = prefix or "non_field_errors"
     if isinstance(detail, dict):
-        return {key: _flatten(value) for key, value in detail.items()}
-    return [str(detail)]
+        for name, value in detail.items():
+            out.update(_flatten(value, f"{prefix}.{name}" if prefix else str(name)))
+    elif isinstance(detail, list):
+        if all(not isinstance(item, (dict, list)) for item in detail):
+            if detail:
+                out[key] = [str(item) for item in detail]
+        else:
+            for index, item in enumerate(detail):
+                if item:
+                    out.update(_flatten(item, f"{prefix}.{index}" if prefix else str(index)))
+    else:
+        out[key] = [str(detail)]
+    return out
 
 
 def api_exception_handler(exc, context):
@@ -60,8 +72,7 @@ def api_exception_handler(exc, context):
     elif isinstance(exc, exceptions.ValidationError):
         response.status_code = status.HTTP_422_UNPROCESSABLE_ENTITY
         code, message = "VALIDATION_ERROR", "The submitted data is invalid."
-        detail = exc.detail if isinstance(exc.detail, dict) else {"non_field_errors": exc.detail}
-        field_errors = _flatten(detail)
+        field_errors = _flatten(exc.detail)
     else:
         code = _DEFAULT_CODES.get(response.status_code, "ERROR")
         message = str(exc.detail) if hasattr(exc, "detail") else str(exc)

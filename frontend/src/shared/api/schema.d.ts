@@ -5,6 +5,42 @@
 
 
 export interface paths {
+  "/api/v1/asset-categories/": {
+    get: operations["asset_categories_list"];
+    post: operations["asset_categories_create"];
+  };
+  "/api/v1/asset-categories/{id}/": {
+    get: operations["asset_categories_retrieve"];
+    patch: operations["asset_categories_partial_update"];
+  };
+  "/api/v1/asset-categories/{id}/fields/": {
+    get: operations["asset_categories_fields_list"];
+    post: operations["asset_categories_fields_create"];
+  };
+  "/api/v1/assets/": {
+    get: operations["assets_list"];
+    post: operations["assets_create"];
+  };
+  "/api/v1/assets/{id}/": {
+    get: operations["assets_retrieve"];
+    patch: operations["assets_partial_update"];
+  };
+  "/api/v1/assets/{id}/archive/": {
+    post: operations["assets_archive_create"];
+  };
+  "/api/v1/assets/{id}/classification/": {
+    post: operations["assets_classification_create"];
+  };
+  "/api/v1/assets/{id}/classification/preview/": {
+    /** @description Shows which custom fields a category change adds, keeps or retains. Changes nothing. */
+    post: operations["assets_classification_preview_create"];
+  };
+  "/api/v1/assets/{id}/history/": {
+    get: operations["assets_history_list"];
+  };
+  "/api/v1/assets/{id}/restore/": {
+    post: operations["assets_restore_create"];
+  };
   "/api/v1/audit/events/": {
     get: operations["audit_events_list"];
   };
@@ -27,6 +63,17 @@ export interface paths {
   "/api/v1/auth/providers/": {
     get: operations["auth_providers_list"];
   };
+  "/api/v1/custom-fields/{id}/": {
+    patch: operations["custom_fields_partial_update"];
+  };
+  "/api/v1/departments/": {
+    get: operations["departments_list"];
+    post: operations["departments_create"];
+  };
+  "/api/v1/departments/{id}/": {
+    get: operations["departments_retrieve"];
+    patch: operations["departments_partial_update"];
+  };
   "/api/v1/health/live/": {
     /** @description Process is up and able to serve requests. No dependency checks. */
     get: operations["health_live_retrieve"];
@@ -34,6 +81,14 @@ export interface paths {
   "/api/v1/health/ready/": {
     /** @description Process and its required dependencies (DB, Redis) are reachable. */
     get: operations["health_ready_retrieve"];
+  };
+  "/api/v1/locations/": {
+    get: operations["locations_list"];
+    post: operations["locations_create"];
+  };
+  "/api/v1/locations/{id}/": {
+    get: operations["locations_retrieve"];
+    patch: operations["locations_partial_update"];
   };
   "/api/v1/permissions/": {
     get: operations["permissions_list"];
@@ -44,6 +99,14 @@ export interface paths {
   "/api/v1/settings/security/": {
     get: operations["settings_security_retrieve"];
     patch: operations["settings_security_partial_update"];
+  };
+  "/api/v1/sites/": {
+    get: operations["sites_list"];
+    post: operations["sites_create"];
+  };
+  "/api/v1/sites/{id}/": {
+    get: operations["sites_retrieve"];
+    patch: operations["sites_partial_update"];
   };
   "/api/v1/users/": {
     get: operations["users_list"];
@@ -65,12 +128,149 @@ export interface paths {
   "/api/v1/users/{id}/unlock/": {
     post: operations["users_unlock_create"];
   };
+  "/api/v1/users/lookup/": {
+    /** @description Minimal active-user directory for choosing asset owners (no emails, no roles). */
+    get: operations["users_lookup_list"];
+  };
 }
 
 export type webhooks = Record<string, never>;
 
 export interface components {
   schemas: {
+    AssetCategory: {
+      /** Format: uuid */
+      id: string;
+      code: string;
+      name: string;
+      /** Format: uuid */
+      parent: string | null;
+      path: string;
+      depth: number;
+      description: string;
+      is_active: boolean;
+      sort_order: number;
+      /** Format: date-time */
+      modified_at: string;
+      version: number;
+    };
+    AssetCategoryWriteRequest: {
+      name: string;
+      code?: string;
+      /** Format: uuid */
+      parent?: string | null;
+      description?: string;
+      is_active?: boolean;
+      sort_order?: number;
+    };
+    AssetDetail: {
+      /** Format: uuid */
+      id: string;
+      name: string;
+      asset_tag: string | null;
+      category: components["schemas"]["CategoryRef"];
+      manufacturer: string;
+      model: string;
+      serial_number: string;
+      primary_hostname: string | null;
+      primary_ip: string | null;
+      site: components["schemas"]["SiteRef"];
+      location: components["schemas"]["Ref"] | null;
+      owner: components["schemas"]["UserRef"] | null;
+      business_status: components["schemas"]["BusinessStatusEnum"];
+      observation_status: components["schemas"]["ObservationStatusEnum"];
+      support_status: components["schemas"]["SupportStatusEnum"];
+      is_archived: boolean;
+      /** Format: date-time */
+      modified_at: string;
+      version: number;
+      os_name: string;
+      os_version: string;
+      firmware_version: string;
+      department: components["schemas"]["Ref"] | null;
+      notes: string;
+      custom_fields: {
+        [key: string]: unknown;
+      };
+      missing_required_fields: readonly string[];
+      retained_custom_fields: readonly string[];
+      hostnames: readonly components["schemas"]["Hostname"][];
+      interfaces: readonly components["schemas"]["Interface"][];
+      ip_addresses: readonly components["schemas"]["IPAddress"][];
+      /** Format: date-time */
+      archived_at: string | null;
+      archived_by: string | null;
+      archive_reason: string;
+      /** Format: date-time */
+      created_at: string;
+      created_by: string | null;
+      modified_by: string | null;
+    };
+    AssetHistory: {
+      /** Format: uuid */
+      id: string;
+      /** Format: date-time */
+      occurred_at: string;
+      actor_label: string;
+      change_type: components["schemas"]["ChangeTypeEnum"];
+      changes: {
+        [key: string]: unknown;
+      };
+      reason: string;
+      version: number;
+      request_id: string;
+    };
+    AssetList: {
+      /** Format: uuid */
+      id: string;
+      name: string;
+      asset_tag: string | null;
+      category: components["schemas"]["CategoryRef"];
+      manufacturer: string;
+      model: string;
+      serial_number: string;
+      primary_hostname: string | null;
+      primary_ip: string | null;
+      site: components["schemas"]["SiteRef"];
+      location: components["schemas"]["Ref"] | null;
+      owner: components["schemas"]["UserRef"] | null;
+      business_status: components["schemas"]["BusinessStatusEnum"];
+      observation_status: components["schemas"]["ObservationStatusEnum"];
+      support_status: components["schemas"]["SupportStatusEnum"];
+      is_archived: boolean;
+      /** Format: date-time */
+      modified_at: string;
+      version: number;
+    };
+    /** @description Create (all fields) and PATCH (partial; category excluded — use classification). */
+    AssetWriteRequest: {
+      name: string;
+      asset_tag?: string | null;
+      /** Format: uuid */
+      category: string;
+      manufacturer?: string;
+      model?: string;
+      serial_number?: string;
+      os_name?: string;
+      os_version?: string;
+      firmware_version?: string;
+      /** Format: uuid */
+      site: string;
+      /** Format: uuid */
+      location?: string | null;
+      /** Format: uuid */
+      department?: string | null;
+      /** Format: uuid */
+      owner?: string | null;
+      business_status?: components["schemas"]["BusinessStatusEnum"];
+      notes?: string;
+      custom_fields?: {
+        [key: string]: unknown;
+      };
+      hostnames?: components["schemas"]["HostnameInputRequest"][];
+      interfaces?: components["schemas"]["InterfaceInputRequest"][];
+      ip_addresses?: components["schemas"]["IPAddressInputRequest"][];
+    };
     AuditEvent: {
       /** Format: uuid */
       id: string;
@@ -84,28 +284,146 @@ export interface components {
       object_id: string;
       object_label: string;
       outcome: components["schemas"]["OutcomeEnum"];
-      source: components["schemas"]["SourceEnum"];
+      source: components["schemas"]["AuditSourceEnum"];
       before: unknown;
       after: unknown;
       detail: string;
       request_id: string;
       ip_address: string | null;
     };
+    /**
+     * @description * `api` - API
+     * * `cli` - Command line
+     * * `system` - System
+     * @enum {string}
+     */
+    AuditSourceEnum: "api" | "cli" | "system";
     AuthProvider: {
       id: string;
-      kind: components["schemas"]["KindEnum"];
+      kind: components["schemas"]["AuthProviderKindEnum"];
       label: string;
       status: components["schemas"]["AuthProviderStatusEnum"];
     };
+    /**
+     * @description * `local` - local
+     * * `oidc` - oidc
+     * @enum {string}
+     */
+    AuthProviderKindEnum: "local" | "oidc";
     /**
      * @description * `available` - available
      * * `planned` - planned
      * @enum {string}
      */
     AuthProviderStatusEnum: "available" | "planned";
+    /**
+     * @description * `ordered` - Ordered
+     * * `in_stock` - In stock
+     * * `deployed` - Deployed
+     * * `assigned` - Assigned
+     * * `in_repair` - In repair
+     * * `retired` - Retired
+     * * `disposed` - Disposed
+     * * `lost` - Lost
+     * @enum {string}
+     */
+    BusinessStatusEnum: "ordered" | "in_stock" | "deployed" | "assigned" | "in_repair" | "retired" | "disposed" | "lost";
+    CategoryRef: {
+      /** Format: uuid */
+      id: string;
+      name: string;
+      path: string;
+    };
     ChangePasswordRequest: {
       current_password: string;
       new_password: string;
+    };
+    /**
+     * @description * `created` - Created
+     * * `updated` - Updated
+     * * `reassigned` - Reassigned
+     * * `reclassified` - Reclassified
+     * * `archived` - Archived
+     * * `restored` - Restored
+     * @enum {string}
+     */
+    ChangeTypeEnum: "created" | "updated" | "reassigned" | "reclassified" | "archived" | "restored";
+    ClassificationImpact: {
+      from_category: string;
+      to_category: string;
+      fields_added: components["schemas"]["FieldAdded"][];
+      fields_kept: string[];
+      values_retained_read_only: string[];
+      required_missing: string[];
+    };
+    ClassificationPreviewRequest: {
+      /** Format: uuid */
+      category: string;
+      custom_fields?: {
+        [key: string]: unknown;
+      };
+    };
+    ClassificationRequest: {
+      /** Format: uuid */
+      category: string;
+      custom_fields?: {
+        [key: string]: unknown;
+      };
+      reason: string;
+    };
+    CustomFieldCreateRequest: {
+      key: string;
+      label: string;
+      field_type: components["schemas"]["FieldTypeEnum"];
+      /** @default false */
+      required?: boolean;
+      choices?: string[];
+      /** @default */
+      help_text?: string;
+      /** Format: decimal */
+      min_value?: string | null;
+      /** Format: decimal */
+      max_value?: string | null;
+      max_length?: number | null;
+      /** @default 0 */
+      sort_order?: number;
+    };
+    CustomFieldDefinition: {
+      /** Format: uuid */
+      id: string;
+      /** Format: uuid */
+      category: string;
+      key: string;
+      label: string;
+      field_type: components["schemas"]["FieldTypeEnum"];
+      required: boolean;
+      choices: unknown;
+      help_text: string;
+      /** Format: decimal */
+      min_value: string | null;
+      /** Format: decimal */
+      max_value: string | null;
+      max_length: number | null;
+      sort_order: number;
+      is_active: boolean;
+      version: number;
+    };
+    Department: {
+      /** Format: uuid */
+      id: string;
+      name: string;
+      code: string;
+      is_active: boolean;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      modified_at: string;
+      version: number;
+    };
+    DepartmentWriteRequest: {
+      name: string;
+      code?: string;
+      is_active?: boolean;
     };
     DependencyStatus: {
       status: components["schemas"]["DependencyStatusStatusEnum"];
@@ -121,11 +439,79 @@ export interface components {
       reason: string;
     };
     /**
-     * @description * `local` - local
-     * * `oidc` - oidc
+     * @description * `manual` - Manual
+     * * `librenms` - LibreNMS
+     * * `endpoint_central` - Endpoint Central
+     * * `intune` - Intune
+     * * `defender` - Defender
+     * * `import` - Import
      * @enum {string}
      */
-    KindEnum: "local" | "oidc";
+    EvidenceSourceEnum: "manual" | "librenms" | "endpoint_central" | "intune" | "defender" | "import";
+    FieldAdded: {
+      key: string;
+      label: string;
+      required: boolean;
+    };
+    /**
+     * @description * `text` - Text
+     * * `long_text` - Long text
+     * * `integer` - Integer
+     * * `decimal` - Decimal
+     * * `boolean` - Yes/No
+     * * `date` - Date
+     * * `choice` - Choice
+     * @enum {string}
+     */
+    FieldTypeEnum: "text" | "long_text" | "integer" | "decimal" | "boolean" | "date" | "choice";
+    Hostname: {
+      /** Format: uuid */
+      id: string;
+      hostname: string;
+      is_primary: boolean;
+      source: components["schemas"]["EvidenceSourceEnum"];
+      source_ref: string;
+      /** Format: date-time */
+      observed_at: string | null;
+    };
+    HostnameInputRequest: {
+      hostname: string;
+      /** @default false */
+      is_primary?: boolean;
+    };
+    IPAddress: {
+      /** Format: uuid */
+      id: string;
+      address: string;
+      interface_name: string | null;
+      is_primary: boolean;
+      source: components["schemas"]["EvidenceSourceEnum"];
+      source_ref: string;
+      /** Format: date-time */
+      observed_at: string | null;
+    };
+    IPAddressInputRequest: {
+      address: string;
+      /** @default */
+      interface_name?: string;
+      /** @default false */
+      is_primary?: boolean;
+    };
+    Interface: {
+      /** Format: uuid */
+      id: string;
+      name: string;
+      mac_address: string;
+      source: components["schemas"]["EvidenceSourceEnum"];
+      source_ref: string;
+      /** Format: date-time */
+      observed_at: string | null;
+    };
+    InterfaceInputRequest: {
+      name: string;
+      /** @default */
+      mac_address?: string;
+    };
     Liveness: {
       status: components["schemas"]["LivenessStatusEnum"];
     };
@@ -134,6 +520,40 @@ export interface components {
      * @enum {string}
      */
     LivenessStatusEnum: "ok";
+    Location: {
+      /** Format: uuid */
+      id: string;
+      /** Format: uuid */
+      site: string;
+      /** Format: uuid */
+      parent: string | null;
+      name: string;
+      kind: components["schemas"]["LocationKindEnum"];
+      is_active: boolean;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      modified_at: string;
+      version: number;
+    };
+    /**
+     * @description * `building` - Building
+     * * `floor` - Floor
+     * * `room` - Room
+     * * `rack` - Rack
+     * * `other` - Other
+     * @enum {string}
+     */
+    LocationKindEnum: "building" | "floor" | "room" | "rack" | "other";
+    LocationWriteRequest: {
+      /** Format: uuid */
+      site: string;
+      /** Format: uuid */
+      parent?: string | null;
+      name: string;
+      kind?: components["schemas"]["LocationKindEnum"];
+      is_active?: boolean;
+    };
     LoginRequest: {
       username: string;
       password: string;
@@ -147,8 +567,18 @@ export interface components {
       email: string;
       roles: readonly components["schemas"]["RoleSummary"][];
       permissions: readonly string[];
+      all_sites: boolean;
       must_change_password: boolean;
     };
+    /**
+     * @description * `recently_seen` - Recently seen
+     * * `stale` - Stale
+     * * `unreachable` - Unreachable
+     * * `never_scanned` - Never scanned
+     * * `manual_only` - Manual only
+     * @enum {string}
+     */
+    ObservationStatusEnum: "recently_seen" | "stale" | "unreachable" | "never_scanned" | "manual_only";
     /**
      * @description * `success` - Success
      * * `failure` - Failure
@@ -156,6 +586,18 @@ export interface components {
      * @enum {string}
      */
     OutcomeEnum: "success" | "failure" | "denied";
+    PaginatedAssetHistoryList: {
+      items: components["schemas"]["AssetHistory"][];
+      next_cursor: string | null;
+      previous_cursor: string | null;
+      count: number;
+    };
+    PaginatedAssetListList: {
+      items: components["schemas"]["AssetList"][];
+      next_cursor: string | null;
+      previous_cursor: string | null;
+      count: number;
+    };
     PaginatedAuditEventList: {
       items: components["schemas"]["AuditEvent"][];
       next_cursor: string | null;
@@ -168,6 +610,70 @@ export interface components {
       previous_cursor: string | null;
       count: number;
     };
+    PatchedAssetCategoryWriteRequest: {
+      name?: string;
+      code?: string;
+      /** Format: uuid */
+      parent?: string | null;
+      description?: string;
+      is_active?: boolean;
+      sort_order?: number;
+    };
+    /** @description Create (all fields) and PATCH (partial; category excluded — use classification). */
+    PatchedAssetWriteRequest: {
+      name?: string;
+      asset_tag?: string | null;
+      manufacturer?: string;
+      model?: string;
+      serial_number?: string;
+      os_name?: string;
+      os_version?: string;
+      firmware_version?: string;
+      /** Format: uuid */
+      site?: string;
+      /** Format: uuid */
+      location?: string | null;
+      /** Format: uuid */
+      department?: string | null;
+      /** Format: uuid */
+      owner?: string | null;
+      business_status?: components["schemas"]["BusinessStatusEnum"];
+      notes?: string;
+      custom_fields?: {
+        [key: string]: unknown;
+      };
+      hostnames?: components["schemas"]["HostnameInputRequest"][];
+      interfaces?: components["schemas"]["InterfaceInputRequest"][];
+      ip_addresses?: components["schemas"]["IPAddressInputRequest"][];
+    };
+    /** @description Key and type are immutable so stored values stay valid. */
+    PatchedCustomFieldUpdateRequest: {
+      label?: string;
+      required?: boolean;
+      choices?: string[];
+      help_text?: string;
+      /** Format: decimal */
+      min_value?: string | null;
+      /** Format: decimal */
+      max_value?: string | null;
+      max_length?: number | null;
+      sort_order?: number;
+      is_active?: boolean;
+    };
+    PatchedDepartmentWriteRequest: {
+      name?: string;
+      code?: string;
+      is_active?: boolean;
+    };
+    PatchedLocationWriteRequest: {
+      /** Format: uuid */
+      site?: string;
+      /** Format: uuid */
+      parent?: string | null;
+      name?: string;
+      kind?: components["schemas"]["LocationKindEnum"];
+      is_active?: boolean;
+    };
     PatchedSecuritySettingsUpdateRequest: {
       session_idle_timeout_minutes?: number;
       session_absolute_timeout_hours?: number;
@@ -175,10 +681,20 @@ export interface components {
       lockout_duration_minutes?: number;
       password_min_length?: number;
     };
+    PatchedSiteWriteRequest: {
+      code?: string;
+      name?: string;
+      /** Format: uuid */
+      parent?: string | null;
+      description?: string;
+      is_active?: boolean;
+    };
     PatchedUserUpdateRequest: {
       display_name?: string;
       email?: string;
       roles?: string[];
+      all_sites?: boolean;
+      site_ids?: string[];
     };
     Permission: {
       code: string;
@@ -196,6 +712,14 @@ export interface components {
      * @enum {string}
      */
     ReadinessStatusEnum: "ok" | "degraded";
+    ReasonRequest: {
+      reason: string;
+    };
+    Ref: {
+      /** Format: uuid */
+      id: string;
+      name: string;
+    };
     ResetPasswordRequest: {
       password: string;
     };
@@ -221,13 +745,52 @@ export interface components {
       modified_at: string;
       modified_by: string | null;
     };
+    Site: {
+      /** Format: uuid */
+      id: string;
+      code: string;
+      name: string;
+      /** Format: uuid */
+      parent: string | null;
+      description: string;
+      is_active: boolean;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      modified_at: string;
+      version: number;
+    };
+    SiteGrant: {
+      /** Format: uuid */
+      id: string;
+      code: string;
+      name: string;
+    };
+    SiteRef: {
+      /** Format: uuid */
+      id: string;
+      code: string;
+      name: string;
+    };
+    SiteWriteRequest: {
+      code: string;
+      name: string;
+      /** Format: uuid */
+      parent?: string | null;
+      description?: string;
+      is_active?: boolean;
+    };
     /**
-     * @description * `api` - API
-     * * `cli` - Command line
-     * * `system` - System
+     * @description * `supported` - Supported
+     * * `eol_announced` - EOL announced
+     * * `expiring` - Expiring
+     * * `security_maintenance_ended` - Security maintenance ended
+     * * `eos` - End of support
+     * * `unknown` - Unknown
+     * * `not_announced` - Not announced
      * @enum {string}
      */
-    SourceEnum: "api" | "cli" | "system";
+    SupportStatusEnum: "supported" | "eol_announced" | "expiring" | "security_maintenance_ended" | "eos" | "unknown" | "not_announced";
     User: {
       /** Format: uuid */
       id: string;
@@ -236,6 +799,8 @@ export interface components {
       /** Format: email */
       email: string;
       roles: readonly components["schemas"]["RoleSummary"][];
+      all_sites: boolean;
+      sites: readonly components["schemas"]["SiteGrant"][];
       is_active: boolean;
       is_locked: boolean;
       /** Format: date-time */
@@ -263,6 +828,18 @@ export interface components {
       roles: string[];
       password: string;
     };
+    UserLookup: {
+      /** Format: uuid */
+      id: string;
+      username: string;
+      display_name: string;
+    };
+    UserRef: {
+      /** Format: uuid */
+      id: string;
+      username: string;
+      display_name: string;
+    };
   };
   responses: never;
   parameters: never;
@@ -277,6 +854,326 @@ export type external = Record<string, never>;
 
 export interface operations {
 
+  asset_categories_list: {
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["AssetCategory"][];
+        };
+      };
+    };
+  };
+  asset_categories_create: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AssetCategoryWriteRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["AssetCategoryWriteRequest"];
+        "multipart/form-data": components["schemas"]["AssetCategoryWriteRequest"];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          "application/json": components["schemas"]["AssetCategory"];
+        };
+      };
+    };
+  };
+  asset_categories_retrieve: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["AssetCategory"];
+        };
+      };
+    };
+  };
+  asset_categories_partial_update: {
+    parameters: {
+      header: {
+        "If-Match": string;
+      };
+      path: {
+        id: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["PatchedAssetCategoryWriteRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["PatchedAssetCategoryWriteRequest"];
+        "multipart/form-data": components["schemas"]["PatchedAssetCategoryWriteRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["AssetCategory"];
+        };
+      };
+    };
+  };
+  asset_categories_fields_list: {
+    parameters: {
+      query?: {
+        /** @description true: fields that apply to this category, including inherited ones */
+        effective?: boolean;
+      };
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["CustomFieldDefinition"][];
+        };
+      };
+    };
+  };
+  asset_categories_fields_create: {
+    parameters: {
+      query?: {
+        /** @description true: fields that apply to this category, including inherited ones */
+        effective?: boolean;
+      };
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CustomFieldCreateRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["CustomFieldCreateRequest"];
+        "multipart/form-data": components["schemas"]["CustomFieldCreateRequest"];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          "application/json": components["schemas"]["CustomFieldDefinition"];
+        };
+      };
+    };
+  };
+  assets_list: {
+    parameters: {
+      query?: {
+        archived?: "exclude" | "include" | "only";
+        business_status?: string;
+        /** @description Category ID (includes subcategories) */
+        category?: string;
+        /** @description The pagination cursor value. */
+        cursor?: string;
+        department?: string;
+        location?: string;
+        /** @description Exact, case-insensitive */
+        manufacturer?: string;
+        observation_status?: string;
+        ordering?: "-asset_tag" | "-created_at" | "-modified_at" | "-name" | "asset_tag" | "created_at" | "modified_at" | "name";
+        owner?: string;
+        /** @description Number of results to return per page. */
+        page_size?: number;
+        /** @description Name, tag, serial, manufacturer, model, hostname, exact IP or MAC */
+        q?: string;
+        /** @description Site ID (includes child sites) */
+        site?: string;
+        support_status?: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["PaginatedAssetListList"];
+        };
+      };
+    };
+  };
+  assets_create: {
+    parameters: {
+      query?: {
+        archived?: "exclude" | "include" | "only";
+        business_status?: string;
+        /** @description Category ID (includes subcategories) */
+        category?: string;
+        department?: string;
+        location?: string;
+        /** @description Exact, case-insensitive */
+        manufacturer?: string;
+        observation_status?: string;
+        ordering?: "-asset_tag" | "-created_at" | "-modified_at" | "-name" | "asset_tag" | "created_at" | "modified_at" | "name";
+        owner?: string;
+        /** @description Name, tag, serial, manufacturer, model, hostname, exact IP or MAC */
+        q?: string;
+        /** @description Site ID (includes child sites) */
+        site?: string;
+        support_status?: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AssetWriteRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["AssetWriteRequest"];
+        "multipart/form-data": components["schemas"]["AssetWriteRequest"];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          "application/json": components["schemas"]["AssetDetail"];
+        };
+      };
+    };
+  };
+  assets_retrieve: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["AssetDetail"];
+        };
+      };
+    };
+  };
+  assets_partial_update: {
+    parameters: {
+      header: {
+        "If-Match": string;
+      };
+      path: {
+        id: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["PatchedAssetWriteRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["PatchedAssetWriteRequest"];
+        "multipart/form-data": components["schemas"]["PatchedAssetWriteRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["AssetDetail"];
+        };
+      };
+    };
+  };
+  assets_archive_create: {
+    parameters: {
+      header: {
+        "If-Match": string;
+      };
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ReasonRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["ReasonRequest"];
+        "multipart/form-data": components["schemas"]["ReasonRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["AssetDetail"];
+        };
+      };
+    };
+  };
+  assets_classification_create: {
+    parameters: {
+      header: {
+        "If-Match": string;
+      };
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ClassificationRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["ClassificationRequest"];
+        "multipart/form-data": components["schemas"]["ClassificationRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["AssetDetail"];
+        };
+      };
+    };
+  };
+  /** @description Shows which custom fields a category change adds, keeps or retains. Changes nothing. */
+  assets_classification_preview_create: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ClassificationPreviewRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["ClassificationPreviewRequest"];
+        "multipart/form-data": components["schemas"]["ClassificationPreviewRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["ClassificationImpact"];
+        };
+      };
+    };
+  };
+  assets_history_list: {
+    parameters: {
+      query?: {
+        /** @description The pagination cursor value. */
+        cursor?: string;
+        /** @description Number of results to return per page. */
+        page_size?: number;
+      };
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["PaginatedAssetHistoryList"];
+        };
+      };
+    };
+  };
+  assets_restore_create: {
+    parameters: {
+      header: {
+        "If-Match": string;
+      };
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["AssetDetail"];
+        };
+      };
+    };
+  };
   audit_events_list: {
     parameters: {
       query?: {
@@ -371,6 +1268,93 @@ export interface operations {
       };
     };
   };
+  custom_fields_partial_update: {
+    parameters: {
+      header: {
+        "If-Match": string;
+      };
+      path: {
+        id: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["PatchedCustomFieldUpdateRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["PatchedCustomFieldUpdateRequest"];
+        "multipart/form-data": components["schemas"]["PatchedCustomFieldUpdateRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["CustomFieldDefinition"];
+        };
+      };
+    };
+  };
+  departments_list: {
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["Department"][];
+        };
+      };
+    };
+  };
+  departments_create: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DepartmentWriteRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["DepartmentWriteRequest"];
+        "multipart/form-data": components["schemas"]["DepartmentWriteRequest"];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          "application/json": components["schemas"]["Department"];
+        };
+      };
+    };
+  };
+  departments_retrieve: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["Department"];
+        };
+      };
+    };
+  };
+  departments_partial_update: {
+    parameters: {
+      header: {
+        "If-Match": string;
+      };
+      path: {
+        id: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["PatchedDepartmentWriteRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["PatchedDepartmentWriteRequest"];
+        "multipart/form-data": components["schemas"]["PatchedDepartmentWriteRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["Department"];
+        };
+      };
+    };
+  };
   /** @description Process is up and able to serve requests. No dependency checks. */
   health_live_retrieve: {
     responses: {
@@ -387,6 +1371,81 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["Readiness"];
+        };
+      };
+    };
+  };
+  locations_list: {
+    parameters: {
+      query?: {
+        /** @description Site ID */
+        site?: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["Location"][];
+        };
+      };
+    };
+  };
+  locations_create: {
+    parameters: {
+      query?: {
+        /** @description Site ID */
+        site?: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LocationWriteRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["LocationWriteRequest"];
+        "multipart/form-data": components["schemas"]["LocationWriteRequest"];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          "application/json": components["schemas"]["Location"];
+        };
+      };
+    };
+  };
+  locations_retrieve: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["Location"];
+        };
+      };
+    };
+  };
+  locations_partial_update: {
+    parameters: {
+      header: {
+        "If-Match": string;
+      };
+      path: {
+        id: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["PatchedLocationWriteRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["PatchedLocationWriteRequest"];
+        "multipart/form-data": components["schemas"]["PatchedLocationWriteRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["Location"];
         };
       };
     };
@@ -435,6 +1494,69 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["SecuritySettings"];
+        };
+      };
+    };
+  };
+  sites_list: {
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["Site"][];
+        };
+      };
+    };
+  };
+  sites_create: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SiteWriteRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["SiteWriteRequest"];
+        "multipart/form-data": components["schemas"]["SiteWriteRequest"];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          "application/json": components["schemas"]["Site"];
+        };
+      };
+    };
+  };
+  sites_retrieve: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["Site"];
+        };
+      };
+    };
+  };
+  sites_partial_update: {
+    parameters: {
+      header: {
+        "If-Match": string;
+      };
+      path: {
+        id: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["PatchedSiteWriteRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["PatchedSiteWriteRequest"];
+        "multipart/form-data": components["schemas"]["PatchedSiteWriteRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["Site"];
         };
       };
     };
@@ -590,6 +1712,22 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["User"];
+        };
+      };
+    };
+  };
+  /** @description Minimal active-user directory for choosing asset owners (no emails, no roles). */
+  users_lookup_list: {
+    parameters: {
+      query?: {
+        /** @description Username or display name */
+        q?: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["UserLookup"][];
         };
       };
     };

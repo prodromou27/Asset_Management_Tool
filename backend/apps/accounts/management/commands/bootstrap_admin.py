@@ -56,7 +56,7 @@ class Command(BaseCommand):
         operator = _os_user()
         with transaction.atomic():
             user = User.objects.create_user(
-                username, password, email=email, display_name=display_name
+                username, password, email=email, display_name=display_name, all_sites=True
             )
             user.roles.add(role)
             audit.record(

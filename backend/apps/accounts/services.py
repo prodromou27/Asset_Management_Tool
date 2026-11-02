@@ -23,11 +23,15 @@ LOGIN_FAILED_MESSAGE = "Sign-in failed. Check your username and password, or try
 
 
 def snapshot(user: User) -> dict:
+    from apps.organizations.services import site_codes_for
+
     return {
         "username": user.username,
         "email": user.email,
         "display_name": user.display_name,
         "roles": sorted(user.roles.values_list("code", flat=True)),
+        "all_sites": user.all_sites,
+        "sites": site_codes_for(user),
         "is_active": user.is_active,
     }
 
@@ -237,6 +241,17 @@ def update_user(request, user: User, changes: dict) -> User:
                     )
                 _guard_last_admin(user)
             user.roles.set(role_objs)
+        if "all_sites" in changes:
+            user.all_sites = changes["all_sites"]
+        if "site_ids" in changes:
+            from apps.organizations.models import Site
+            from apps.organizations.services import set_user_sites
+
+            sites = list(Site.objects.filter(pk__in=changes["site_ids"]))
+            missing = {str(s) for s in changes["site_ids"]} - {str(s.pk) for s in sites}
+            if missing:
+                raise serializers.ValidationError({"site_ids": ["Unknown site."]})
+            set_user_sites(user, sites, request.user)
 
         after = snapshot(user)
         if after == before:

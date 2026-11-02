@@ -331,6 +331,8 @@ def test_snapshot_never_contains_password_material(operator_user):
         "email",
         "display_name",
         "roles",
+        "all_sites",
+        "sites",
         "is_active",
     }
 

@@ -4,6 +4,583 @@ info:
   version: v1
   description: Custom IT Asset Management and EOL/EOS platform API.
 paths:
+  /api/v1/asset-categories/:
+    get:
+      operationId: asset_categories_list
+      tags:
+      - asset-categories
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AssetCategory'
+          description: ''
+    post:
+      operationId: asset_categories_create
+      tags:
+      - asset-categories
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssetCategoryWriteRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AssetCategoryWriteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AssetCategoryWriteRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetCategory'
+          description: ''
+  /api/v1/asset-categories/{id}/:
+    get:
+      operationId: asset_categories_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - asset-categories
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetCategory'
+          description: ''
+    patch:
+      operationId: asset_categories_partial_update
+      parameters:
+      - in: header
+        name: If-Match
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - asset-categories
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedAssetCategoryWriteRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedAssetCategoryWriteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedAssetCategoryWriteRequest'
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetCategory'
+          description: ''
+  /api/v1/asset-categories/{id}/fields/:
+    get:
+      operationId: asset_categories_fields_list
+      parameters:
+      - in: query
+        name: effective
+        schema:
+          type: boolean
+        description: 'true: fields that apply to this category, including inherited
+          ones'
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - asset-categories
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CustomFieldDefinition'
+          description: ''
+    post:
+      operationId: asset_categories_fields_create
+      parameters:
+      - in: query
+        name: effective
+        schema:
+          type: boolean
+        description: 'true: fields that apply to this category, including inherited
+          ones'
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - asset-categories
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomFieldCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CustomFieldCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CustomFieldCreateRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomFieldDefinition'
+          description: ''
+  /api/v1/assets/:
+    get:
+      operationId: assets_list
+      parameters:
+      - in: query
+        name: archived
+        schema:
+          type: string
+          enum:
+          - exclude
+          - include
+          - only
+      - in: query
+        name: business_status
+        schema:
+          type: string
+      - in: query
+        name: category
+        schema:
+          type: string
+        description: Category ID (includes subcategories)
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - in: query
+        name: department
+        schema:
+          type: string
+      - in: query
+        name: location
+        schema:
+          type: string
+      - in: query
+        name: manufacturer
+        schema:
+          type: string
+        description: Exact, case-insensitive
+      - in: query
+        name: observation_status
+        schema:
+          type: string
+      - in: query
+        name: ordering
+        schema:
+          type: string
+          enum:
+          - -asset_tag
+          - -created_at
+          - -modified_at
+          - -name
+          - asset_tag
+          - created_at
+          - modified_at
+          - name
+      - in: query
+        name: owner
+        schema:
+          type: string
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: q
+        schema:
+          type: string
+        description: Name, tag, serial, manufacturer, model, hostname, exact IP or
+          MAC
+      - in: query
+        name: site
+        schema:
+          type: string
+        description: Site ID (includes child sites)
+      - in: query
+        name: support_status
+        schema:
+          type: string
+      tags:
+      - assets
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAssetListList'
+          description: ''
+    post:
+      operationId: assets_create
+      parameters:
+      - in: query
+        name: archived
+        schema:
+          type: string
+          enum:
+          - exclude
+          - include
+          - only
+      - in: query
+        name: business_status
+        schema:
+          type: string
+      - in: query
+        name: category
+        schema:
+          type: string
+        description: Category ID (includes subcategories)
+      - in: query
+        name: department
+        schema:
+          type: string
+      - in: query
+        name: location
+        schema:
+          type: string
+      - in: query
+        name: manufacturer
+        schema:
+          type: string
+        description: Exact, case-insensitive
+      - in: query
+        name: observation_status
+        schema:
+          type: string
+      - in: query
+        name: ordering
+        schema:
+          type: string
+          enum:
+          - -asset_tag
+          - -created_at
+          - -modified_at
+          - -name
+          - asset_tag
+          - created_at
+          - modified_at
+          - name
+      - in: query
+        name: owner
+        schema:
+          type: string
+      - in: query
+        name: q
+        schema:
+          type: string
+        description: Name, tag, serial, manufacturer, model, hostname, exact IP or
+          MAC
+      - in: query
+        name: site
+        schema:
+          type: string
+        description: Site ID (includes child sites)
+      - in: query
+        name: support_status
+        schema:
+          type: string
+      tags:
+      - assets
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssetWriteRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AssetWriteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AssetWriteRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetDetail'
+          description: ''
+  /api/v1/assets/{id}/:
+    get:
+      operationId: assets_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - assets
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetDetail'
+          description: ''
+    patch:
+      operationId: assets_partial_update
+      parameters:
+      - in: header
+        name: If-Match
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - assets
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedAssetWriteRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedAssetWriteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedAssetWriteRequest'
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetDetail'
+          description: ''
+  /api/v1/assets/{id}/archive/:
+    post:
+      operationId: assets_archive_create
+      parameters:
+      - in: header
+        name: If-Match
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - assets
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetDetail'
+          description: ''
+  /api/v1/assets/{id}/classification/:
+    post:
+      operationId: assets_classification_create
+      parameters:
+      - in: header
+        name: If-Match
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - assets
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClassificationRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ClassificationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ClassificationRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetDetail'
+          description: ''
+  /api/v1/assets/{id}/classification/preview/:
+    post:
+      operationId: assets_classification_preview_create
+      description: Shows which custom fields a category change adds, keeps or retains.
+        Changes nothing.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - assets
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClassificationPreviewRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ClassificationPreviewRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ClassificationPreviewRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClassificationImpact'
+          description: ''
+  /api/v1/assets/{id}/history/:
+    get:
+      operationId: assets_history_list
+      parameters:
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      tags:
+      - assets
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAssetHistoryList'
+          description: ''
+  /api/v1/assets/{id}/restore/:
+    post:
+      operationId: assets_restore_create
+      parameters:
+      - in: header
+        name: If-Match
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - assets
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetDetail'
+          description: ''
   /api/v1/audit/events/:
     get:
       operationId: audit_events_list
@@ -168,6 +745,141 @@ paths:
                 items:
                   $ref: '#/components/schemas/AuthProvider'
           description: ''
+  /api/v1/custom-fields/{id}/:
+    patch:
+      operationId: custom_fields_partial_update
+      parameters:
+      - in: header
+        name: If-Match
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - custom-fields
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedCustomFieldUpdateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedCustomFieldUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedCustomFieldUpdateRequest'
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomFieldDefinition'
+          description: ''
+  /api/v1/departments/:
+    get:
+      operationId: departments_list
+      tags:
+      - departments
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Department'
+          description: ''
+    post:
+      operationId: departments_create
+      tags:
+      - departments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DepartmentWriteRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DepartmentWriteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DepartmentWriteRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Department'
+          description: ''
+  /api/v1/departments/{id}/:
+    get:
+      operationId: departments_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - departments
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Department'
+          description: ''
+    patch:
+      operationId: departments_partial_update
+      parameters:
+      - in: header
+        name: If-Match
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - departments
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedDepartmentWriteRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedDepartmentWriteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedDepartmentWriteRequest'
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Department'
+          description: ''
   /api/v1/health/live/:
     get:
       operationId: health_live_retrieve
@@ -199,6 +911,116 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Readiness'
+          description: ''
+  /api/v1/locations/:
+    get:
+      operationId: locations_list
+      parameters:
+      - in: query
+        name: site
+        schema:
+          type: string
+        description: Site ID
+      tags:
+      - locations
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Location'
+          description: ''
+    post:
+      operationId: locations_create
+      parameters:
+      - in: query
+        name: site
+        schema:
+          type: string
+        description: Site ID
+      tags:
+      - locations
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LocationWriteRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LocationWriteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LocationWriteRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Location'
+          description: ''
+  /api/v1/locations/{id}/:
+    get:
+      operationId: locations_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - locations
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Location'
+          description: ''
+    patch:
+      operationId: locations_partial_update
+      parameters:
+      - in: header
+        name: If-Match
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - locations
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedLocationWriteRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedLocationWriteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedLocationWriteRequest'
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Location'
           description: ''
   /api/v1/permissions/:
     get:
@@ -275,6 +1097,104 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SecuritySettings'
+          description: ''
+  /api/v1/sites/:
+    get:
+      operationId: sites_list
+      tags:
+      - sites
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Site'
+          description: ''
+    post:
+      operationId: sites_create
+      tags:
+      - sites
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SiteWriteRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SiteWriteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SiteWriteRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Site'
+          description: ''
+  /api/v1/sites/{id}/:
+    get:
+      operationId: sites_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - sites
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Site'
+          description: ''
+    patch:
+      operationId: sites_partial_update
+      parameters:
+      - in: header
+        name: If-Match
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - sites
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedSiteWriteRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedSiteWriteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedSiteWriteRequest'
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Site'
           description: ''
   /api/v1/users/:
     get:
@@ -530,8 +1450,490 @@ paths:
               schema:
                 $ref: '#/components/schemas/User'
           description: ''
+  /api/v1/users/lookup/:
+    get:
+      operationId: users_lookup_list
+      description: Minimal active-user directory for choosing asset owners (no emails,
+        no roles).
+      parameters:
+      - in: query
+        name: q
+        schema:
+          type: string
+        description: Username or display name
+      tags:
+      - users
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserLookup'
+          description: ''
 components:
   schemas:
+    AssetCategory:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        code:
+          type: string
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+        parent:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        path:
+          type: string
+          readOnly: true
+        depth:
+          type: integer
+          readOnly: true
+        description:
+          type: string
+          readOnly: true
+        is_active:
+          type: boolean
+          readOnly: true
+        sort_order:
+          type: integer
+          readOnly: true
+        modified_at:
+          type: string
+          format: date-time
+          readOnly: true
+        version:
+          type: integer
+          readOnly: true
+      required:
+      - code
+      - depth
+      - description
+      - id
+      - is_active
+      - modified_at
+      - name
+      - parent
+      - path
+      - sort_order
+      - version
+    AssetCategoryWriteRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        code:
+          type: string
+          minLength: 1
+          maxLength: 64
+        parent:
+          type: string
+          format: uuid
+          nullable: true
+        description:
+          type: string
+          maxLength: 500
+        is_active:
+          type: boolean
+        sort_order:
+          type: integer
+          maximum: 10000
+          minimum: 0
+      required:
+      - name
+    AssetDetail:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+        asset_tag:
+          type: string
+          readOnly: true
+          nullable: true
+        category:
+          allOf:
+          - $ref: '#/components/schemas/CategoryRef'
+          readOnly: true
+        manufacturer:
+          type: string
+          readOnly: true
+        model:
+          type: string
+          readOnly: true
+        serial_number:
+          type: string
+          readOnly: true
+        primary_hostname:
+          type: string
+          readOnly: true
+          nullable: true
+        primary_ip:
+          type: string
+          readOnly: true
+          nullable: true
+        site:
+          allOf:
+          - $ref: '#/components/schemas/SiteRef'
+          readOnly: true
+        location:
+          allOf:
+          - $ref: '#/components/schemas/Ref'
+          readOnly: true
+          nullable: true
+        owner:
+          allOf:
+          - $ref: '#/components/schemas/UserRef'
+          readOnly: true
+          nullable: true
+        business_status:
+          allOf:
+          - $ref: '#/components/schemas/BusinessStatusEnum'
+          readOnly: true
+        observation_status:
+          allOf:
+          - $ref: '#/components/schemas/ObservationStatusEnum'
+          readOnly: true
+        support_status:
+          allOf:
+          - $ref: '#/components/schemas/SupportStatusEnum'
+          readOnly: true
+        is_archived:
+          type: boolean
+          readOnly: true
+        modified_at:
+          type: string
+          format: date-time
+          readOnly: true
+        version:
+          type: integer
+          readOnly: true
+        os_name:
+          type: string
+          readOnly: true
+        os_version:
+          type: string
+          readOnly: true
+        firmware_version:
+          type: string
+          readOnly: true
+        department:
+          allOf:
+          - $ref: '#/components/schemas/Ref'
+          readOnly: true
+          nullable: true
+        notes:
+          type: string
+          readOnly: true
+        custom_fields:
+          type: object
+          additionalProperties: {}
+          readOnly: true
+        missing_required_fields:
+          type: array
+          items:
+            type: string
+          readOnly: true
+        retained_custom_fields:
+          type: array
+          items:
+            type: string
+          readOnly: true
+        hostnames:
+          type: array
+          items:
+            $ref: '#/components/schemas/Hostname'
+          readOnly: true
+        interfaces:
+          type: array
+          items:
+            $ref: '#/components/schemas/Interface'
+          readOnly: true
+        ip_addresses:
+          type: array
+          items:
+            $ref: '#/components/schemas/IPAddress'
+          readOnly: true
+        archived_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        archived_by:
+          type: string
+          readOnly: true
+          nullable: true
+        archive_reason:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        created_by:
+          type: string
+          readOnly: true
+          nullable: true
+        modified_by:
+          type: string
+          readOnly: true
+          nullable: true
+      required:
+      - archive_reason
+      - archived_at
+      - archived_by
+      - asset_tag
+      - business_status
+      - category
+      - created_at
+      - created_by
+      - custom_fields
+      - department
+      - firmware_version
+      - hostnames
+      - id
+      - interfaces
+      - ip_addresses
+      - is_archived
+      - location
+      - manufacturer
+      - missing_required_fields
+      - model
+      - modified_at
+      - modified_by
+      - name
+      - notes
+      - observation_status
+      - os_name
+      - os_version
+      - owner
+      - primary_hostname
+      - primary_ip
+      - retained_custom_fields
+      - serial_number
+      - site
+      - support_status
+      - version
+    AssetHistory:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        occurred_at:
+          type: string
+          format: date-time
+          readOnly: true
+        actor_label:
+          type: string
+          readOnly: true
+        change_type:
+          allOf:
+          - $ref: '#/components/schemas/ChangeTypeEnum'
+          readOnly: true
+        changes:
+          type: object
+          additionalProperties: {}
+          readOnly: true
+        reason:
+          type: string
+          readOnly: true
+        version:
+          type: integer
+          readOnly: true
+        request_id:
+          type: string
+          readOnly: true
+      required:
+      - actor_label
+      - change_type
+      - changes
+      - id
+      - occurred_at
+      - reason
+      - request_id
+      - version
+    AssetList:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+        asset_tag:
+          type: string
+          readOnly: true
+          nullable: true
+        category:
+          allOf:
+          - $ref: '#/components/schemas/CategoryRef'
+          readOnly: true
+        manufacturer:
+          type: string
+          readOnly: true
+        model:
+          type: string
+          readOnly: true
+        serial_number:
+          type: string
+          readOnly: true
+        primary_hostname:
+          type: string
+          readOnly: true
+          nullable: true
+        primary_ip:
+          type: string
+          readOnly: true
+          nullable: true
+        site:
+          allOf:
+          - $ref: '#/components/schemas/SiteRef'
+          readOnly: true
+        location:
+          allOf:
+          - $ref: '#/components/schemas/Ref'
+          readOnly: true
+          nullable: true
+        owner:
+          allOf:
+          - $ref: '#/components/schemas/UserRef'
+          readOnly: true
+          nullable: true
+        business_status:
+          allOf:
+          - $ref: '#/components/schemas/BusinessStatusEnum'
+          readOnly: true
+        observation_status:
+          allOf:
+          - $ref: '#/components/schemas/ObservationStatusEnum'
+          readOnly: true
+        support_status:
+          allOf:
+          - $ref: '#/components/schemas/SupportStatusEnum'
+          readOnly: true
+        is_archived:
+          type: boolean
+          readOnly: true
+        modified_at:
+          type: string
+          format: date-time
+          readOnly: true
+        version:
+          type: integer
+          readOnly: true
+      required:
+      - asset_tag
+      - business_status
+      - category
+      - id
+      - is_archived
+      - location
+      - manufacturer
+      - model
+      - modified_at
+      - name
+      - observation_status
+      - owner
+      - primary_hostname
+      - primary_ip
+      - serial_number
+      - site
+      - support_status
+      - version
+    AssetWriteRequest:
+      type: object
+      description: Create (all fields) and PATCH (partial; category excluded — use
+        classification).
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        asset_tag:
+          type: string
+          nullable: true
+          maxLength: 64
+        category:
+          type: string
+          format: uuid
+        manufacturer:
+          type: string
+          maxLength: 150
+        model:
+          type: string
+          maxLength: 150
+        serial_number:
+          type: string
+          maxLength: 150
+        os_name:
+          type: string
+          maxLength: 150
+        os_version:
+          type: string
+          maxLength: 100
+        firmware_version:
+          type: string
+          maxLength: 100
+        site:
+          type: string
+          format: uuid
+        location:
+          type: string
+          format: uuid
+          nullable: true
+        department:
+          type: string
+          format: uuid
+          nullable: true
+        owner:
+          type: string
+          format: uuid
+          nullable: true
+        business_status:
+          $ref: '#/components/schemas/BusinessStatusEnum'
+        notes:
+          type: string
+          maxLength: 10000
+        custom_fields:
+          type: object
+          additionalProperties: {}
+        hostnames:
+          type: array
+          items:
+            $ref: '#/components/schemas/HostnameInputRequest'
+        interfaces:
+          type: array
+          items:
+            $ref: '#/components/schemas/InterfaceInputRequest'
+        ip_addresses:
+          type: array
+          items:
+            $ref: '#/components/schemas/IPAddressInputRequest'
+      required:
+      - category
+      - name
+      - site
     AuditEvent:
       type: object
       properties:
@@ -569,7 +1971,7 @@ components:
           readOnly: true
         source:
           allOf:
-          - $ref: '#/components/schemas/SourceEnum'
+          - $ref: '#/components/schemas/AuditSourceEnum'
           readOnly: true
         before:
           readOnly: true
@@ -603,13 +2005,23 @@ components:
       - outcome
       - request_id
       - source
+    AuditSourceEnum:
+      enum:
+      - api
+      - cli
+      - system
+      type: string
+      description: |-
+        * `api` - API
+        * `cli` - Command line
+        * `system` - System
     AuthProvider:
       type: object
       properties:
         id:
           type: string
         kind:
-          $ref: '#/components/schemas/KindEnum'
+          $ref: '#/components/schemas/AuthProviderKindEnum'
         label:
           type: string
         status:
@@ -619,6 +2031,14 @@ components:
       - kind
       - label
       - status
+    AuthProviderKindEnum:
+      enum:
+      - local
+      - oidc
+      type: string
+      description: |-
+        * `local` - local
+        * `oidc` - oidc
     AuthProviderStatusEnum:
       enum:
       - available
@@ -627,6 +2047,40 @@ components:
       description: |-
         * `available` - available
         * `planned` - planned
+    BusinessStatusEnum:
+      enum:
+      - ordered
+      - in_stock
+      - deployed
+      - assigned
+      - in_repair
+      - retired
+      - disposed
+      - lost
+      type: string
+      description: |-
+        * `ordered` - Ordered
+        * `in_stock` - In stock
+        * `deployed` - Deployed
+        * `assigned` - Assigned
+        * `in_repair` - In repair
+        * `retired` - Retired
+        * `disposed` - Disposed
+        * `lost` - Lost
+    CategoryRef:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        path:
+          type: string
+      required:
+      - id
+      - name
+      - path
     ChangePasswordRequest:
       type: object
       properties:
@@ -641,6 +2095,249 @@ components:
       required:
       - current_password
       - new_password
+    ChangeTypeEnum:
+      enum:
+      - created
+      - updated
+      - reassigned
+      - reclassified
+      - archived
+      - restored
+      type: string
+      description: |-
+        * `created` - Created
+        * `updated` - Updated
+        * `reassigned` - Reassigned
+        * `reclassified` - Reclassified
+        * `archived` - Archived
+        * `restored` - Restored
+    ClassificationImpact:
+      type: object
+      properties:
+        from_category:
+          type: string
+        to_category:
+          type: string
+        fields_added:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldAdded'
+        fields_kept:
+          type: array
+          items:
+            type: string
+        values_retained_read_only:
+          type: array
+          items:
+            type: string
+        required_missing:
+          type: array
+          items:
+            type: string
+      required:
+      - fields_added
+      - fields_kept
+      - from_category
+      - required_missing
+      - to_category
+      - values_retained_read_only
+    ClassificationPreviewRequest:
+      type: object
+      properties:
+        category:
+          type: string
+          format: uuid
+        custom_fields:
+          type: object
+          additionalProperties: {}
+      required:
+      - category
+    ClassificationRequest:
+      type: object
+      properties:
+        category:
+          type: string
+          format: uuid
+        custom_fields:
+          type: object
+          additionalProperties: {}
+        reason:
+          type: string
+          minLength: 5
+          maxLength: 500
+      required:
+      - category
+      - reason
+    CustomFieldCreateRequest:
+      type: object
+      properties:
+        key:
+          type: string
+          minLength: 1
+          maxLength: 50
+          pattern: ^[a-z][a-z0-9_]{0,49}$
+        label:
+          type: string
+          minLength: 1
+          maxLength: 100
+        field_type:
+          $ref: '#/components/schemas/FieldTypeEnum'
+        required:
+          type: boolean
+          default: false
+        choices:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 100
+          maxItems: 200
+        help_text:
+          type: string
+          default: ''
+          maxLength: 300
+        min_value:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,6})?$
+          nullable: true
+        max_value:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,6})?$
+          nullable: true
+        max_length:
+          type: integer
+          maximum: 5000
+          minimum: 1
+          nullable: true
+        sort_order:
+          type: integer
+          maximum: 10000
+          minimum: 0
+          default: 0
+      required:
+      - field_type
+      - key
+      - label
+    CustomFieldDefinition:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        category:
+          type: string
+          format: uuid
+          readOnly: true
+        key:
+          type: string
+          readOnly: true
+        label:
+          type: string
+          readOnly: true
+        field_type:
+          allOf:
+          - $ref: '#/components/schemas/FieldTypeEnum'
+          readOnly: true
+        required:
+          type: boolean
+          readOnly: true
+        choices:
+          readOnly: true
+        help_text:
+          type: string
+          readOnly: true
+        min_value:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,6})?$
+          readOnly: true
+          nullable: true
+        max_value:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,6})?$
+          readOnly: true
+          nullable: true
+        max_length:
+          type: integer
+          readOnly: true
+          nullable: true
+        sort_order:
+          type: integer
+          readOnly: true
+        is_active:
+          type: boolean
+          readOnly: true
+        version:
+          type: integer
+          readOnly: true
+      required:
+      - category
+      - choices
+      - field_type
+      - help_text
+      - id
+      - is_active
+      - key
+      - label
+      - max_length
+      - max_value
+      - min_value
+      - required
+      - sort_order
+      - version
+    Department:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+        code:
+          type: string
+          readOnly: true
+        is_active:
+          type: boolean
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        modified_at:
+          type: string
+          format: date-time
+          readOnly: true
+        version:
+          type: integer
+          readOnly: true
+      required:
+      - code
+      - created_at
+      - id
+      - is_active
+      - modified_at
+      - name
+      - version
+    DepartmentWriteRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 150
+        code:
+          type: string
+          maxLength: 32
+        is_active:
+          type: boolean
+      required:
+      - name
     DependencyStatus:
       type: object
       properties:
@@ -668,14 +2365,195 @@ components:
           maxLength: 500
       required:
       - reason
-    KindEnum:
+    EvidenceSourceEnum:
       enum:
-      - local
-      - oidc
+      - manual
+      - librenms
+      - endpoint_central
+      - intune
+      - defender
+      - import
       type: string
       description: |-
-        * `local` - local
-        * `oidc` - oidc
+        * `manual` - Manual
+        * `librenms` - LibreNMS
+        * `endpoint_central` - Endpoint Central
+        * `intune` - Intune
+        * `defender` - Defender
+        * `import` - Import
+    FieldAdded:
+      type: object
+      properties:
+        key:
+          type: string
+        label:
+          type: string
+        required:
+          type: boolean
+      required:
+      - key
+      - label
+      - required
+    FieldTypeEnum:
+      enum:
+      - text
+      - long_text
+      - integer
+      - decimal
+      - boolean
+      - date
+      - choice
+      type: string
+      description: |-
+        * `text` - Text
+        * `long_text` - Long text
+        * `integer` - Integer
+        * `decimal` - Decimal
+        * `boolean` - Yes/No
+        * `date` - Date
+        * `choice` - Choice
+    Hostname:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        hostname:
+          type: string
+          readOnly: true
+        is_primary:
+          type: boolean
+          readOnly: true
+        source:
+          allOf:
+          - $ref: '#/components/schemas/EvidenceSourceEnum'
+          readOnly: true
+        source_ref:
+          type: string
+          readOnly: true
+        observed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+      required:
+      - hostname
+      - id
+      - is_primary
+      - observed_at
+      - source
+      - source_ref
+    HostnameInputRequest:
+      type: object
+      properties:
+        hostname:
+          type: string
+          minLength: 1
+          maxLength: 253
+        is_primary:
+          type: boolean
+          default: false
+      required:
+      - hostname
+    IPAddress:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        address:
+          type: string
+          readOnly: true
+        interface_name:
+          type: string
+          readOnly: true
+          nullable: true
+        is_primary:
+          type: boolean
+          readOnly: true
+        source:
+          allOf:
+          - $ref: '#/components/schemas/EvidenceSourceEnum'
+          readOnly: true
+        source_ref:
+          type: string
+          readOnly: true
+        observed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+      required:
+      - address
+      - id
+      - interface_name
+      - is_primary
+      - observed_at
+      - source
+      - source_ref
+    IPAddressInputRequest:
+      type: object
+      properties:
+        address:
+          type: string
+          minLength: 1
+          maxLength: 64
+        interface_name:
+          type: string
+          default: ''
+          maxLength: 64
+        is_primary:
+          type: boolean
+          default: false
+      required:
+      - address
+    Interface:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+        mac_address:
+          type: string
+          readOnly: true
+        source:
+          allOf:
+          - $ref: '#/components/schemas/EvidenceSourceEnum'
+          readOnly: true
+        source_ref:
+          type: string
+          readOnly: true
+        observed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+      required:
+      - id
+      - mac_address
+      - name
+      - observed_at
+      - source
+      - source_ref
+    InterfaceInputRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 64
+        mac_address:
+          type: string
+          default: ''
+          maxLength: 32
+      required:
+      - name
     Liveness:
       type: object
       properties:
@@ -688,6 +2566,88 @@ components:
       - ok
       type: string
       description: '* `ok` - ok'
+    Location:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        site:
+          type: string
+          format: uuid
+          readOnly: true
+        parent:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        name:
+          type: string
+          readOnly: true
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/LocationKindEnum'
+          readOnly: true
+        is_active:
+          type: boolean
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        modified_at:
+          type: string
+          format: date-time
+          readOnly: true
+        version:
+          type: integer
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - is_active
+      - kind
+      - modified_at
+      - name
+      - parent
+      - site
+      - version
+    LocationKindEnum:
+      enum:
+      - building
+      - floor
+      - room
+      - rack
+      - other
+      type: string
+      description: |-
+        * `building` - Building
+        * `floor` - Floor
+        * `room` - Room
+        * `rack` - Rack
+        * `other` - Other
+    LocationWriteRequest:
+      type: object
+      properties:
+        site:
+          type: string
+          format: uuid
+        parent:
+          type: string
+          format: uuid
+          nullable: true
+        name:
+          type: string
+          minLength: 1
+          maxLength: 150
+        kind:
+          $ref: '#/components/schemas/LocationKindEnum'
+        is_active:
+          type: boolean
+      required:
+      - name
+      - site
     LoginRequest:
       type: object
       properties:
@@ -729,10 +2689,14 @@ components:
           items:
             type: string
           readOnly: true
+        all_sites:
+          type: boolean
+          readOnly: true
         must_change_password:
           type: boolean
           readOnly: true
       required:
+      - all_sites
       - display_name
       - email
       - id
@@ -740,6 +2704,20 @@ components:
       - permissions
       - roles
       - username
+    ObservationStatusEnum:
+      enum:
+      - recently_seen
+      - stale
+      - unreachable
+      - never_scanned
+      - manual_only
+      type: string
+      description: |-
+        * `recently_seen` - Recently seen
+        * `stale` - Stale
+        * `unreachable` - Unreachable
+        * `never_scanned` - Never scanned
+        * `manual_only` - Manual only
     OutcomeEnum:
       enum:
       - success
@@ -750,6 +2728,46 @@ components:
         * `success` - Success
         * `failure` - Failure
         * `denied` - Denied
+    PaginatedAssetHistoryList:
+      type: object
+      required:
+      - items
+      - next_cursor
+      - previous_cursor
+      - count
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssetHistory'
+        next_cursor:
+          type: string
+          nullable: true
+        previous_cursor:
+          type: string
+          nullable: true
+        count:
+          type: integer
+    PaginatedAssetListList:
+      type: object
+      required:
+      - items
+      - next_cursor
+      - previous_cursor
+      - count
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssetList'
+        next_cursor:
+          type: string
+          nullable: true
+        previous_cursor:
+          type: string
+          nullable: true
+        count:
+          type: integer
     PaginatedAuditEventList:
       type: object
       required:
@@ -790,6 +2808,167 @@ components:
           nullable: true
         count:
           type: integer
+    PatchedAssetCategoryWriteRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        code:
+          type: string
+          minLength: 1
+          maxLength: 64
+        parent:
+          type: string
+          format: uuid
+          nullable: true
+        description:
+          type: string
+          maxLength: 500
+        is_active:
+          type: boolean
+        sort_order:
+          type: integer
+          maximum: 10000
+          minimum: 0
+    PatchedAssetWriteRequest:
+      type: object
+      description: Create (all fields) and PATCH (partial; category excluded — use
+        classification).
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        asset_tag:
+          type: string
+          nullable: true
+          maxLength: 64
+        manufacturer:
+          type: string
+          maxLength: 150
+        model:
+          type: string
+          maxLength: 150
+        serial_number:
+          type: string
+          maxLength: 150
+        os_name:
+          type: string
+          maxLength: 150
+        os_version:
+          type: string
+          maxLength: 100
+        firmware_version:
+          type: string
+          maxLength: 100
+        site:
+          type: string
+          format: uuid
+        location:
+          type: string
+          format: uuid
+          nullable: true
+        department:
+          type: string
+          format: uuid
+          nullable: true
+        owner:
+          type: string
+          format: uuid
+          nullable: true
+        business_status:
+          $ref: '#/components/schemas/BusinessStatusEnum'
+        notes:
+          type: string
+          maxLength: 10000
+        custom_fields:
+          type: object
+          additionalProperties: {}
+        hostnames:
+          type: array
+          items:
+            $ref: '#/components/schemas/HostnameInputRequest'
+        interfaces:
+          type: array
+          items:
+            $ref: '#/components/schemas/InterfaceInputRequest'
+        ip_addresses:
+          type: array
+          items:
+            $ref: '#/components/schemas/IPAddressInputRequest'
+    PatchedCustomFieldUpdateRequest:
+      type: object
+      description: Key and type are immutable so stored values stay valid.
+      properties:
+        label:
+          type: string
+          minLength: 1
+          maxLength: 100
+        required:
+          type: boolean
+        choices:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 100
+          maxItems: 200
+        help_text:
+          type: string
+          maxLength: 300
+        min_value:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,6})?$
+          nullable: true
+        max_value:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,6})?$
+          nullable: true
+        max_length:
+          type: integer
+          maximum: 5000
+          minimum: 1
+          nullable: true
+        sort_order:
+          type: integer
+          maximum: 10000
+          minimum: 0
+        is_active:
+          type: boolean
+    PatchedDepartmentWriteRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 150
+        code:
+          type: string
+          maxLength: 32
+        is_active:
+          type: boolean
+    PatchedLocationWriteRequest:
+      type: object
+      properties:
+        site:
+          type: string
+          format: uuid
+        parent:
+          type: string
+          format: uuid
+          nullable: true
+        name:
+          type: string
+          minLength: 1
+          maxLength: 150
+        kind:
+          $ref: '#/components/schemas/LocationKindEnum'
+        is_active:
+          type: boolean
     PatchedSecuritySettingsUpdateRequest:
       type: object
       properties:
@@ -803,6 +2982,26 @@ components:
           type: integer
         password_min_length:
           type: integer
+    PatchedSiteWriteRequest:
+      type: object
+      properties:
+        code:
+          type: string
+          minLength: 1
+          maxLength: 32
+        name:
+          type: string
+          minLength: 1
+          maxLength: 150
+        parent:
+          type: string
+          format: uuid
+          nullable: true
+        description:
+          type: string
+          maxLength: 500
+        is_active:
+          type: boolean
     PatchedUserUpdateRequest:
       type: object
       properties:
@@ -823,6 +3022,14 @@ components:
             type: string
             minLength: 1
             maxLength: 50
+        all_sites:
+          type: boolean
+        site_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          maxItems: 500
     Permission:
       type: object
       properties:
@@ -855,6 +3062,26 @@ components:
       description: |-
         * `ok` - ok
         * `degraded` - degraded
+    ReasonRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          minLength: 5
+          maxLength: 500
+      required:
+      - reason
+    Ref:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+      required:
+      - id
+      - name
     ResetPasswordRequest:
       type: object
       properties:
@@ -946,16 +3173,120 @@ components:
       - session_absolute_timeout_hours
       - session_idle_timeout_minutes
       - version
-    SourceEnum:
+    Site:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        code:
+          type: string
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+        parent:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        description:
+          type: string
+          readOnly: true
+        is_active:
+          type: boolean
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        modified_at:
+          type: string
+          format: date-time
+          readOnly: true
+        version:
+          type: integer
+          readOnly: true
+      required:
+      - code
+      - created_at
+      - description
+      - id
+      - is_active
+      - modified_at
+      - name
+      - parent
+      - version
+    SiteGrant:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        name:
+          type: string
+      required:
+      - code
+      - id
+      - name
+    SiteRef:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        name:
+          type: string
+      required:
+      - code
+      - id
+      - name
+    SiteWriteRequest:
+      type: object
+      properties:
+        code:
+          type: string
+          minLength: 1
+          maxLength: 32
+        name:
+          type: string
+          minLength: 1
+          maxLength: 150
+        parent:
+          type: string
+          format: uuid
+          nullable: true
+        description:
+          type: string
+          maxLength: 500
+        is_active:
+          type: boolean
+      required:
+      - code
+      - name
+    SupportStatusEnum:
       enum:
-      - api
-      - cli
-      - system
+      - supported
+      - eol_announced
+      - expiring
+      - security_maintenance_ended
+      - eos
+      - unknown
+      - not_announced
       type: string
       description: |-
-        * `api` - API
-        * `cli` - Command line
-        * `system` - System
+        * `supported` - Supported
+        * `eol_announced` - EOL announced
+        * `expiring` - Expiring
+        * `security_maintenance_ended` - Security maintenance ended
+        * `eos` - End of support
+        * `unknown` - Unknown
+        * `not_announced` - Not announced
     User:
       type: object
       properties:
@@ -977,6 +3308,14 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/RoleSummary'
+          readOnly: true
+        all_sites:
+          type: boolean
+          readOnly: true
+        sites:
+          type: array
+          items:
+            $ref: '#/components/schemas/SiteGrant'
           readOnly: true
         is_active:
           type: boolean
@@ -1030,6 +3369,7 @@ components:
           type: integer
           readOnly: true
       required:
+      - all_sites
       - created_at
       - created_by
       - disabled_at
@@ -1046,6 +3386,7 @@ components:
       - must_change_password
       - password_changed_at
       - roles
+      - sites
       - username
       - version
     UserCreateRequest:
@@ -1082,6 +3423,37 @@ components:
       - display_name
       - password
       - roles
+      - username
+    UserLookup:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        username:
+          type: string
+          readOnly: true
+        display_name:
+          type: string
+          readOnly: true
+      required:
+      - display_name
+      - id
+      - username
+    UserRef:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        display_name:
+          type: string
+      required:
+      - display_name
+      - id
       - username
   securitySchemes:
     sessionAuth:

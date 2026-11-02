@@ -44,6 +44,8 @@ INSTALLED_APPS = [
     "apps.health",
     "apps.audit",
     "apps.accounts",
+    "apps.organizations",
+    "apps.assets",
 ]
 
 AUTH_USER_MODEL = "accounts.User"
@@ -160,6 +162,12 @@ SPECTACULAR_SETTINGS = {
     "SERVE_INCLUDE_SCHEMA": False,
     "SCHEMA_PATH_PREFIX": "/api/v1",
     "COMPONENT_SPLIT_REQUEST": True,
+    "ENUM_NAME_OVERRIDES": {
+        "AuditSourceEnum": "apps.audit.models.AuditEvent.Source",
+        "EvidenceSourceEnum": "apps.assets.models.Source",
+        "LocationKindEnum": "apps.organizations.models.Location.Kind",
+        "AuthProviderKindEnum": ["local", "oidc"],
+    },
 }
 
 CORS_ALLOWED_ORIGINS = env("CORS_ALLOWED_ORIGINS")

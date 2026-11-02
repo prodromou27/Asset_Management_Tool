@@ -32,7 +32,9 @@ def make_user(db):
 
 @pytest.fixture
 def admin_user(make_user):
-    return make_user("admin.one", roles=["system_admin"], email="admin.one@example.test")
+    return make_user(
+        "admin.one", roles=["system_admin"], email="admin.one@example.test", all_sites=True
+    )
 
 
 @pytest.fixture

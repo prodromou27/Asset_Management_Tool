@@ -56,3 +56,33 @@ def HasMethodPermission(read: str, write: str):  # noqa: N802
             return needed in request.user.permission_codes()
 
     return _HasMethodPermission
+
+
+def ReadAnyWritePermission(read_any: tuple[str, ...], write: str):  # noqa: N802
+    """Safe methods need any one of `read_any`; unsafe methods need `write`."""
+
+    class _ReadAnyWrite(BasePermission):
+        message = "You do not have permission to perform this action."
+
+        def has_permission(self, request, view):
+            if not _authenticated_with_current_password(request):
+                return False
+            granted = request.user.permission_codes()
+            if request.method in ("GET", "HEAD", "OPTIONS"):
+                return any(code in granted for code in read_any)
+            return write in granted
+
+    return _ReadAnyWrite
+
+
+def HasAnyPermission(*codes: str):  # noqa: N802
+    class _HasAny(BasePermission):
+        message = "You do not have permission to perform this action."
+
+        def has_permission(self, request, view):
+            if not _authenticated_with_current_password(request):
+                return False
+            granted = request.user.permission_codes()
+            return any(code in granted for code in codes)
+
+    return _HasAny

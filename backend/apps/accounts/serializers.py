@@ -26,8 +26,15 @@ class RoleSummarySerializer(serializers.ModelSerializer):
         fields = ["code", "name"]
 
 
+class SiteGrantSerializer(serializers.Serializer):
+    id = serializers.UUIDField(source="site.id")
+    code = serializers.CharField(source="site.code")
+    name = serializers.CharField(source="site.name")
+
+
 class UserSerializer(serializers.ModelSerializer):
     roles = RoleSummarySerializer(many=True, read_only=True)
+    sites = SiteGrantSerializer(source="site_grants", many=True, read_only=True)
     is_locked = serializers.BooleanField(read_only=True)
     disabled_by = serializers.SlugRelatedField(
         read_only=True, allow_null=True, slug_field="username"
@@ -44,6 +51,8 @@ class UserSerializer(serializers.ModelSerializer):
             "display_name",
             "email",
             "roles",
+            "all_sites",
+            "sites",
             "is_active",
             "is_locked",
             "locked_until",
@@ -83,6 +92,8 @@ class UserUpdateSerializer(serializers.Serializer):
     roles = serializers.ListField(
         child=serializers.CharField(max_length=50), required=False, allow_empty=False
     )
+    all_sites = serializers.BooleanField(required=False)
+    site_ids = serializers.ListField(child=serializers.UUIDField(), required=False, max_length=500)
 
 
 class DisableUserSerializer(serializers.Serializer):
@@ -116,6 +127,7 @@ class MeSerializer(serializers.ModelSerializer):
             "email",
             "roles",
             "permissions",
+            "all_sites",
             "must_change_password",
         ]
         read_only_fields = fields
@@ -154,3 +166,10 @@ class AuthProviderSerializer(serializers.Serializer):
     kind = serializers.ChoiceField(choices=["local", "oidc"])
     label = serializers.CharField()
     status = serializers.ChoiceField(choices=["available", "planned"])
+
+
+class UserLookupSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ["id", "username", "display_name"]
+        read_only_fields = fields

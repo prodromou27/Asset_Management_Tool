@@ -12,7 +12,7 @@ from config.api import ItemsCursorPagination, require_if_match
 
 from . import catalog, services
 from .models import Permission, Role, SecuritySettings, User
-from .permissions import HasMethodPermission, HasPermission
+from .permissions import HasAnyPermission, HasMethodPermission, HasPermission
 from .serializers import (
     AuthProviderSerializer,
     ChangePasswordSerializer,
@@ -24,6 +24,7 @@ from .serializers import (
     RoleSerializer,
     SecuritySettingsSerializer,
     UserCreateSerializer,
+    UserLookupSerializer,
     UserSerializer,
     UserUpdateSerializer,
 )
@@ -126,7 +127,9 @@ class UserListCreateView(generics.ListAPIView):
     def get_queryset(self):
         from django.utils import timezone
 
-        qs = User.objects.prefetch_related("roles").select_related("disabled_by", "created_by")
+        qs = User.objects.prefetch_related("roles", "site_grants__site").select_related(
+            "disabled_by", "created_by"
+        )
         params = self.request.query_params
         if q := params.get("q", "").strip():
             qs = qs.filter(
@@ -155,7 +158,9 @@ class UserDetailView(APIView):
     permission_classes = [HasMethodPermission(catalog.USERS_VIEW, catalog.USERS_MANAGE)]
 
     def _get(self, pk):
-        return generics.get_object_or_404(User.objects.prefetch_related("roles"), pk=pk)
+        return generics.get_object_or_404(
+            User.objects.prefetch_related("roles", "site_grants__site"), pk=pk
+        )
 
     @extend_schema(responses=UserSerializer)
     def get(self, request, pk):
@@ -262,3 +267,20 @@ class SecuritySettingsView(APIView):
         return Response(
             SecuritySettingsSerializer(policy).data, headers={"ETag": f'"{policy.version}"'}
         )
+
+
+@extend_schema(parameters=[OpenApiParameter("q", str, description="Username or display name")])
+class UserLookupView(generics.ListAPIView):
+    """Minimal active-user directory for choosing asset owners (no emails, no roles)."""
+
+    serializer_class = UserLookupSerializer
+    pagination_class = None
+    permission_classes = [
+        HasAnyPermission(catalog.ASSETS_CREATE, catalog.ASSETS_EDIT, catalog.USERS_VIEW)
+    ]
+
+    def get_queryset(self):
+        qs = User.objects.filter(is_active=True).order_by("display_name", "username")
+        if q := self.request.query_params.get("q", "").strip()[:100]:
+            qs = qs.filter(Q(username__icontains=q) | Q(display_name__icontains=q))
+        return qs[:200]

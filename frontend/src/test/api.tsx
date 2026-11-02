@@ -83,6 +83,7 @@ export function makeMe(overrides: Partial<Me> = {}): Me {
     email: 'admin.one@example.test',
     roles: [{ code: 'system_admin', name: 'System Admin' }],
     permissions: ALL_ADMIN,
+    all_sites: true,
     must_change_password: false,
     ...overrides,
   }
@@ -113,6 +114,8 @@ export function makeUser(overrides: Partial<User> = {}): User {
     display_name: 'Jane Doe',
     email: 'jane.doe@example.test',
     roles: [{ code: 'asset_operator', name: 'Asset Operator' }],
+    all_sites: false,
+    sites: [],
     is_active: true,
     is_locked: false,
     locked_until: null,

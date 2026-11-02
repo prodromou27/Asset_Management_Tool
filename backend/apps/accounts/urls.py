@@ -13,6 +13,7 @@ auth_urlpatterns = [
 
 user_urlpatterns = [
     path("", views.UserListCreateView.as_view(), name="user-list"),
+    path("lookup/", views.UserLookupView.as_view(), name="user-lookup"),
     path("<uuid:pk>/", views.UserDetailView.as_view(), name="user-detail"),
     path("<uuid:pk>/disable/", views.DisableUserView.as_view(), name="user-disable"),
     path("<uuid:pk>/enable/", views.EnableUserView.as_view(), name="user-enable"),

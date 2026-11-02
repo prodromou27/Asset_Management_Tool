@@ -55,6 +55,8 @@ class User(AbstractBaseUser):
     email = models.EmailField(max_length=254, blank=True)
     display_name = models.CharField(max_length=150)
     roles = models.ManyToManyField(Role, related_name="users", blank=True)
+    # Site scope: True = every site; otherwise only sites granted via UserSiteGrant.
+    all_sites = models.BooleanField(default=False)
 
     is_active = models.BooleanField(default=True)
     must_change_password = models.BooleanField(default=False)
@@ -109,14 +111,22 @@ class User(AbstractBaseUser):
         return self.locked_until is not None and self.locked_until > timezone.now()
 
     def permission_codes(self) -> set[str]:
+        # Cached per instance; each request loads a fresh user, so grants still
+        # take effect on the next request.
         if not self.is_active:
             return set()
-        return set(
-            Permission.objects.filter(roles__users=self).values_list("code", flat=True).distinct()
-        )
+        cached = getattr(self, "_permission_cache", None)
+        if cached is None:
+            cached = set(
+                Permission.objects.filter(roles__users=self)
+                .values_list("code", flat=True)
+                .distinct()
+            )
+            self._permission_cache = cached
+        return cached
 
     def has_permission(self, code: str) -> bool:
-        return self.is_active and Permission.objects.filter(code=code, roles__users=self).exists()
+        return code in self.permission_codes()
 
 
 class SecuritySettings(models.Model):

@@ -1,4 +1,33 @@
-# Current Task: 002 | Named Admin Bootstrap, Local Auth/RBAC + Audit
+# Current Task: 003 | Core Asset Management
+
+Status: **In progress** (started 2026-11-02 on branch DEV).
+
+**Read:** AGENTS.md, docs/00, 01, 03, 04, 07, 08 (backlog list for 003).
+
+## Objective
+
+Canonical asset register with site-scoped RBAC: assets (UUID, tag, identity, hardware,
+OS/firmware, category, site/location/department, owner, three status dimensions,
+notes), hierarchical categories with typed custom fields, sites/locations/departments,
+multiple interfaces/MACs/IPs/hostnames with source fields, append-only history,
+soft archival, optimistic locking. Closes ASM-04 (site-scoped authorization).
+
+## Out of scope
+
+LibreNMS/discovery, EOL data, licensing, dynamic groups, agents, import/export jobs.
+
+## Acceptance
+
+- Users never see or change assets outside granted sites via URL, filter or payload.
+- Create/edit/reclassify/reassign/archive/restore recorded in asset history and audit.
+- PATCH and state changes require If-Match; stale versions return 409.
+- No hard delete; archived assets hidden by default and read-only until restored.
+- IP, MAC, serial and hostname optional; no global uniqueness on them.
+- PostgreSQL CI green; OpenAPI and generated frontend types in sync.
+
+---
+
+## Task 002 | Named Admin Bootstrap, Local Auth/RBAC + Audit (previous)
 
 Status: **Provisionally Complete / Pending Docker and PostgreSQL Verification.**
 

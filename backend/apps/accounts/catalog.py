@@ -10,6 +10,13 @@ ROLES_VIEW = "roles.view"
 AUDIT_VIEW = "audit.view"
 SECURITY_SETTINGS_VIEW = "settings.security.view"
 SECURITY_SETTINGS_MANAGE = "settings.security.manage"
+ASSETS_VIEW = "assets.view"
+ASSETS_CREATE = "assets.create"
+ASSETS_EDIT = "assets.edit"
+ASSETS_RECLASSIFY = "assets.reclassify"
+ASSETS_ARCHIVE = "assets.archive"
+CATEGORIES_MANAGE = "categories.manage"
+SITES_MANAGE = "sites.manage"
 
 PERMISSIONS: dict[str, str] = {
     USERS_VIEW: "View user accounts, role assignments and access review data",
@@ -18,6 +25,13 @@ PERMISSIONS: dict[str, str] = {
     AUDIT_VIEW: "View the audit log",
     SECURITY_SETTINGS_VIEW: "View session, lockout and password policy settings",
     SECURITY_SETTINGS_MANAGE: "Change session, lockout and password policy settings",
+    ASSETS_VIEW: "View assets in permitted sites",
+    ASSETS_CREATE: "Register assets in permitted sites",
+    ASSETS_EDIT: "Edit and reassign assets in permitted sites",
+    ASSETS_RECLASSIFY: "Change an asset's category",
+    ASSETS_ARCHIVE: "Archive and restore assets",
+    CATEGORIES_MANAGE: "Manage asset categories and custom field definitions",
+    SITES_MANAGE: "Manage sites, locations and departments",
 }
 
 SYSTEM_ADMIN = "system_admin"
@@ -34,37 +48,37 @@ ROLES: list[tuple[str, str, str, list[str]]] = [
         "itam_manager",
         "ITAM Manager",
         "Curates asset data, approves lifecycle matches and exceptions.",
-        [],
+        [ASSETS_VIEW, ASSETS_CREATE, ASSETS_EDIT, ASSETS_RECLASSIFY, ASSETS_ARCHIVE],
     ),
     (
         "infrastructure_engineer",
         "Infrastructure Engineer",
         "Technical comments, match proposals and source diagnostics.",
-        [],
+        [ASSETS_VIEW],
     ),
     (
         "security_analyst",
         "Security Analyst",
         "Read and investigate assets; flag high-risk lifecycle findings.",
-        [],
+        [ASSETS_VIEW],
     ),
     (
         "asset_operator",
         "Asset Operator",
         "Maintains authorized business fields and static group membership.",
-        [],
+        [ASSETS_VIEW, ASSETS_CREATE, ASSETS_EDIT],
     ),
     (
         "auditor",
         "Auditor",
         "Read-only access to evidence, health and the audit log.",
-        [USERS_VIEW, ROLES_VIEW, AUDIT_VIEW, SECURITY_SETTINGS_VIEW],
+        [USERS_VIEW, ROLES_VIEW, AUDIT_VIEW, SECURITY_SETTINGS_VIEW, ASSETS_VIEW],
     ),
     (
         "read_only",
         "Read Only",
         "Site-scoped read access.",
-        [],
+        [ASSETS_VIEW],
     ),
 ]
 
