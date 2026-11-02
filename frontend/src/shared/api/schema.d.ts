@@ -397,7 +397,7 @@ export interface components {
       label: string;
       field_type: components["schemas"]["FieldTypeEnum"];
       required: boolean;
-      choices: unknown;
+      choices: readonly string[];
       help_text: string;
       /** Format: decimal */
       min_value: string | null;

@@ -2,6 +2,11 @@ import { QueryClientProvider, type QueryClient } from '@tanstack/react-query'
 import { useState, type ReactNode } from 'react'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { AuditLogPage } from '../features/admin-audit/AuditLogPage'
+import { CategoriesPage } from '../features/admin-categories/CategoriesPage'
+import { SitesPage } from '../features/admin-sites/SitesPage'
+import { AssetDetailPage } from '../features/assets/AssetDetailPage'
+import { AssetFormPage } from '../features/assets/AssetFormPage'
+import { AssetsListPage } from '../features/assets/AssetsListPage'
 import { SecuritySettingsPage } from '../features/admin-security/SecuritySettingsPage'
 import { UserCreatePage } from '../features/admin-users/UserCreatePage'
 import { UserDetailPage } from '../features/admin-users/UserDetailPage'
@@ -45,6 +50,54 @@ export function AppRoutes() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/" element={<Protected><SystemHealthPage /></Protected>} />
       <Route path="/account/password" element={<Protected><ChangePasswordPage /></Protected>} />
+      <Route
+        path="/assets"
+        element={
+          <Protected permission={PERMISSIONS.assetsView} what="assets">
+            <AssetsListPage />
+          </Protected>
+        }
+      />
+      <Route
+        path="/assets/new"
+        element={
+          <Protected permission={PERMISSIONS.assetsCreate} what="asset registration">
+            <AssetFormPage />
+          </Protected>
+        }
+      />
+      <Route
+        path="/assets/:id"
+        element={
+          <Protected permission={PERMISSIONS.assetsView} what="assets">
+            <AssetDetailPage />
+          </Protected>
+        }
+      />
+      <Route
+        path="/assets/:id/edit"
+        element={
+          <Protected permission={PERMISSIONS.assetsEdit} what="asset editing">
+            <AssetFormPage />
+          </Protected>
+        }
+      />
+      <Route
+        path="/admin/sites"
+        element={
+          <Protected permission={PERMISSIONS.sitesManage} what="site administration">
+            <SitesPage />
+          </Protected>
+        }
+      />
+      <Route
+        path="/admin/categories"
+        element={
+          <Protected permission={PERMISSIONS.categoriesManage} what="category administration">
+            <CategoriesPage />
+          </Protected>
+        }
+      />
       <Route
         path="/admin/users"
         element={

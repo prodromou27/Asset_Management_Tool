@@ -2245,6 +2245,9 @@ components:
           type: boolean
           readOnly: true
         choices:
+          type: array
+          items:
+            type: string
           readOnly: true
         help_text:
           type: string

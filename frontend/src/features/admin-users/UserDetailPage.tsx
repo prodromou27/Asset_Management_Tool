@@ -12,6 +12,7 @@ import {
   unlockUser,
   updateUser,
 } from '../../shared/api/accounts'
+import { assetKeys, fetchSites } from '../../shared/api/assets'
 import { isApiError } from '../../shared/api/client'
 import { PERMISSIONS, type User } from '../../shared/api/types'
 import { formatDateTime } from '../../shared/format'
@@ -85,6 +86,7 @@ export function UserDetailPage() {
         </div>
         <aside className="detail-layout__side">
           <AccountFacts user={user.data} />
+          <SiteAccessPanel key={`sites-${user.data.version}`} user={user.data} canManage={canManage} onSaved={setNotice} />
           {canManage && <AccountActions user={user.data} isSelf={isSelf} onDone={setNotice} />}
         </aside>
       </div>
@@ -457,6 +459,98 @@ function AccountActions({
           error={errors.confirm}
         />
       </Dialog>
+    </section>
+  )
+}
+
+function SiteAccessPanel({
+  user,
+  canManage,
+  onSaved,
+}: {
+  user: User
+  canManage: boolean
+  onSaved: (message: string) => void
+}) {
+  const queryClient = useQueryClient()
+  const sites = useQuery({ queryKey: assetKeys.sites, queryFn: fetchSites, enabled: canManage })
+  const [allSites, setAllSites] = useState(user.all_sites)
+  const [selected, setSelected] = useState(user.sites.map((s) => s.id))
+
+  const mutation = useMutation({
+    mutationFn: () =>
+      updateUser(user.id, user.version, { all_sites: allSites, site_ids: allSites ? [] : selected }),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(queryKeys.user(user.id), updated)
+      queryClient.invalidateQueries({ queryKey: ['users', 'list'] })
+      onSaved("Site access saved. It applies on the user's next request.")
+    },
+  })
+
+  return (
+    <section className="panel" aria-labelledby="sites-heading">
+      <h2 className="section-title" id="sites-heading">
+        Site access
+      </h2>
+      {!canManage ? (
+        <p>
+          {user.all_sites
+            ? 'All sites'
+            : user.sites.length
+              ? user.sites.map((s) => s.code).join(', ')
+              : 'No sites. This user cannot see any assets.'}
+        </p>
+      ) : (
+        <form
+          className="form-stack"
+          onSubmit={(event) => {
+            event.preventDefault()
+            mutation.mutate()
+          }}
+        >
+          {mutation.error && (
+            <p className="field__error" role="alert">
+              {mutation.error.message}
+            </p>
+          )}
+          <CheckboxGroup
+            legend="Scope"
+            name="all_sites"
+            options={[
+              {
+                value: 'all',
+                label: 'All sites',
+                description: 'Includes sites added later. Use for administrators only.',
+              },
+            ]}
+            value={allSites ? ['all'] : []}
+            onChange={(v) => setAllSites(v.includes('all'))}
+          />
+          {!allSites && (
+            <>
+              {sites.isPending && <LoadingState label="Loading sites…" />}
+              {sites.isError && <QueryErrorState error={sites.error} what="sites" />}
+              {sites.data && (
+                <CheckboxGroup
+                  legend="Granted sites (child sites included)"
+                  name="site_ids"
+                  options={sites.data.map((s) => ({ value: s.id, label: `${s.code} — ${s.name}` }))}
+                  value={selected}
+                  onChange={setSelected}
+                />
+              )}
+              {selected.length === 0 && (
+                <p className="field__help">With no sites, this user cannot see any assets.</p>
+              )}
+            </>
+          )}
+          <div className="form-actions">
+            <Button type="submit" busy={mutation.isPending}>
+              Save site access
+            </Button>
+          </div>
+        </form>
+      )}
     </section>
   )
 }

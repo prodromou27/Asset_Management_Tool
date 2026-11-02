@@ -132,6 +132,7 @@ class AssetCategoryWriteSerializer(serializers.Serializer):
 
 class CustomFieldDefinitionSerializer(serializers.ModelSerializer):
     category = serializers.PrimaryKeyRelatedField(read_only=True)
+    choices = serializers.ListField(child=serializers.CharField(), read_only=True)
     min_value = serializers.DecimalField(
         max_digits=20, decimal_places=6, allow_null=True, read_only=True
     )

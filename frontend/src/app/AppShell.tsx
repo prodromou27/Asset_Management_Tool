@@ -11,9 +11,14 @@ interface NavItem {
   permission?: string
 }
 
-const PRIMARY: NavItem[] = [{ to: '/', label: 'System health' }]
+const PRIMARY: NavItem[] = [
+  { to: '/assets', label: 'Assets', permission: PERMISSIONS.assetsView },
+  { to: '/', label: 'System health' },
+]
 
 const ADMINISTRATION: NavItem[] = [
+  { to: '/admin/sites', label: 'Sites & locations', permission: PERMISSIONS.sitesManage },
+  { to: '/admin/categories', label: 'Categories & fields', permission: PERMISSIONS.categoriesManage },
   { to: '/admin/users', label: 'Users & roles', permission: PERMISSIONS.usersView },
   { to: '/admin/audit', label: 'Audit log', permission: PERMISSIONS.auditView },
   { to: '/admin/security', label: 'Security policy', permission: PERMISSIONS.securityView },
@@ -111,7 +116,9 @@ export function AppShell({ children }: { children: ReactNode }) {
       </a>
       <nav className="app-shell__nav" aria-label="Primary">
         <div className="app-shell__brand">ITAM</div>
-        {!restricted && <NavList items={PRIMARY} />}
+        {!restricted && (
+          <NavList items={PRIMARY.filter((item) => !item.permission || can(item.permission))} />
+        )}
         {!restricted && adminItems.length > 0 && (
           <>
             <p className="nav-section" id="nav-admin">

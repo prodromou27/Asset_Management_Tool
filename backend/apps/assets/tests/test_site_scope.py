@@ -82,6 +82,7 @@ def test_out_of_scope_detail_is_404(client_for, hq_operator, branch_asset, suffi
         ("post", "archive/", {"reason": "cross-site attempt"}, "hq_manager"),
         ("post", "restore/", None, "hq_manager"),
         ("post", "classification/", {"category": None, "reason": "cross-site"}, "hq_manager"),
+        ("post", "classification/preview/", {"category": None}, "hq_manager"),
     ],
 )
 def test_out_of_scope_mutations_are_404_and_change_nothing(

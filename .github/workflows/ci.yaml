@@ -65,6 +65,8 @@ jobs:
           uv run python manage.py migrate --check
       - name: Migrations reverse cleanly
         run: |
+          uv run python manage.py migrate assets zero --no-input
+          uv run python manage.py migrate organizations zero --no-input
           uv run python manage.py migrate audit zero --no-input
           uv run python manage.py migrate accounts zero --no-input
           uv run python manage.py migrate --no-input

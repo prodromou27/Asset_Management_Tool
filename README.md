@@ -76,6 +76,13 @@ Sign in at http://localhost:5173 with that account. Create a second named admin 
 - Audit log: **Administration → Audit log**. Append-only; PostgreSQL rejects UPDATE/DELETE/TRUNCATE on the table.
 - Not yet available: SSO/OIDC and MFA (see ASM-03 in docs/17_ADR_OPEN_DECISIONS.md), site-scoped permissions (Task 003).
 
+### Assets, categories and sites (Task 003)
+
+- **Assets** (`/assets`): inventory list with search (name, tag, serial, model, hostname, exact IP or MAC), filters kept in the URL, detail with Overview / Network / History tabs, create/edit forms, category change with impact preview and required reason, archive/restore (no hard delete).
+- **Sites & locations** and **Categories & fields** under Administration (System Admin). Default category taxonomy is seeded; fields are typed (text, long text, integer, decimal, yes/no, date, choice) and inherited by subcategories.
+- **Site access**: on each user's page under Users & roles. Users see only assets in granted sites (and their child sites) unless "All sites" is set. `bootstrap_admin` creates admins with all sites.
+- Every create, edit, reassignment, reclassification, archive and restore is recorded in the asset's history (append-only) and the audit log. Edits require the current version (If-Match); stale edits are rejected.
+
 After changing an API serializer, regenerate the contract: `cd backend && uv run python manage.py spectacular --file ../frontend/src/shared/api/openapi.yaml`, then `cd frontend && pnpm run gen:api`. CI fails on drift.
 
 Dev ports are bound to 127.0.0.1 only. Stop with `scripts/compose.sh dev down` (add `-v` only to discard the local PostgreSQL volume).

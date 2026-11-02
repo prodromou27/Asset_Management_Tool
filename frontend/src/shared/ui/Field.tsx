@@ -1,4 +1,10 @@
-import { useId, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from 'react'
+import {
+  useId,
+  type InputHTMLAttributes,
+  type ReactNode,
+  type SelectHTMLAttributes,
+  type TextareaHTMLAttributes,
+} from 'react'
 
 interface FieldShellProps {
   id: string
@@ -148,5 +154,28 @@ export function CheckboxGroup({
         </p>
       ))}
     </fieldset>
+  )
+}
+
+interface TextAreaFieldProps extends Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, 'id'> {
+  label: string
+  name: string
+  help?: ReactNode
+  error?: string[]
+}
+
+export function TextAreaField({ label, name, help, error, ...textarea }: TextAreaFieldProps) {
+  const id = `field-${name}-${useId()}`
+  return (
+    <FieldShell id={id} label={label} help={help} error={error}>
+      <textarea
+        id={id}
+        name={name}
+        className="field__control field__control--textarea"
+        aria-invalid={error?.length ? true : undefined}
+        aria-describedby={describedBy(id, help, error)}
+        {...textarea}
+      />
+    </FieldShell>
   )
 }
