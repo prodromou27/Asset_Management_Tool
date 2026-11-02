@@ -1,0 +1,153 @@
+import uuid
+
+from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
+from django.core.validators import MaxValueValidator, MinValueValidator, RegexValidator
+from django.db import models
+from django.db.models.functions import Lower
+from django.utils import timezone
+from django.utils.crypto import salted_hmac
+
+USERNAME_VALIDATOR = RegexValidator(
+    r"^[a-z0-9][a-z0-9._-]{2,149}$",
+    "Use 3-150 lowercase letters, digits, dots, hyphens or underscores.",
+)
+
+
+class Permission(models.Model):
+    code = models.CharField(max_length=100, primary_key=True)
+    description = models.CharField(max_length=255)
+
+    class Meta:
+        ordering = ["code"]
+
+    def __str__(self):
+        return self.code
+
+
+class Role(models.Model):
+    code = models.CharField(max_length=50, primary_key=True)
+    name = models.CharField(max_length=100, unique=True)
+    description = models.CharField(max_length=255, blank=True)
+    is_system = models.BooleanField(default=True)
+    permissions = models.ManyToManyField(Permission, related_name="roles", blank=True)
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
+class UserManager(BaseUserManager):
+    def create_user(self, username, password, **extra):
+        extra["email"] = extra.get("email", "").strip().lower()
+        user = self.model(username=username.strip().lower(), **extra)
+        user.set_password(password)
+        user.password_changed_at = timezone.now()
+        user.full_clean(exclude=["password"])
+        user.save()
+        return user
+
+
+class User(AbstractBaseUser):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    username = models.CharField(max_length=150, unique=True, validators=[USERNAME_VALIDATOR])
+    email = models.EmailField(max_length=254, blank=True)
+    display_name = models.CharField(max_length=150)
+    roles = models.ManyToManyField(Role, related_name="users", blank=True)
+
+    is_active = models.BooleanField(default=True)
+    must_change_password = models.BooleanField(default=False)
+    password_changed_at = models.DateTimeField(null=True, blank=True)
+    failed_login_count = models.PositiveIntegerField(default=0)
+    last_failed_login_at = models.DateTimeField(null=True, blank=True)
+    locked_until = models.DateTimeField(null=True, blank=True)
+    session_epoch = models.PositiveIntegerField(default=0)
+
+    disabled_at = models.DateTimeField(null=True, blank=True)
+    disabled_reason = models.CharField(max_length=500, blank=True)
+    disabled_by = models.ForeignKey(
+        "self", null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
+    created_by = models.ForeignKey(
+        "self", null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    modified_at = models.DateTimeField(auto_now=True)
+    version = models.PositiveIntegerField(default=1)
+
+    objects = UserManager()
+
+    USERNAME_FIELD = "username"
+    EMAIL_FIELD = "email"
+    REQUIRED_FIELDS = ["display_name"]
+
+    class Meta:
+        ordering = ["username"]
+        constraints = [
+            models.UniqueConstraint(
+                Lower("email"),
+                condition=~models.Q(email=""),
+                name="accounts_user_email_ci_unique",
+            ),
+        ]
+
+    def __str__(self):
+        return self.username
+
+    def _get_session_auth_hash(self, secret=None):
+        # Includes session_epoch so bumping it revokes every existing session.
+        return salted_hmac(
+            "apps.accounts.User.get_session_auth_hash",
+            f"{self.password}:{self.session_epoch}",
+            secret=secret,
+            algorithm="sha256",
+        ).hexdigest()
+
+    @property
+    def is_locked(self) -> bool:
+        return self.locked_until is not None and self.locked_until > timezone.now()
+
+    def permission_codes(self) -> set[str]:
+        if not self.is_active:
+            return set()
+        return set(
+            Permission.objects.filter(roles__users=self).values_list("code", flat=True).distinct()
+        )
+
+    def has_permission(self, code: str) -> bool:
+        return self.is_active and Permission.objects.filter(code=code, roles__users=self).exists()
+
+
+class SecuritySettings(models.Model):
+    """Singleton (pk=1) of admin-configurable authentication policy."""
+
+    id = models.PositiveSmallIntegerField(primary_key=True, default=1, editable=False)
+    session_idle_timeout_minutes = models.PositiveIntegerField(
+        default=30, validators=[MinValueValidator(5), MaxValueValidator(480)]
+    )
+    session_absolute_timeout_hours = models.PositiveIntegerField(
+        default=12, validators=[MinValueValidator(1), MaxValueValidator(72)]
+    )
+    lockout_threshold = models.PositiveIntegerField(
+        default=5, validators=[MinValueValidator(3), MaxValueValidator(20)]
+    )
+    lockout_duration_minutes = models.PositiveIntegerField(
+        default=15, validators=[MinValueValidator(1), MaxValueValidator(1440)]
+    )
+    password_min_length = models.PositiveIntegerField(
+        default=12, validators=[MinValueValidator(12), MaxValueValidator(128)]
+    )
+    version = models.PositiveIntegerField(default=1)
+    modified_at = models.DateTimeField(auto_now=True)
+    modified_by = models.ForeignKey(
+        User, null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
+
+    class Meta:
+        verbose_name_plural = "security settings"
+
+    @classmethod
+    def load(cls) -> "SecuritySettings":
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj

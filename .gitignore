@@ -1,0 +1,7 @@
+.env
+.env.local
+*.sqlite3
+
+# OS cruft
+.DS_Store
+Thumbs.db

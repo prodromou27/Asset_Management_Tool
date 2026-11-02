@@ -1,0 +1,66 @@
+# Local development only. Published ports bind to 127.0.0.1 so they are not
+# reachable from other hosts. Never combine with compose.prod.yaml.
+x-dev-backend-env: &dev-backend-env
+  DJANGO_SETTINGS_MODULE: config.settings.development
+  ITAM_DEBUG: "true"
+  SMTP_HOST: mailpit
+  SMTP_PORT: "1025"
+  SMTP_SECURITY: none
+  SMTP_FROM: itam@localhost
+
+x-dev-backend-build: &dev-backend-build
+  context: ../backend
+  dockerfile: Dockerfile.dev
+
+services:
+  api:
+    build: *dev-backend-build
+    environment: *dev-backend-env
+    volumes:
+      - ../backend:/app
+      - /app/.venv
+    ports:
+      - "127.0.0.1:8000:8000"
+    command: ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+
+  worker:
+    build: *dev-backend-build
+    environment: *dev-backend-env
+    volumes:
+      - ../backend:/app
+      - /app/.venv
+
+  scheduler:
+    build: *dev-backend-build
+    environment: *dev-backend-env
+    volumes:
+      - ../backend:/app
+      - /app/.venv
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile.dev
+    environment:
+      VITE_API_BASE_URL: /api/v1
+      VITE_API_PROXY_TARGET: http://api:8000
+    volumes:
+      - ../frontend:/app
+      - /app/node_modules
+    ports:
+      - "127.0.0.1:5173:5173"
+
+  postgres:
+    ports:
+      - "127.0.0.1:5432:5432"
+
+  redis:
+    ports:
+      - "127.0.0.1:6379:6379"
+
+  mailpit:
+    image: axllent/mailpit:v1.21
+    ports:
+      - "127.0.0.1:8025:8025"
+    networks:
+      - backend

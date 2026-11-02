@@ -1,0 +1,1090 @@
+openapi: 3.0.3
+info:
+  title: ITAM API
+  version: v1
+  description: Custom IT Asset Management and EOL/EOS platform API.
+paths:
+  /api/v1/audit/events/:
+    get:
+      operationId: audit_events_list
+      parameters:
+      - in: query
+        name: action
+        schema:
+          type: string
+        description: Exact action code, e.g. users.disable
+      - in: query
+        name: actor
+        schema:
+          type: string
+        description: Actor username (exact)
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - in: query
+        name: from
+        schema:
+          type: string
+        description: RFC 3339 lower bound (inclusive)
+      - in: query
+        name: object_id
+        schema:
+          type: string
+      - in: query
+        name: object_type
+        schema:
+          type: string
+      - in: query
+        name: outcome
+        schema:
+          type: string
+          enum:
+          - denied
+          - failure
+          - success
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: to
+        schema:
+          type: string
+        description: RFC 3339 upper bound (exclusive)
+      tags:
+      - audit
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAuditEventList'
+          description: ''
+  /api/v1/auth/csrf/:
+    get:
+      operationId: auth_csrf_retrieve
+      description: Sets the CSRF cookie so the SPA can send X-CSRFToken on unsafe
+        requests.
+      tags:
+      - auth
+      security:
+      - {}
+      responses:
+        '204':
+          description: No response body
+  /api/v1/auth/local/login/:
+    post:
+      operationId: auth_local_login_create
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Me'
+          description: ''
+  /api/v1/auth/logout/:
+    post:
+      operationId: auth_logout_create
+      tags:
+      - auth
+      security:
+      - sessionAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/auth/me/:
+    get:
+      operationId: auth_me_retrieve
+      tags:
+      - auth
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Me'
+          description: ''
+  /api/v1/auth/password/change/:
+    post:
+      operationId: auth_password_change_create
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/auth/providers/:
+    get:
+      operationId: auth_providers_list
+      tags:
+      - auth
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AuthProvider'
+          description: ''
+  /api/v1/health/live/:
+    get:
+      operationId: health_live_retrieve
+      description: Process is up and able to serve requests. No dependency checks.
+      tags:
+      - health
+      security:
+      - sessionAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Liveness'
+          description: ''
+  /api/v1/health/ready/:
+    get:
+      operationId: health_ready_retrieve
+      description: Process and its required dependencies (DB, Redis) are reachable.
+      tags:
+      - health
+      security:
+      - sessionAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Readiness'
+          description: ''
+  /api/v1/permissions/:
+    get:
+      operationId: permissions_list
+      tags:
+      - permissions
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Permission'
+          description: ''
+  /api/v1/roles/:
+    get:
+      operationId: roles_list
+      tags:
+      - roles
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Role'
+          description: ''
+  /api/v1/settings/security/:
+    get:
+      operationId: settings_security_retrieve
+      tags:
+      - settings
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SecuritySettings'
+          description: ''
+    patch:
+      operationId: settings_security_partial_update
+      parameters:
+      - in: header
+        name: If-Match
+        schema:
+          type: string
+        required: true
+      tags:
+      - settings
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedSecuritySettingsUpdateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedSecuritySettingsUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedSecuritySettingsUpdateRequest'
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SecuritySettings'
+          description: ''
+  /api/v1/users/:
+    get:
+      operationId: users_list
+      parameters:
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: q
+        schema:
+          type: string
+        description: Match username, display name or email
+      - in: query
+        name: role
+        schema:
+          type: string
+        description: Role code
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - active
+          - disabled
+          - locked
+      tags:
+      - users
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedUserList'
+          description: ''
+    post:
+      operationId: users_create
+      parameters:
+      - in: query
+        name: q
+        schema:
+          type: string
+        description: Match username, display name or email
+      - in: query
+        name: role
+        schema:
+          type: string
+        description: Role code
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - active
+          - disabled
+          - locked
+      tags:
+      - users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserCreateRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+  /api/v1/users/{id}/:
+    get:
+      operationId: users_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - users
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+    patch:
+      operationId: users_partial_update
+      parameters:
+      - in: header
+        name: If-Match
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedUserUpdateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedUserUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedUserUpdateRequest'
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+  /api/v1/users/{id}/disable/:
+    post:
+      operationId: users_disable_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DisableUserRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DisableUserRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DisableUserRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+  /api/v1/users/{id}/enable/:
+    post:
+      operationId: users_enable_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - users
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+  /api/v1/users/{id}/reset-password/:
+    post:
+      operationId: users_reset_password_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+  /api/v1/users/{id}/unlock/:
+    post:
+      operationId: users_unlock_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - users
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+components:
+  schemas:
+    AuditEvent:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        occurred_at:
+          type: string
+          format: date-time
+          readOnly: true
+        actor_id:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        actor_label:
+          type: string
+          readOnly: true
+        action:
+          type: string
+          readOnly: true
+        object_type:
+          type: string
+          readOnly: true
+        object_id:
+          type: string
+          readOnly: true
+        object_label:
+          type: string
+          readOnly: true
+        outcome:
+          allOf:
+          - $ref: '#/components/schemas/OutcomeEnum'
+          readOnly: true
+        source:
+          allOf:
+          - $ref: '#/components/schemas/SourceEnum'
+          readOnly: true
+        before:
+          readOnly: true
+          nullable: true
+        after:
+          readOnly: true
+          nullable: true
+        detail:
+          type: string
+          readOnly: true
+        request_id:
+          type: string
+          readOnly: true
+        ip_address:
+          type: string
+          readOnly: true
+          nullable: true
+      required:
+      - action
+      - actor_id
+      - actor_label
+      - after
+      - before
+      - detail
+      - id
+      - ip_address
+      - object_id
+      - object_label
+      - object_type
+      - occurred_at
+      - outcome
+      - request_id
+      - source
+    AuthProvider:
+      type: object
+      properties:
+        id:
+          type: string
+        kind:
+          $ref: '#/components/schemas/KindEnum'
+        label:
+          type: string
+        status:
+          $ref: '#/components/schemas/AuthProviderStatusEnum'
+      required:
+      - id
+      - kind
+      - label
+      - status
+    AuthProviderStatusEnum:
+      enum:
+      - available
+      - planned
+      type: string
+      description: |-
+        * `available` - available
+        * `planned` - planned
+    ChangePasswordRequest:
+      type: object
+      properties:
+        current_password:
+          type: string
+          minLength: 1
+          maxLength: 128
+        new_password:
+          type: string
+          minLength: 1
+          maxLength: 128
+      required:
+      - current_password
+      - new_password
+    DependencyStatus:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/DependencyStatusStatusEnum'
+        detail:
+          type: string
+      required:
+      - detail
+      - status
+    DependencyStatusStatusEnum:
+      enum:
+      - up
+      - down
+      type: string
+      description: |-
+        * `up` - up
+        * `down` - down
+    DisableUserRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          minLength: 5
+          maxLength: 500
+      required:
+      - reason
+    KindEnum:
+      enum:
+      - local
+      - oidc
+      type: string
+      description: |-
+        * `local` - local
+        * `oidc` - oidc
+    Liveness:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/LivenessStatusEnum'
+      required:
+      - status
+    LivenessStatusEnum:
+      enum:
+      - ok
+      type: string
+      description: '* `ok` - ok'
+    LoginRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 1
+          maxLength: 150
+        password:
+          type: string
+          minLength: 1
+          maxLength: 128
+      required:
+      - password
+      - username
+    Me:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        username:
+          type: string
+          readOnly: true
+        display_name:
+          type: string
+          readOnly: true
+        email:
+          type: string
+          format: email
+          readOnly: true
+        roles:
+          type: array
+          items:
+            $ref: '#/components/schemas/RoleSummary'
+          readOnly: true
+        permissions:
+          type: array
+          items:
+            type: string
+          readOnly: true
+        must_change_password:
+          type: boolean
+          readOnly: true
+      required:
+      - display_name
+      - email
+      - id
+      - must_change_password
+      - permissions
+      - roles
+      - username
+    OutcomeEnum:
+      enum:
+      - success
+      - failure
+      - denied
+      type: string
+      description: |-
+        * `success` - Success
+        * `failure` - Failure
+        * `denied` - Denied
+    PaginatedAuditEventList:
+      type: object
+      required:
+      - items
+      - next_cursor
+      - previous_cursor
+      - count
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditEvent'
+        next_cursor:
+          type: string
+          nullable: true
+        previous_cursor:
+          type: string
+          nullable: true
+        count:
+          type: integer
+    PaginatedUserList:
+      type: object
+      required:
+      - items
+      - next_cursor
+      - previous_cursor
+      - count
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'
+        next_cursor:
+          type: string
+          nullable: true
+        previous_cursor:
+          type: string
+          nullable: true
+        count:
+          type: integer
+    PatchedSecuritySettingsUpdateRequest:
+      type: object
+      properties:
+        session_idle_timeout_minutes:
+          type: integer
+        session_absolute_timeout_hours:
+          type: integer
+        lockout_threshold:
+          type: integer
+        lockout_duration_minutes:
+          type: integer
+        password_min_length:
+          type: integer
+    PatchedUserUpdateRequest:
+      type: object
+      properties:
+        display_name:
+          type: string
+          minLength: 1
+          maxLength: 150
+        email:
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 254
+          - type: string
+            maxLength: 0
+        roles:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 50
+    Permission:
+      type: object
+      properties:
+        code:
+          type: string
+          readOnly: true
+        description:
+          type: string
+          readOnly: true
+      required:
+      - code
+      - description
+    Readiness:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/ReadinessStatusEnum'
+        dependencies:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/DependencyStatus'
+      required:
+      - dependencies
+      - status
+    ReadinessStatusEnum:
+      enum:
+      - ok
+      - degraded
+      type: string
+      description: |-
+        * `ok` - ok
+        * `degraded` - degraded
+    ResetPasswordRequest:
+      type: object
+      properties:
+        password:
+          type: string
+          writeOnly: true
+          minLength: 1
+          maxLength: 128
+      required:
+      - password
+    Role:
+      type: object
+      properties:
+        code:
+          type: string
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+        description:
+          type: string
+          readOnly: true
+        is_system:
+          type: boolean
+          readOnly: true
+        permissions:
+          type: array
+          items:
+            type: string
+          readOnly: true
+      required:
+      - code
+      - description
+      - is_system
+      - name
+      - permissions
+    RoleSummary:
+      type: object
+      properties:
+        code:
+          type: string
+          maxLength: 50
+        name:
+          type: string
+          maxLength: 100
+      required:
+      - code
+      - name
+    SecuritySettings:
+      type: object
+      properties:
+        session_idle_timeout_minutes:
+          type: integer
+          maximum: 480
+          minimum: 5
+        session_absolute_timeout_hours:
+          type: integer
+          maximum: 72
+          minimum: 1
+        lockout_threshold:
+          type: integer
+          maximum: 20
+          minimum: 3
+        lockout_duration_minutes:
+          type: integer
+          maximum: 1440
+          minimum: 1
+        password_min_length:
+          type: integer
+          maximum: 128
+          minimum: 12
+        version:
+          type: integer
+          readOnly: true
+        modified_at:
+          type: string
+          format: date-time
+          readOnly: true
+        modified_by:
+          type: string
+          readOnly: true
+          nullable: true
+      required:
+      - lockout_duration_minutes
+      - lockout_threshold
+      - modified_at
+      - modified_by
+      - password_min_length
+      - session_absolute_timeout_hours
+      - session_idle_timeout_minutes
+      - version
+    SourceEnum:
+      enum:
+      - api
+      - cli
+      - system
+      type: string
+      description: |-
+        * `api` - API
+        * `cli` - Command line
+        * `system` - System
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        username:
+          type: string
+          readOnly: true
+        display_name:
+          type: string
+          readOnly: true
+        email:
+          type: string
+          format: email
+          readOnly: true
+        roles:
+          type: array
+          items:
+            $ref: '#/components/schemas/RoleSummary'
+          readOnly: true
+        is_active:
+          type: boolean
+          readOnly: true
+        is_locked:
+          type: boolean
+          readOnly: true
+        locked_until:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        must_change_password:
+          type: boolean
+          readOnly: true
+        last_login:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        password_changed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        disabled_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        disabled_by:
+          type: string
+          readOnly: true
+          nullable: true
+        disabled_reason:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        created_by:
+          type: string
+          readOnly: true
+          nullable: true
+        modified_at:
+          type: string
+          format: date-time
+          readOnly: true
+        version:
+          type: integer
+          readOnly: true
+      required:
+      - created_at
+      - created_by
+      - disabled_at
+      - disabled_by
+      - disabled_reason
+      - display_name
+      - email
+      - id
+      - is_active
+      - is_locked
+      - last_login
+      - locked_until
+      - modified_at
+      - must_change_password
+      - password_changed_at
+      - roles
+      - username
+      - version
+    UserCreateRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 1
+          maxLength: 150
+        display_name:
+          type: string
+          minLength: 1
+          maxLength: 150
+        email:
+          oneOf:
+          - type: string
+            format: email
+            default: ''
+            maxLength: 254
+          - type: string
+            maxLength: 0
+        roles:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 50
+        password:
+          type: string
+          writeOnly: true
+          minLength: 1
+          maxLength: 128
+      required:
+      - display_name
+      - password
+      - roles
+      - username
+  securitySchemes:
+    sessionAuth:
+      type: apiKey
+      in: cookie
+      name: itam_session

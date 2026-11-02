@@ -1,0 +1,98 @@
+# Environment-neutral service definitions. Always combine with compose.dev.yaml
+# or compose.prod.yaml. No ports are published here; PostgreSQL is the only
+# database engine for every Compose environment.
+name: itam
+
+x-backend-env: &backend-env
+  ITAM_ENV: ${ITAM_ENV:?ITAM_ENV is required}
+  ITAM_ALLOWED_HOSTS: ${ITAM_ALLOWED_HOSTS:?ITAM_ALLOWED_HOSTS is required}
+  ITAM_TIMEZONE: ${ITAM_TIMEZONE:-Asia/Nicosia}
+  ITAM_LOG_LEVEL: ${ITAM_LOG_LEVEL:-INFO}
+  DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?DJANGO_SECRET_KEY is required}
+  POSTGRES_DB: ${POSTGRES_DB:-itam}
+  POSTGRES_USER: ${POSTGRES_USER:-itam}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+  POSTGRES_HOST: postgres
+  POSTGRES_PORT: "5432"
+  REDIS_URL: redis://redis:6379/0
+
+x-backend-depends: &backend-depends
+  postgres:
+    condition: service_healthy
+  redis:
+    condition: service_healthy
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-itam}
+      POSTGRES_USER: ${POSTGRES_USER:-itam}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - backend
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - backend
+
+  api:
+    environment: *backend-env
+    depends_on: *backend-depends
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/api/v1/health/live/', timeout=3).status == 200 else 1)"
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+    networks:
+      - backend
+      - frontend
+
+  worker:
+    command: ["celery", "-A", "config", "worker", "--loglevel=INFO"]
+    environment: *backend-env
+    depends_on: *backend-depends
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A config inspect ping -d celery@$$HOSTNAME --timeout 5"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - backend
+
+  scheduler:
+    command: ["celery", "-A", "config", "beat", "--loglevel=INFO", "--schedule", "/tmp/celerybeat-schedule"]
+    environment: *backend-env
+    depends_on: *backend-depends
+    networks:
+      - backend
+
+  frontend:
+    networks:
+      - frontend
+
+networks:
+  backend:
+  frontend:
+
+volumes:
+  postgres_data:

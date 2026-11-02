@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.pyc
+*.sqlite3
+staticfiles/
+.env
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+schema_check.yaml

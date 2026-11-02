@@ -1,0 +1,94 @@
+# Production overrides. PostgreSQL and Redis publish no host ports; only the
+# reverse proxy publishes 443. Never combine with compose.dev.yaml.
+x-prod-backend-env: &prod-backend-env
+  DJANGO_SETTINGS_MODULE: config.settings.production
+  ITAM_DEBUG: "false"
+  # nginx-proxy appends the client address to X-Forwarded-For.
+  ITAM_TRUSTED_PROXY_COUNT: "1"
+
+x-prod-backend: &prod-backend
+  build:
+    context: ../backend
+    dockerfile: Dockerfile
+  environment: *prod-backend-env
+  restart: unless-stopped
+  read_only: true
+  tmpfs:
+    - /tmp
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+  stop_grace_period: 30s
+
+services:
+  api:
+    <<: *prod-backend
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 2g
+
+  worker:
+    <<: *prod-backend
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 2g
+
+  scheduler:
+    <<: *prod-backend
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 1g
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx
+      - /var/run
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+
+  nginx-proxy:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+      frontend:
+        condition: service_started
+    ports:
+      - "443:443"
+    volumes:
+      - ./nginx/prod.conf:/etc/nginx/conf.d/default.conf:ro
+      - ${ITAM_TLS_CERT_DIR:?ITAM_TLS_CERT_DIR is required}:/etc/nginx/tls:ro
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx
+      - /var/run
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - frontend
+
+  postgres:
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 4g
+
+  redis:
+    restart: unless-stopped

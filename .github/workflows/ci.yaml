@@ -1,0 +1,142 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend (PostgreSQL + Redis)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: itam
+          POSTGRES_USER: itam
+          # Ephemeral CI-only service container credential; not used anywhere else.
+          POSTGRES_PASSWORD: ci-only-ephemeral
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U itam -d itam"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DJANGO_SETTINGS_MODULE: config.settings.test
+      DJANGO_SECRET_KEY: ci-only-test-secret
+      POSTGRES_DB: itam
+      POSTGRES_USER: itam
+      POSTGRES_PASSWORD: ci-only-ephemeral
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: "5432"
+      REDIS_URL: redis://localhost:6379/0
+    defaults:
+      run:
+        shell: bash
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.13.6"
+      - name: Refuse SQLite fallback in CI
+        run: test -z "${ITAM_TEST_DB_SQLITE:-}"
+      - run: uv sync --frozen --group dev
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - name: Migration drift check
+        run: uv run python manage.py makemigrations --check --dry-run
+      - name: Apply migrations to PostgreSQL
+        run: |
+          uv run python manage.py migrate --no-input
+          uv run python manage.py migrate --check
+      - name: Migrations reverse cleanly
+        run: |
+          uv run python manage.py migrate audit zero --no-input
+          uv run python manage.py migrate accounts zero --no-input
+          uv run python manage.py migrate --no-input
+      - name: OpenAPI schema validation and drift check
+        run: |
+          uv run python manage.py spectacular --validate --fail-on-warn --file /tmp/schema.yaml
+          diff -u ../frontend/src/shared/api/openapi.yaml /tmp/schema.yaml
+      - name: Unit + PostgreSQL/Redis integration tests (no skips allowed)
+        run: |
+          uv run python -m pytest -q -rs | tee /tmp/pytest.log
+          ! grep -q "SKIPPED" /tmp/pytest.log
+      - name: Production settings deploy check
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings.production
+          ITAM_ALLOWED_HOSTS: itam.ci.invalid
+        run: |
+          export DJANGO_SECRET_KEY="$(python3 -c 'import secrets;print(secrets.token_urlsafe(64))')"
+          uv run python manage.py check --deploy --fail-level WARNING
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: "10"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - name: Generated API types match committed OpenAPI schema
+        run: |
+          pnpm run gen:api
+          git diff --exit-code -- src/shared/api/schema.d.ts
+      - run: pnpm run lint
+      - run: pnpm run typecheck
+      - run: pnpm run test
+      - run: pnpm run build
+
+  compose:
+    name: Compose config + image build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - name: Write throwaway CI env file
+        run: |
+          {
+            echo "ITAM_ENV=ci"
+            echo "ITAM_ALLOWED_HOSTS=itam.ci.invalid"
+            echo "DJANGO_SECRET_KEY=$(python3 -c 'import secrets;print(secrets.token_urlsafe(64))')"
+            echo "POSTGRES_PASSWORD=$(python3 -c 'import secrets;print(secrets.token_urlsafe(24))')"
+            echo "ITAM_TLS_CERT_DIR=/tmp/itam-tls"
+          } > .env
+      - name: Validate dev and prod compose
+        run: |
+          bash scripts/compose.sh dev config --quiet
+          bash scripts/compose.sh prod config --quiet
+      - name: Prod must not publish PostgreSQL or Redis ports
+        run: |
+          bash scripts/compose.sh prod config --format json > /tmp/prod.json
+          test "$(jq '[.services.postgres.ports // [], .services.redis.ports // []] | add | length' /tmp/prod.json)" = "0"
+          test "$(jq -r '[.services[] | select(.ports) | .ports[].published] | join(",")' /tmp/prod.json)" = "443"
+          test "$(jq -r '.services.api.environment.DJANGO_SETTINGS_MODULE' /tmp/prod.json)" = "config.settings.production"
+          test "$(jq -r '.services.api.environment.ITAM_DEBUG' /tmp/prod.json)" = "false"
+          test "$(jq '.services | has("mailpit")' /tmp/prod.json)" = "false"
+      - name: Build production images
+        run: bash scripts/compose.sh prod build api frontend

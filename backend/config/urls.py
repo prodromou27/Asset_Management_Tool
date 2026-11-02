@@ -1,0 +1,25 @@
+from django.urls import include, path
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
+
+from apps.accounts import views as account_views
+from apps.accounts.urls import auth_urlpatterns, user_urlpatterns
+
+urlpatterns = [
+    path("api/v1/health/", include("apps.health.urls")),
+    path("api/v1/auth/", include(auth_urlpatterns)),
+    path("api/v1/users/", include(user_urlpatterns)),
+    path("api/v1/roles/", account_views.RoleListView.as_view(), name="role-list"),
+    path("api/v1/permissions/", account_views.PermissionListView.as_view(), name="permission-list"),
+    path(
+        "api/v1/settings/security/",
+        account_views.SecuritySettingsView.as_view(),
+        name="settings-security",
+    ),
+    path("api/v1/audit/", include("apps.audit.urls")),
+    path("api/v1/schema/", SpectacularAPIView.as_view(), name="schema"),
+    path(
+        "api/v1/docs/",
+        SpectacularSwaggerView.as_view(url_name="schema"),
+        name="swagger-ui",
+    ),
+]

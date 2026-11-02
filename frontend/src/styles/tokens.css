@@ -1,0 +1,37 @@
+/* Light theme tokens from docs/07_UI_DESIGN_SYSTEM.md. Change only via design review. */
+:root {
+  --color-page-bg: #f6f8fa;
+  --color-surface: #ffffff;
+  --color-text-primary: #17212b;
+  --color-text-secondary: #5f6c79;
+  --color-border: #e0e6eb;
+  --color-brand: #175e70;
+  --color-link: #175e70;
+  --color-success: #16734a;
+  --color-warning: #a45a0c;
+  --color-danger: #b63636;
+  --color-neutral: #65717d;
+  --color-focus-ring: #2f7f94;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+
+  --size-control: 36px;
+  --size-row: 40px;
+  --size-topbar: 56px;
+  --size-sidebar: 240px;
+
+  --font-sans: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Consolas, monospace;
+
+  --shadow-overlay: 0 8px 24px rgb(23 33 43 / 16%);
+  --duration-fast: 120ms;
+}
