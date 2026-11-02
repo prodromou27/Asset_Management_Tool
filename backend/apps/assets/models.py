@@ -201,6 +201,18 @@ class Asset(models.Model):
         return self.archived_at is not None
 
 
+# Fields a discovery source may populate. Everything else on Asset is business-owned
+# and never written by discovery (docs/00, docs/05).
+TECHNICAL_FIELDS = (
+    "manufacturer",
+    "model",
+    "serial_number",
+    "os_name",
+    "os_version",
+    "firmware_version",
+)
+
+
 class Source(models.TextChoices):
     """Where a network identifier came from. Only `manual` rows are editable via the API."""
 
@@ -210,6 +222,7 @@ class Source(models.TextChoices):
     INTUNE = "intune", "Intune"
     DEFENDER = "defender", "Defender"
     IMPORT = "import", "Import"
+    FIXTURE = "fixture", "Fixture import"
 
 
 class _Evidence(models.Model):
@@ -246,6 +259,11 @@ class AssetIPAddress(_Evidence):
     )
     address = models.GenericIPAddressField()
     is_primary = models.BooleanField(default=False)
+    # IPs are only meaningful within a site/VRF (docs/03); never globally unique.
+    site = models.ForeignKey(
+        Site, null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
+    vrf = models.CharField(max_length=64, blank=True)
 
     class Meta:
         ordering = ["-is_primary", "address"]
@@ -283,6 +301,13 @@ class AssetHistoryEntry(models.Model):
         RECLASSIFIED = "reclassified", "Reclassified"
         ARCHIVED = "archived", "Archived"
         RESTORED = "restored", "Restored"
+        DISCOVERED = "discovered", "Updated from source"
+        LINKED = "linked", "Source linked"
+        UNLINKED = "unlinked", "Source unlinked"
+        MERGED = "merged", "Merged"
+        UNMERGED = "unmerged", "Merge reverted"
+        FIELD_LOCKED = "field_locked", "Field locked"
+        FIELD_UNLOCKED = "field_unlocked", "Field unlocked"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     asset = models.ForeignKey(Asset, on_delete=models.PROTECT, related_name="history")
@@ -308,3 +333,55 @@ class AssetHistoryEntry(models.Model):
 
     def delete(self, *args, **kwargs):
         raise RuntimeError("Asset history is append-only")
+
+
+class FieldProvenance(models.Model):
+    """Where the current value of one technical field came from."""
+
+    class Kind(models.TextChoices):
+        MANUAL = "manual", "Manual"
+        DISCOVERY = "discovery", "Discovery"
+
+    asset = models.ForeignKey(Asset, on_delete=models.CASCADE, related_name="field_provenance")
+    field = models.CharField(max_length=40)
+    kind = models.CharField(max_length=20, choices=Kind.choices)
+    instance = models.ForeignKey(
+        "integrations.IntegrationInstance",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="+",
+    )
+    observation = models.ForeignKey(
+        "observations.Observation",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="+",
+    )
+    value = models.CharField(max_length=200, blank=True)
+    observed_at = models.DateTimeField(null=True, blank=True)
+    recorded_at = models.DateTimeField(auto_now=True)
+    recorded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint("asset", "field", name="assets_field_provenance_unique")
+        ]
+
+
+class FieldLock(models.Model):
+    """Manually approved value: discovery may not overwrite it, only raise a conflict."""
+
+    asset = models.ForeignKey(Asset, on_delete=models.CASCADE, related_name="field_locks")
+    field = models.CharField(max_length=40)
+    locked_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
+    locked_at = models.DateTimeField(auto_now_add=True)
+    reason = models.CharField(max_length=300, blank=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint("asset", "field", name="assets_field_lock_unique")]

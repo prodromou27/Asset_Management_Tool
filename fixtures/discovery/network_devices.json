@@ -1,0 +1,65 @@
+[
+  {
+    "external_id": "101",
+    "observed_at": "2026-11-02T06:00:00Z",
+    "manufacturer": "Cisco Systems, Inc.",
+    "model": "C9300-48T",
+    "serial": "FXS0000A101",
+    "hostname": "sw-core-01.corp.example",
+    "interfaces": [{"name": "Vlan10", "mac": "02:00:5e:00:01:01", "ips": ["192.0.2.11"]}],
+    "os_name": "IOS XE",
+    "os_version": "17.9.4",
+    "firmware_version": "17.9.4",
+    "device_type": "switch",
+    "source_version": "fixture-1"
+  },
+  {
+    "external_id": "102",
+    "observed_at": "2026-11-02T06:00:00Z",
+    "manufacturer": "Fortinet, Inc.",
+    "model": "FortiGate 100F",
+    "serial": "FGT0000000000102",
+    "hostname": "fw-edge-01.corp.example",
+    "interfaces": [
+      {"name": "port1", "mac": "02:00:5e:00:01:02", "ips": ["198.51.100.2"]},
+      {"name": "internal", "mac": "02:00:5e:00:01:03", "ips": ["192.0.2.1"]}
+    ],
+    "os_name": "FortiOS",
+    "os_version": "7.4.3",
+    "device_type": "firewall",
+    "source_version": "fixture-1"
+  },
+  {
+    "external_id": "103",
+    "observed_at": "2026-11-02T06:00:00Z",
+    "manufacturer": "Hewlett-Packard",
+    "model": "LaserJet M507",
+    "serial": "To be filled by O.E.M.",
+    "hostname": "prn-floor2.corp.example",
+    "interfaces": [{"name": "eth0", "mac": "02:00:5e:00:01:04", "ips": ["192.0.2.40"]}],
+    "device_type": "printer",
+    "source_version": "fixture-1"
+  },
+  {
+    "external_id": "104",
+    "observed_at": "2026-11-02T06:00:00Z",
+    "manufacturer": "APC by Schneider Electric",
+    "model": "Smart-UPS 3000",
+    "serial": "AS0000000104",
+    "device_type": "ups",
+    "source_version": "fixture-1"
+  },
+  {
+    "external_id": "105",
+    "observed_at": "2026-11-02T06:00:00Z",
+    "manufacturer": "Cisco Systems, Inc.",
+    "model": "C9200-24P",
+    "serial": "JAE0000A105",
+    "hostname": "sw-core-01.corp.example",
+    "interfaces": [{"name": "Vlan10", "mac": "02:00:5e:00:01:05", "ips": ["192.0.2.12"]}],
+    "os_name": "IOS XE",
+    "os_version": "17.6.5",
+    "device_type": "switch",
+    "source_version": "fixture-1"
+  }
+]

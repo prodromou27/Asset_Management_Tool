@@ -522,6 +522,93 @@ paths:
               schema:
                 $ref: '#/components/schemas/ClassificationImpact'
           description: ''
+  /api/v1/assets/{id}/evidence/:
+    get:
+      operationId: assets_evidence_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - assets
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetEvidence'
+          description: ''
+  /api/v1/assets/{id}/field-locks/:
+    post:
+      operationId: assets_field_locks_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - assets
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LockRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LockRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LockRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetEvidence'
+          description: ''
+  /api/v1/assets/{id}/field-locks/unlock/:
+    post:
+      operationId: assets_field_locks_unlock_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - assets
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LockRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LockRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LockRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetEvidence'
+          description: ''
   /api/v1/assets/{id}/history/:
     get:
       operationId: assets_history_list
@@ -554,6 +641,77 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PaginatedAssetHistoryList'
+          description: ''
+  /api/v1/assets/{id}/merge/:
+    post:
+      operationId: assets_merge_create
+      parameters:
+      - in: header
+        name: If-Match
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - assets
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MergeRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MergeRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MergeRequestRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetMerge'
+          description: ''
+  /api/v1/assets/{id}/observations/:
+    get:
+      operationId: assets_observations_list
+      parameters:
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      tags:
+      - assets
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedObservationDetailList'
           description: ''
   /api/v1/assets/{id}/restore/:
     post:
@@ -880,6 +1038,259 @@ paths:
               schema:
                 $ref: '#/components/schemas/Department'
           description: ''
+  /api/v1/discovery/candidates/:
+    get:
+      operationId: discovery_candidates_list
+      parameters:
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - in: query
+        name: instance
+        schema:
+          type: string
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: rule
+        schema:
+          type: string
+          enum:
+          - conflict
+          - corroborated
+          - new_device
+          - strong
+          - weak
+      - in: query
+        name: status
+        schema:
+          type: string
+        description: 'Default: open and held. Or one of open, held, linked, created,
+          rejected, superseded, all.'
+      tags:
+      - discovery
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedCandidateList'
+          description: ''
+  /api/v1/discovery/candidates/{id}/:
+    get:
+      operationId: discovery_candidates_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - discovery
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Candidate'
+          description: ''
+  /api/v1/discovery/conflicts/:
+    get:
+      operationId: discovery_conflicts_list
+      parameters:
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - accepted
+          - all
+          - dismissed
+          - open
+      tags:
+      - discovery
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedFieldConflictList'
+          description: ''
+  /api/v1/discovery/conflicts/{id}/resolve/:
+    post:
+      operationId: discovery_conflicts_resolve_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - discovery
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResolveConflictRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ResolveConflictRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ResolveConflictRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FieldConflict'
+          description: ''
+  /api/v1/discovery/field-authority/:
+    get:
+      operationId: discovery_field_authority_retrieve
+      tags:
+      - discovery
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FieldAuthorityPolicy'
+          description: ''
+    patch:
+      operationId: discovery_field_authority_partial_update
+      parameters:
+      - in: header
+        name: If-Match
+        schema:
+          type: string
+        required: true
+      tags:
+      - discovery
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedFieldAuthorityPolicyRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedFieldAuthorityPolicyRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedFieldAuthorityPolicyRequest'
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FieldAuthorityPolicy'
+          description: ''
+  /api/v1/discovery/observations/:
+    get:
+      operationId: discovery_observations_list
+      parameters:
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - in: query
+        name: external_id
+        schema:
+          type: string
+      - in: query
+        name: instance
+        schema:
+          type: string
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      tags:
+      - discovery
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedObservationSummaryList'
+          description: ''
+  /api/v1/discovery/observations/{id}/:
+    get:
+      operationId: discovery_observations_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - discovery
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ObservationDetail'
+          description: ''
+  /api/v1/discovery/sources/:
+    get:
+      operationId: discovery_sources_list
+      tags:
+      - discovery
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DiscoverySource'
+          description: ''
   /api/v1/health/live/:
     get:
       operationId: health_live_retrieve
@@ -911,6 +1322,137 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Readiness'
+          description: ''
+  /api/v1/integrations/:
+    get:
+      operationId: integrations_list
+      tags:
+      - integrations
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/IntegrationInstance'
+          description: ''
+    post:
+      operationId: integrations_create
+      tags:
+      - integrations
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IntegrationInstanceWriteRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/IntegrationInstanceWriteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/IntegrationInstanceWriteRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationInstance'
+          description: ''
+  /api/v1/integrations/{id}/:
+    get:
+      operationId: integrations_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - integrations
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationInstance'
+          description: ''
+    patch:
+      operationId: integrations_partial_update
+      parameters:
+      - in: header
+        name: If-Match
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - integrations
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedIntegrationInstanceWriteRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedIntegrationInstanceWriteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedIntegrationInstanceWriteRequest'
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationInstance'
+          description: ''
+  /api/v1/integrations/{id}/runs/:
+    get:
+      operationId: integrations_runs_list
+      parameters:
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      tags:
+      - integrations
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSyncRunList'
           description: ''
   /api/v1/locations/:
     get:
@@ -1022,6 +1564,39 @@ paths:
               schema:
                 $ref: '#/components/schemas/Location'
           description: ''
+  /api/v1/merges/{id}/revert/:
+    post:
+      operationId: merges_revert_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - merges
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetMerge'
+          description: ''
   /api/v1/permissions/:
     get:
       operationId: permissions_list
@@ -1037,6 +1612,120 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Permission'
+          description: ''
+  /api/v1/reconciliation/{id}/approve/:
+    post:
+      operationId: reconciliation_approve_create
+      parameters:
+      - in: header
+        name: If-Match
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - reconciliation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApproveRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ApproveRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ApproveRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Candidate'
+          description: ''
+  /api/v1/reconciliation/{id}/hold/:
+    post:
+      operationId: reconciliation_hold_create
+      parameters:
+      - in: header
+        name: If-Match
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - reconciliation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Candidate'
+          description: ''
+  /api/v1/reconciliation/{id}/reject/:
+    post:
+      operationId: reconciliation_reject_create
+      parameters:
+      - in: header
+        name: If-Match
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - reconciliation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Candidate'
           description: ''
   /api/v1/roles/:
     get:
@@ -1195,6 +1884,39 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Site'
+          description: ''
+  /api/v1/source-links/{id}/unlink/:
+    post:
+      operationId: source_links_unlink_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - source-links
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SourceLink'
           description: ''
   /api/v1/users/:
     get:
@@ -1476,6 +2198,37 @@ paths:
           description: ''
 components:
   schemas:
+    ActionEnum:
+      enum:
+      - link
+      - create
+      type: string
+      description: |-
+        * `link` - link
+        * `create` - create
+    ApproveRequest:
+      type: object
+      properties:
+        action:
+          $ref: '#/components/schemas/ActionEnum'
+        asset:
+          type: string
+          format: uuid
+        category:
+          type: string
+          format: uuid
+        name:
+          type: string
+          maxLength: 200
+        business_status:
+          $ref: '#/components/schemas/BusinessStatusEnum'
+        reason:
+          type: string
+          minLength: 5
+          maxLength: 500
+      required:
+      - action
+      - reason
     AssetCategory:
       type: object
       properties:
@@ -1731,6 +2484,25 @@ components:
       - site
       - support_status
       - version
+    AssetEvidence:
+      type: object
+      properties:
+        field_evidence:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldEvidence'
+        links:
+          type: array
+          items:
+            $ref: '#/components/schemas/SourceLink'
+        merges:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssetMerge'
+      required:
+      - field_evidence
+      - links
+      - merges
     AssetHistory:
       type: object
       properties:
@@ -1861,6 +2633,73 @@ components:
       - site
       - support_status
       - version
+    AssetMerge:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        survivor:
+          allOf:
+          - $ref: '#/components/schemas/Ref'
+          readOnly: true
+        merged:
+          allOf:
+          - $ref: '#/components/schemas/Ref'
+          readOnly: true
+        reason:
+          type: string
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/AssetMergeStatusEnum'
+          readOnly: true
+        moved_link_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          readOnly: true
+        performed_by:
+          type: string
+          readOnly: true
+        performed_at:
+          type: string
+          format: date-time
+          readOnly: true
+        reverted_by:
+          type: string
+          readOnly: true
+          nullable: true
+        reverted_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        revert_reason:
+          type: string
+          readOnly: true
+      required:
+      - id
+      - merged
+      - moved_link_ids
+      - performed_at
+      - performed_by
+      - reason
+      - revert_reason
+      - reverted_at
+      - reverted_by
+      - status
+      - survivor
+    AssetMergeStatusEnum:
+      enum:
+      - merged
+      - reverted
+      type: string
+      description: |-
+        * `merged` - Merged
+        * `reverted` - Reverted
     AssetWriteRequest:
       type: object
       description: Create (all fields) and PATCH (partial; category excluded — use
@@ -2047,6 +2886,14 @@ components:
       description: |-
         * `available` - available
         * `planned` - planned
+    AvailabilityEnum:
+      enum:
+      - planned
+      - available
+      type: string
+      description: |-
+        * `planned` - Planned
+        * `available` - Available
     BusinessStatusEnum:
       enum:
       - ordered
@@ -2067,6 +2914,131 @@ components:
         * `retired` - Retired
         * `disposed` - Disposed
         * `lost` - Lost
+    Candidate:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        instance:
+          allOf:
+          - $ref: '#/components/schemas/InstanceRef'
+          readOnly: true
+        external_id:
+          type: string
+          readOnly: true
+        site:
+          allOf:
+          - $ref: '#/components/schemas/SiteRef'
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/CandidateStatusEnum'
+          readOnly: true
+        rule:
+          allOf:
+          - $ref: '#/components/schemas/RuleEnum'
+          readOnly: true
+        score:
+          type: integer
+          readOnly: true
+        proposed_asset:
+          allOf:
+          - $ref: '#/components/schemas/Ref'
+          nullable: true
+          readOnly: true
+        matches:
+          type: array
+          items:
+            $ref: '#/components/schemas/Match'
+          readOnly: true
+        hidden_match_count:
+          type: integer
+          readOnly: true
+        conflicts:
+          type: array
+          items:
+            type: string
+          readOnly: true
+        suggested_category:
+          allOf:
+          - $ref: '#/components/schemas/Ref'
+          readOnly: true
+          nullable: true
+        observation:
+          allOf:
+          - $ref: '#/components/schemas/ObservationSummary'
+          readOnly: true
+        decision:
+          type: string
+          readOnly: true
+        decision_reason:
+          type: string
+          readOnly: true
+        decided_by:
+          type: string
+          readOnly: true
+          nullable: true
+        decided_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        resulting_asset:
+          allOf:
+          - $ref: '#/components/schemas/Ref'
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        modified_at:
+          type: string
+          format: date-time
+          readOnly: true
+        version:
+          type: integer
+          readOnly: true
+      required:
+      - conflicts
+      - created_at
+      - decided_at
+      - decided_by
+      - decision
+      - decision_reason
+      - external_id
+      - hidden_match_count
+      - id
+      - instance
+      - matches
+      - modified_at
+      - observation
+      - proposed_asset
+      - resulting_asset
+      - rule
+      - score
+      - site
+      - status
+      - suggested_category
+      - version
+    CandidateStatusEnum:
+      enum:
+      - open
+      - held
+      - linked
+      - created
+      - rejected
+      - superseded
+      type: string
+      description: |-
+        * `open` - Open
+        * `held` - On hold
+        * `linked` - Linked
+        * `created` - Asset created
+        * `rejected` - Rejected
+        * `superseded` - Superseded
     CategoryRef:
       type: object
       properties:
@@ -2103,6 +3075,13 @@ components:
       - reclassified
       - archived
       - restored
+      - discovered
+      - linked
+      - unlinked
+      - merged
+      - unmerged
+      - field_locked
+      - field_unlocked
       type: string
       description: |-
         * `created` - Created
@@ -2111,6 +3090,13 @@ components:
         * `reclassified` - Reclassified
         * `archived` - Archived
         * `restored` - Restored
+        * `discovered` - Updated from source
+        * `linked` - Source linked
+        * `unlinked` - Source unlinked
+        * `merged` - Merged
+        * `unmerged` - Merge reverted
+        * `field_locked` - Field locked
+        * `field_unlocked` - Field unlocked
     ClassificationImpact:
       type: object
       properties:
@@ -2368,6 +3354,50 @@ components:
           maxLength: 500
       required:
       - reason
+    DiscoverySource:
+      type: object
+      properties:
+        code:
+          type: string
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/DiscoverySourceKindEnum'
+          readOnly: true
+        availability:
+          allOf:
+          - $ref: '#/components/schemas/AvailabilityEnum'
+          readOnly: true
+        description:
+          type: string
+          readOnly: true
+        instance_count:
+          type: integer
+          readOnly: true
+      required:
+      - availability
+      - code
+      - description
+      - instance_count
+      - kind
+      - name
+    DiscoverySourceKindEnum:
+      enum:
+      - network
+      - endpoint
+      - security
+      - directory
+      - import
+      type: string
+      description: |-
+        * `network` - Network inventory
+        * `endpoint` - Endpoint management
+        * `security` - Security
+        * `directory` - Directory and licensing
+        * `import` - Import
     EvidenceSourceEnum:
       enum:
       - manual
@@ -2376,6 +3406,7 @@ components:
       - intune
       - defender
       - import
+      - fixture
       type: string
       description: |-
         * `manual` - Manual
@@ -2384,6 +3415,7 @@ components:
         * `intune` - Intune
         * `defender` - Defender
         * `import` - Import
+        * `fixture` - Fixture import
     FieldAdded:
       type: object
       properties:
@@ -2397,6 +3429,162 @@ components:
       - key
       - label
       - required
+    FieldAuthorityPolicy:
+      type: object
+      properties:
+        precedence:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+        version:
+          type: integer
+          readOnly: true
+        modified_at:
+          type: string
+          format: date-time
+          readOnly: true
+        modified_by:
+          type: string
+          readOnly: true
+          nullable: true
+      required:
+      - modified_at
+      - modified_by
+      - precedence
+      - version
+    FieldConflict:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        asset:
+          allOf:
+          - $ref: '#/components/schemas/Ref'
+          readOnly: true
+        field:
+          type: string
+          readOnly: true
+        current_value:
+          type: string
+          readOnly: true
+        observed_value:
+          type: string
+          readOnly: true
+        reason:
+          type: string
+          readOnly: true
+        instance:
+          allOf:
+          - $ref: '#/components/schemas/InstanceRef'
+          readOnly: true
+        observation:
+          type: string
+          format: uuid
+          readOnly: true
+        observed_at:
+          type: string
+          format: date-time
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/FieldConflictStatusEnum'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        modified_at:
+          type: string
+          format: date-time
+          readOnly: true
+        resolved_by:
+          type: string
+          readOnly: true
+          nullable: true
+        resolved_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        resolution_reason:
+          type: string
+          readOnly: true
+      required:
+      - asset
+      - created_at
+      - current_value
+      - field
+      - id
+      - instance
+      - modified_at
+      - observation
+      - observed_at
+      - observed_value
+      - reason
+      - resolution_reason
+      - resolved_at
+      - resolved_by
+      - status
+    FieldConflictStatusEnum:
+      enum:
+      - open
+      - accepted
+      - dismissed
+      type: string
+      description: |-
+        * `open` - Open
+        * `accepted` - Observed value accepted
+        * `dismissed` - Current value kept
+    FieldEnum:
+      enum:
+      - manufacturer
+      - model
+      - serial_number
+      - os_name
+      - os_version
+      - firmware_version
+      type: string
+      description: |-
+        * `manufacturer` - manufacturer
+        * `model` - model
+        * `serial_number` - serial_number
+        * `os_name` - os_name
+        * `os_version` - os_version
+        * `firmware_version` - firmware_version
+    FieldEvidence:
+      type: object
+      properties:
+        field:
+          type: string
+        value:
+          type: string
+        provenance:
+          allOf:
+          - $ref: '#/components/schemas/Provenance'
+          nullable: true
+        lock:
+          allOf:
+          - $ref: '#/components/schemas/LockInfo'
+          nullable: true
+        sources:
+          type: array
+          items:
+            $ref: '#/components/schemas/SourceValue'
+        open_conflicts:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldConflict'
+      required:
+      - field
+      - lock
+      - open_conflicts
+      - provenance
+      - sources
+      - value
     FieldTypeEnum:
       enum:
       - text
@@ -2512,6 +3700,169 @@ components:
           default: false
       required:
       - address
+    InstanceRef:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        source:
+          type: string
+      required:
+      - id
+      - name
+      - source
+    IntegrationInstance:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        source:
+          allOf:
+          - $ref: '#/components/schemas/DiscoverySource'
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/IntegrationInstanceStatusEnum'
+          readOnly: true
+        is_enabled:
+          type: boolean
+          readOnly: true
+        base_url:
+          type: string
+          readOnly: true
+        default_site:
+          allOf:
+          - $ref: '#/components/schemas/SiteRef'
+          readOnly: true
+        default_vrf:
+          type: string
+          readOnly: true
+        stale_after_hours:
+          type: integer
+          readOnly: true
+        auto_link_strong_matches:
+          type: boolean
+          readOnly: true
+        last_attempt_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        last_success_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        last_error:
+          type: string
+          readOnly: true
+        active_links:
+          type: integer
+          readOnly: true
+        stale_links:
+          type: integer
+          readOnly: true
+        open_candidates:
+          type: integer
+          readOnly: true
+        freshness:
+          type: string
+          description: never | fresh | stale, from the last successful run against
+            the threshold.
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        modified_at:
+          type: string
+          format: date-time
+          readOnly: true
+        version:
+          type: integer
+          readOnly: true
+      required:
+      - active_links
+      - auto_link_strong_matches
+      - base_url
+      - created_at
+      - default_site
+      - default_vrf
+      - freshness
+      - id
+      - is_enabled
+      - last_attempt_at
+      - last_error
+      - last_success_at
+      - modified_at
+      - name
+      - open_candidates
+      - source
+      - stale_after_hours
+      - stale_links
+      - status
+      - version
+    IntegrationInstanceStatusEnum:
+      enum:
+      - configured
+      - available
+      - degraded
+      - disconnected
+      type: string
+      description: |-
+        * `configured` - Configured
+        * `available` - Available
+        * `degraded` - Degraded
+        * `disconnected` - Disconnected
+    IntegrationInstanceWriteRequest:
+      type: object
+      properties:
+        source:
+          type: string
+          minLength: 1
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        default_site:
+          type: string
+          format: uuid
+        default_vrf:
+          type: string
+          maxLength: 64
+        base_url:
+          type: string
+          maxLength: 300
+        stale_after_hours:
+          type: integer
+          maximum: 720
+          minimum: 1
+        auto_link_strong_matches:
+          type: boolean
+        is_enabled:
+          type: boolean
+        status:
+          $ref: '#/components/schemas/IntegrationInstanceWriteStatusEnum'
+      required:
+      - default_site
+      - name
+      - source
+    IntegrationInstanceWriteStatusEnum:
+      enum:
+      - configured
+      - disconnected
+      type: string
+      description: |-
+        * `configured` - configured
+        * `disconnected` - disconnected
     Interface:
       type: object
       properties:
@@ -2651,6 +4002,33 @@ components:
       required:
       - name
       - site
+    LockInfo:
+      type: object
+      properties:
+        locked_by:
+          type: string
+          nullable: true
+        locked_at:
+          type: string
+          format: date-time
+        reason:
+          type: string
+      required:
+      - locked_at
+      - locked_by
+      - reason
+    LockRequest:
+      type: object
+      properties:
+        field:
+          $ref: '#/components/schemas/FieldEnum'
+        reason:
+          type: string
+          minLength: 5
+          maxLength: 300
+      required:
+      - field
+      - reason
     LoginRequest:
       type: object
       properties:
@@ -2665,6 +4043,42 @@ components:
       required:
       - password
       - username
+    Match:
+      type: object
+      properties:
+        asset_id:
+          type: string
+          format: uuid
+        asset_name:
+          type: string
+        score:
+          type: integer
+        keys:
+          type: array
+          items:
+            $ref: '#/components/schemas/MatchKey'
+        category_agrees:
+          type: boolean
+          nullable: true
+      required:
+      - asset_id
+      - asset_name
+      - category_agrees
+      - keys
+      - score
+    MatchKey:
+      type: object
+      properties:
+        key:
+          type: string
+        strength:
+          $ref: '#/components/schemas/StrengthEnum'
+        value:
+          type: string
+      required:
+      - key
+      - strength
+      - value
     Me:
       type: object
       properties:
@@ -2707,6 +4121,89 @@ components:
       - permissions
       - roles
       - username
+    MergeRequestRequest:
+      type: object
+      properties:
+        source_asset:
+          type: string
+          format: uuid
+        reason:
+          type: string
+          minLength: 5
+          maxLength: 500
+      required:
+      - reason
+      - source_asset
+    MethodEnum:
+      enum:
+      - approved_candidate
+      - created_from_candidate
+      - auto_strong_match
+      - merge
+      type: string
+      description: |-
+        * `approved_candidate` - Approved match
+        * `created_from_candidate` - Created from discovery
+        * `auto_strong_match` - Automatic strong match
+        * `merge` - Moved by merge
+    ModeEnum:
+      enum:
+      - full
+      - incremental
+      type: string
+      description: |-
+        * `full` - Full
+        * `incremental` - Incremental
+    ObservationDetail:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        external_id:
+          type: string
+          readOnly: true
+        observed_at:
+          type: string
+          format: date-time
+          readOnly: true
+        received_at:
+          type: string
+          format: date-time
+          readOnly: true
+        checksum:
+          type: string
+          readOnly: true
+        source_version:
+          type: string
+          readOnly: true
+        normalized:
+          type: object
+          additionalProperties: {}
+          readOnly: true
+        instance:
+          allOf:
+          - $ref: '#/components/schemas/InstanceRef'
+          readOnly: true
+        payload:
+          type: object
+          additionalProperties: {}
+          readOnly: true
+        normalizer_version:
+          type: integer
+          readOnly: true
+      required:
+      - checksum
+      - external_id
+      - id
+      - instance
+      - normalized
+      - normalizer_version
+      - observed_at
+      - payload
+      - received_at
+      - source_version
     ObservationStatusEnum:
       enum:
       - recently_seen
@@ -2721,6 +4218,42 @@ components:
         * `unreachable` - Unreachable
         * `never_scanned` - Never scanned
         * `manual_only` - Manual only
+    ObservationSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        external_id:
+          type: string
+          readOnly: true
+        observed_at:
+          type: string
+          format: date-time
+          readOnly: true
+        received_at:
+          type: string
+          format: date-time
+          readOnly: true
+        checksum:
+          type: string
+          readOnly: true
+        source_version:
+          type: string
+          readOnly: true
+        normalized:
+          type: object
+          additionalProperties: {}
+          readOnly: true
+      required:
+      - checksum
+      - external_id
+      - id
+      - normalized
+      - observed_at
+      - received_at
+      - source_version
     OutcomeEnum:
       enum:
       - success
@@ -2783,6 +4316,106 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/AuditEvent'
+        next_cursor:
+          type: string
+          nullable: true
+        previous_cursor:
+          type: string
+          nullable: true
+        count:
+          type: integer
+    PaginatedCandidateList:
+      type: object
+      required:
+      - items
+      - next_cursor
+      - previous_cursor
+      - count
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Candidate'
+        next_cursor:
+          type: string
+          nullable: true
+        previous_cursor:
+          type: string
+          nullable: true
+        count:
+          type: integer
+    PaginatedFieldConflictList:
+      type: object
+      required:
+      - items
+      - next_cursor
+      - previous_cursor
+      - count
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldConflict'
+        next_cursor:
+          type: string
+          nullable: true
+        previous_cursor:
+          type: string
+          nullable: true
+        count:
+          type: integer
+    PaginatedObservationDetailList:
+      type: object
+      required:
+      - items
+      - next_cursor
+      - previous_cursor
+      - count
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ObservationDetail'
+        next_cursor:
+          type: string
+          nullable: true
+        previous_cursor:
+          type: string
+          nullable: true
+        count:
+          type: integer
+    PaginatedObservationSummaryList:
+      type: object
+      required:
+      - items
+      - next_cursor
+      - previous_cursor
+      - count
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ObservationSummary'
+        next_cursor:
+          type: string
+          nullable: true
+        previous_cursor:
+          type: string
+          nullable: true
+        count:
+          type: integer
+    PaginatedSyncRunList:
+      type: object
+      required:
+      - items
+      - next_cursor
+      - previous_cursor
+      - count
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/SyncRun'
         next_cursor:
           type: string
           nullable: true
@@ -2954,6 +4587,45 @@ components:
           maxLength: 32
         is_active:
           type: boolean
+    PatchedFieldAuthorityPolicyRequest:
+      type: object
+      properties:
+        precedence:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+              minLength: 1
+    PatchedIntegrationInstanceWriteRequest:
+      type: object
+      properties:
+        source:
+          type: string
+          minLength: 1
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        default_site:
+          type: string
+          format: uuid
+        default_vrf:
+          type: string
+          maxLength: 64
+        base_url:
+          type: string
+          maxLength: 300
+        stale_after_hours:
+          type: integer
+          maximum: 720
+          minimum: 1
+        auto_link_strong_matches:
+          type: boolean
+        is_enabled:
+          type: boolean
+        status:
+          $ref: '#/components/schemas/IntegrationInstanceWriteStatusEnum'
     PatchedLocationWriteRequest:
       type: object
       properties:
@@ -3045,6 +4717,39 @@ components:
       required:
       - code
       - description
+    Provenance:
+      type: object
+      properties:
+        kind:
+          $ref: '#/components/schemas/ProvenanceKindEnum'
+        instance:
+          allOf:
+          - $ref: '#/components/schemas/InstanceRef'
+          nullable: true
+        observed_at:
+          type: string
+          format: date-time
+          nullable: true
+        recorded_at:
+          type: string
+          format: date-time
+        recorded_by:
+          type: string
+          nullable: true
+      required:
+      - instance
+      - kind
+      - observed_at
+      - recorded_at
+      - recorded_by
+    ProvenanceKindEnum:
+      enum:
+      - manual
+      - discovery
+      type: string
+      description: |-
+        * `manual` - manual
+        * `discovery` - discovery
     Readiness:
       type: object
       properties:
@@ -3095,6 +4800,26 @@ components:
           maxLength: 128
       required:
       - password
+    ResolutionEnum:
+      enum:
+      - accept_observed
+      - keep_current
+      type: string
+      description: |-
+        * `accept_observed` - accept_observed
+        * `keep_current` - keep_current
+    ResolveConflictRequest:
+      type: object
+      properties:
+        resolution:
+          $ref: '#/components/schemas/ResolutionEnum'
+        reason:
+          type: string
+          minLength: 5
+          maxLength: 500
+      required:
+      - reason
+      - resolution
     Role:
       type: object
       properties:
@@ -3133,6 +4858,20 @@ components:
       required:
       - code
       - name
+    RuleEnum:
+      enum:
+      - new_device
+      - weak
+      - corroborated
+      - strong
+      - conflict
+      type: string
+      description: |-
+        * `new_device` - No matching asset
+        * `weak` - Weak identifier only
+        * `corroborated` - Multiple corroborating identifiers
+        * `strong` - Strong identifier
+        * `conflict` - Conflicting identifiers
     SecuritySettings:
       type: object
       properties:
@@ -3272,6 +5011,117 @@ components:
       required:
       - code
       - name
+    SourceLink:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        instance:
+          allOf:
+          - $ref: '#/components/schemas/InstanceRef'
+          readOnly: true
+        external_id:
+          type: string
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/SourceLinkStatusEnum'
+          readOnly: true
+        method:
+          allOf:
+          - $ref: '#/components/schemas/MethodEnum'
+          readOnly: true
+        first_seen_at:
+          type: string
+          format: date-time
+          readOnly: true
+        last_seen_at:
+          type: string
+          format: date-time
+          readOnly: true
+        last_observation_id:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        linked_at:
+          type: string
+          format: date-time
+          readOnly: true
+        linked_by:
+          type: string
+          readOnly: true
+          nullable: true
+        unlinked_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        unlinked_by:
+          type: string
+          readOnly: true
+          nullable: true
+        unlink_reason:
+          type: string
+          readOnly: true
+      required:
+      - external_id
+      - first_seen_at
+      - id
+      - instance
+      - last_observation_id
+      - last_seen_at
+      - linked_at
+      - linked_by
+      - method
+      - status
+      - unlink_reason
+      - unlinked_at
+      - unlinked_by
+    SourceLinkStatusEnum:
+      enum:
+      - active
+      - stale
+      - unlinked
+      type: string
+      description: |-
+        * `active` - Active
+        * `stale` - Stale
+        * `unlinked` - Unlinked
+    SourceValue:
+      type: object
+      properties:
+        instance:
+          $ref: '#/components/schemas/InstanceRef'
+        external_id:
+          type: string
+        value:
+          type: string
+          nullable: true
+        observed_at:
+          type: string
+          format: date-time
+        link_status:
+          type: string
+        differs:
+          type: boolean
+      required:
+      - differs
+      - external_id
+      - instance
+      - link_status
+      - observed_at
+      - value
+    StrengthEnum:
+      enum:
+      - strong
+      - corroborating
+      type: string
+      description: |-
+        * `strong` - strong
+        * `corroborating` - corroborating
     SupportStatusEnum:
       enum:
       - supported
@@ -3290,6 +5140,103 @@ components:
         * `eos` - End of support
         * `unknown` - Unknown
         * `not_announced` - Not announced
+    SyncRun:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        mode:
+          allOf:
+          - $ref: '#/components/schemas/ModeEnum'
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/SyncRunStatusEnum'
+          readOnly: true
+        triggered_by:
+          type: string
+          readOnly: true
+        started_at:
+          type: string
+          format: date-time
+          readOnly: true
+        finished_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        records_received:
+          type: integer
+          readOnly: true
+        observations_created:
+          type: integer
+          readOnly: true
+        observations_unchanged:
+          type: integer
+          readOnly: true
+        links_refreshed:
+          type: integer
+          readOnly: true
+        links_marked_stale:
+          type: integer
+          readOnly: true
+        candidates_opened:
+          type: integer
+          readOnly: true
+        candidates_updated:
+          type: integer
+          readOnly: true
+        assets_updated:
+          type: integer
+          readOnly: true
+        conflicts_opened:
+          type: integer
+          readOnly: true
+        errors:
+          type: integer
+          readOnly: true
+        error_samples:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+          readOnly: true
+        error_message:
+          type: string
+          readOnly: true
+      required:
+      - assets_updated
+      - candidates_opened
+      - candidates_updated
+      - conflicts_opened
+      - error_message
+      - error_samples
+      - errors
+      - finished_at
+      - id
+      - links_marked_stale
+      - links_refreshed
+      - mode
+      - observations_created
+      - observations_unchanged
+      - records_received
+      - started_at
+      - status
+      - triggered_by
+    SyncRunStatusEnum:
+      enum:
+      - running
+      - succeeded
+      - partial
+      - failed
+      type: string
+      description: |-
+        * `running` - Running
+        * `succeeded` - Succeeded
+        * `partial` - Partial
+        * `failed` - Failed
     User:
       type: object
       properties:

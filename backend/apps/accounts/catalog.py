@@ -17,6 +17,11 @@ ASSETS_RECLASSIFY = "assets.reclassify"
 ASSETS_ARCHIVE = "assets.archive"
 CATEGORIES_MANAGE = "categories.manage"
 SITES_MANAGE = "sites.manage"
+ASSETS_EDIT_TECHNICAL = "assets.edit_technical"
+ASSETS_MERGE = "assets.merge"
+DISCOVERY_VIEW = "discovery.view"
+RECONCILIATION_DECIDE = "reconciliation.decide"
+INTEGRATIONS_MANAGE = "integrations.manage"
 
 PERMISSIONS: dict[str, str] = {
     USERS_VIEW: "View user accounts, role assignments and access review data",
@@ -32,6 +37,13 @@ PERMISSIONS: dict[str, str] = {
     ASSETS_ARCHIVE: "Archive and restore assets",
     CATEGORIES_MANAGE: "Manage asset categories and custom field definitions",
     SITES_MANAGE: "Manage sites, locations and departments",
+    ASSETS_EDIT_TECHNICAL: (
+        "Edit discovered technical fields, lock/unlock fields, resolve field conflicts"
+    ),
+    ASSETS_MERGE: "Merge duplicate assets and revert merges",
+    DISCOVERY_VIEW: "View discovery sources, observations, candidates and source evidence",
+    RECONCILIATION_DECIDE: "Approve, reject or hold reconciliation candidates; unlink sources",
+    INTEGRATIONS_MANAGE: "Configure integration instances and field authority",
 }
 
 SYSTEM_ADMIN = "system_admin"
@@ -48,19 +60,29 @@ ROLES: list[tuple[str, str, str, list[str]]] = [
         "itam_manager",
         "ITAM Manager",
         "Curates asset data, approves lifecycle matches and exceptions.",
-        [ASSETS_VIEW, ASSETS_CREATE, ASSETS_EDIT, ASSETS_RECLASSIFY, ASSETS_ARCHIVE],
+        [
+            ASSETS_VIEW,
+            ASSETS_CREATE,
+            ASSETS_EDIT,
+            ASSETS_RECLASSIFY,
+            ASSETS_ARCHIVE,
+            ASSETS_EDIT_TECHNICAL,
+            ASSETS_MERGE,
+            DISCOVERY_VIEW,
+            RECONCILIATION_DECIDE,
+        ],
     ),
     (
         "infrastructure_engineer",
         "Infrastructure Engineer",
         "Technical comments, match proposals and source diagnostics.",
-        [ASSETS_VIEW],
+        [ASSETS_VIEW, ASSETS_EDIT_TECHNICAL, DISCOVERY_VIEW],
     ),
     (
         "security_analyst",
         "Security Analyst",
         "Read and investigate assets; flag high-risk lifecycle findings.",
-        [ASSETS_VIEW],
+        [ASSETS_VIEW, DISCOVERY_VIEW],
     ),
     (
         "asset_operator",
@@ -72,7 +94,14 @@ ROLES: list[tuple[str, str, str, list[str]]] = [
         "auditor",
         "Auditor",
         "Read-only access to evidence, health and the audit log.",
-        [USERS_VIEW, ROLES_VIEW, AUDIT_VIEW, SECURITY_SETTINGS_VIEW, ASSETS_VIEW],
+        [
+            USERS_VIEW,
+            ROLES_VIEW,
+            AUDIT_VIEW,
+            SECURITY_SETTINGS_VIEW,
+            ASSETS_VIEW,
+            DISCOVERY_VIEW,
+        ],
     ),
     (
         "read_only",

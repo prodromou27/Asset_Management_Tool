@@ -35,8 +35,23 @@ export interface paths {
     /** @description Shows which custom fields a category change adds, keeps or retains. Changes nothing. */
     post: operations["assets_classification_preview_create"];
   };
+  "/api/v1/assets/{id}/evidence/": {
+    get: operations["assets_evidence_retrieve"];
+  };
+  "/api/v1/assets/{id}/field-locks/": {
+    post: operations["assets_field_locks_create"];
+  };
+  "/api/v1/assets/{id}/field-locks/unlock/": {
+    post: operations["assets_field_locks_unlock_create"];
+  };
   "/api/v1/assets/{id}/history/": {
     get: operations["assets_history_list"];
+  };
+  "/api/v1/assets/{id}/merge/": {
+    post: operations["assets_merge_create"];
+  };
+  "/api/v1/assets/{id}/observations/": {
+    get: operations["assets_observations_list"];
   };
   "/api/v1/assets/{id}/restore/": {
     post: operations["assets_restore_create"];
@@ -74,6 +89,31 @@ export interface paths {
     get: operations["departments_retrieve"];
     patch: operations["departments_partial_update"];
   };
+  "/api/v1/discovery/candidates/": {
+    get: operations["discovery_candidates_list"];
+  };
+  "/api/v1/discovery/candidates/{id}/": {
+    get: operations["discovery_candidates_retrieve"];
+  };
+  "/api/v1/discovery/conflicts/": {
+    get: operations["discovery_conflicts_list"];
+  };
+  "/api/v1/discovery/conflicts/{id}/resolve/": {
+    post: operations["discovery_conflicts_resolve_create"];
+  };
+  "/api/v1/discovery/field-authority/": {
+    get: operations["discovery_field_authority_retrieve"];
+    patch: operations["discovery_field_authority_partial_update"];
+  };
+  "/api/v1/discovery/observations/": {
+    get: operations["discovery_observations_list"];
+  };
+  "/api/v1/discovery/observations/{id}/": {
+    get: operations["discovery_observations_retrieve"];
+  };
+  "/api/v1/discovery/sources/": {
+    get: operations["discovery_sources_list"];
+  };
   "/api/v1/health/live/": {
     /** @description Process is up and able to serve requests. No dependency checks. */
     get: operations["health_live_retrieve"];
@@ -81,6 +121,17 @@ export interface paths {
   "/api/v1/health/ready/": {
     /** @description Process and its required dependencies (DB, Redis) are reachable. */
     get: operations["health_ready_retrieve"];
+  };
+  "/api/v1/integrations/": {
+    get: operations["integrations_list"];
+    post: operations["integrations_create"];
+  };
+  "/api/v1/integrations/{id}/": {
+    get: operations["integrations_retrieve"];
+    patch: operations["integrations_partial_update"];
+  };
+  "/api/v1/integrations/{id}/runs/": {
+    get: operations["integrations_runs_list"];
   };
   "/api/v1/locations/": {
     get: operations["locations_list"];
@@ -90,8 +141,20 @@ export interface paths {
     get: operations["locations_retrieve"];
     patch: operations["locations_partial_update"];
   };
+  "/api/v1/merges/{id}/revert/": {
+    post: operations["merges_revert_create"];
+  };
   "/api/v1/permissions/": {
     get: operations["permissions_list"];
+  };
+  "/api/v1/reconciliation/{id}/approve/": {
+    post: operations["reconciliation_approve_create"];
+  };
+  "/api/v1/reconciliation/{id}/hold/": {
+    post: operations["reconciliation_hold_create"];
+  };
+  "/api/v1/reconciliation/{id}/reject/": {
+    post: operations["reconciliation_reject_create"];
   };
   "/api/v1/roles/": {
     get: operations["roles_list"];
@@ -107,6 +170,9 @@ export interface paths {
   "/api/v1/sites/{id}/": {
     get: operations["sites_retrieve"];
     patch: operations["sites_partial_update"];
+  };
+  "/api/v1/source-links/{id}/unlink/": {
+    post: operations["source_links_unlink_create"];
   };
   "/api/v1/users/": {
     get: operations["users_list"];
@@ -138,6 +204,22 @@ export type webhooks = Record<string, never>;
 
 export interface components {
   schemas: {
+    /**
+     * @description * `link` - link
+     * * `create` - create
+     * @enum {string}
+     */
+    ActionEnum: "link" | "create";
+    ApproveRequest: {
+      action: components["schemas"]["ActionEnum"];
+      /** Format: uuid */
+      asset?: string;
+      /** Format: uuid */
+      category?: string;
+      name?: string;
+      business_status?: components["schemas"]["BusinessStatusEnum"];
+      reason: string;
+    };
     AssetCategory: {
       /** Format: uuid */
       id: string;
@@ -206,6 +288,11 @@ export interface components {
       created_by: string | null;
       modified_by: string | null;
     };
+    AssetEvidence: {
+      field_evidence: components["schemas"]["FieldEvidence"][];
+      links: components["schemas"]["SourceLink"][];
+      merges: components["schemas"]["AssetMerge"][];
+    };
     AssetHistory: {
       /** Format: uuid */
       id: string;
@@ -242,6 +329,28 @@ export interface components {
       modified_at: string;
       version: number;
     };
+    AssetMerge: {
+      /** Format: uuid */
+      id: string;
+      survivor: components["schemas"]["Ref"];
+      merged: components["schemas"]["Ref"];
+      reason: string;
+      status: components["schemas"]["AssetMergeStatusEnum"];
+      moved_link_ids: readonly string[];
+      performed_by: string;
+      /** Format: date-time */
+      performed_at: string;
+      reverted_by: string | null;
+      /** Format: date-time */
+      reverted_at: string | null;
+      revert_reason: string;
+    };
+    /**
+     * @description * `merged` - Merged
+     * * `reverted` - Reverted
+     * @enum {string}
+     */
+    AssetMergeStatusEnum: "merged" | "reverted";
     /** @description Create (all fields) and PATCH (partial; category excluded — use classification). */
     AssetWriteRequest: {
       name: string;
@@ -317,6 +426,12 @@ export interface components {
      */
     AuthProviderStatusEnum: "available" | "planned";
     /**
+     * @description * `planned` - Planned
+     * * `available` - Available
+     * @enum {string}
+     */
+    AvailabilityEnum: "planned" | "available";
+    /**
      * @description * `ordered` - Ordered
      * * `in_stock` - In stock
      * * `deployed` - Deployed
@@ -328,6 +443,43 @@ export interface components {
      * @enum {string}
      */
     BusinessStatusEnum: "ordered" | "in_stock" | "deployed" | "assigned" | "in_repair" | "retired" | "disposed" | "lost";
+    Candidate: {
+      /** Format: uuid */
+      id: string;
+      instance: components["schemas"]["InstanceRef"];
+      external_id: string;
+      site: components["schemas"]["SiteRef"];
+      status: components["schemas"]["CandidateStatusEnum"];
+      rule: components["schemas"]["RuleEnum"];
+      score: number;
+      proposed_asset: components["schemas"]["Ref"] | null;
+      matches: readonly components["schemas"]["Match"][];
+      hidden_match_count: number;
+      conflicts: readonly string[];
+      suggested_category: components["schemas"]["Ref"] | null;
+      observation: components["schemas"]["ObservationSummary"];
+      decision: string;
+      decision_reason: string;
+      decided_by: string | null;
+      /** Format: date-time */
+      decided_at: string | null;
+      resulting_asset: components["schemas"]["Ref"] | null;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      modified_at: string;
+      version: number;
+    };
+    /**
+     * @description * `open` - Open
+     * * `held` - On hold
+     * * `linked` - Linked
+     * * `created` - Asset created
+     * * `rejected` - Rejected
+     * * `superseded` - Superseded
+     * @enum {string}
+     */
+    CandidateStatusEnum: "open" | "held" | "linked" | "created" | "rejected" | "superseded";
     CategoryRef: {
       /** Format: uuid */
       id: string;
@@ -345,9 +497,16 @@ export interface components {
      * * `reclassified` - Reclassified
      * * `archived` - Archived
      * * `restored` - Restored
+     * * `discovered` - Updated from source
+     * * `linked` - Source linked
+     * * `unlinked` - Source unlinked
+     * * `merged` - Merged
+     * * `unmerged` - Merge reverted
+     * * `field_locked` - Field locked
+     * * `field_unlocked` - Field unlocked
      * @enum {string}
      */
-    ChangeTypeEnum: "created" | "updated" | "reassigned" | "reclassified" | "archived" | "restored";
+    ChangeTypeEnum: "created" | "updated" | "reassigned" | "reclassified" | "archived" | "restored" | "discovered" | "linked" | "unlinked" | "merged" | "unmerged" | "field_locked" | "field_unlocked";
     ClassificationImpact: {
       from_category: string;
       to_category: string;
@@ -438,6 +597,23 @@ export interface components {
     DisableUserRequest: {
       reason: string;
     };
+    DiscoverySource: {
+      code: string;
+      name: string;
+      kind: components["schemas"]["DiscoverySourceKindEnum"];
+      availability: components["schemas"]["AvailabilityEnum"];
+      description: string;
+      instance_count: number;
+    };
+    /**
+     * @description * `network` - Network inventory
+     * * `endpoint` - Endpoint management
+     * * `security` - Security
+     * * `directory` - Directory and licensing
+     * * `import` - Import
+     * @enum {string}
+     */
+    DiscoverySourceKindEnum: "network" | "endpoint" | "security" | "directory" | "import";
     /**
      * @description * `manual` - Manual
      * * `librenms` - LibreNMS
@@ -445,13 +621,71 @@ export interface components {
      * * `intune` - Intune
      * * `defender` - Defender
      * * `import` - Import
+     * * `fixture` - Fixture import
      * @enum {string}
      */
-    EvidenceSourceEnum: "manual" | "librenms" | "endpoint_central" | "intune" | "defender" | "import";
+    EvidenceSourceEnum: "manual" | "librenms" | "endpoint_central" | "intune" | "defender" | "import" | "fixture";
     FieldAdded: {
       key: string;
       label: string;
       required: boolean;
+    };
+    FieldAuthorityPolicy: {
+      precedence: {
+        [key: string]: string[];
+      };
+      version: number;
+      /** Format: date-time */
+      modified_at: string;
+      modified_by: string | null;
+    };
+    FieldConflict: {
+      /** Format: uuid */
+      id: string;
+      asset: components["schemas"]["Ref"];
+      field: string;
+      current_value: string;
+      observed_value: string;
+      reason: string;
+      instance: components["schemas"]["InstanceRef"];
+      /** Format: uuid */
+      observation: string;
+      /** Format: date-time */
+      observed_at: string;
+      status: components["schemas"]["FieldConflictStatusEnum"];
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      modified_at: string;
+      resolved_by: string | null;
+      /** Format: date-time */
+      resolved_at: string | null;
+      resolution_reason: string;
+    };
+    /**
+     * @description * `open` - Open
+     * * `accepted` - Observed value accepted
+     * * `dismissed` - Current value kept
+     * @enum {string}
+     */
+    FieldConflictStatusEnum: "open" | "accepted" | "dismissed";
+    /**
+     * @description * `manufacturer` - manufacturer
+     * * `model` - model
+     * * `serial_number` - serial_number
+     * * `os_name` - os_name
+     * * `os_version` - os_version
+     * * `firmware_version` - firmware_version
+     * @enum {string}
+     */
+    FieldEnum: "manufacturer" | "model" | "serial_number" | "os_name" | "os_version" | "firmware_version";
+    FieldEvidence: {
+      field: string;
+      value: string;
+      provenance: components["schemas"]["Provenance"] | null;
+      lock: components["schemas"]["LockInfo"] | null;
+      sources: components["schemas"]["SourceValue"][];
+      open_conflicts: components["schemas"]["FieldConflict"][];
     };
     /**
      * @description * `text` - Text
@@ -497,6 +731,66 @@ export interface components {
       /** @default false */
       is_primary?: boolean;
     };
+    InstanceRef: {
+      /** Format: uuid */
+      id: string;
+      name: string;
+      source: string;
+    };
+    IntegrationInstance: {
+      /** Format: uuid */
+      id: string;
+      source: components["schemas"]["DiscoverySource"];
+      name: string;
+      status: components["schemas"]["IntegrationInstanceStatusEnum"];
+      is_enabled: boolean;
+      base_url: string;
+      default_site: components["schemas"]["SiteRef"];
+      default_vrf: string;
+      stale_after_hours: number;
+      auto_link_strong_matches: boolean;
+      /** Format: date-time */
+      last_attempt_at: string | null;
+      /** Format: date-time */
+      last_success_at: string | null;
+      last_error: string;
+      active_links: number;
+      stale_links: number;
+      open_candidates: number;
+      /** @description never | fresh | stale, from the last successful run against the threshold. */
+      freshness: string;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      modified_at: string;
+      version: number;
+    };
+    /**
+     * @description * `configured` - Configured
+     * * `available` - Available
+     * * `degraded` - Degraded
+     * * `disconnected` - Disconnected
+     * @enum {string}
+     */
+    IntegrationInstanceStatusEnum: "configured" | "available" | "degraded" | "disconnected";
+    IntegrationInstanceWriteRequest: {
+      source: string;
+      name: string;
+      /** Format: uuid */
+      default_site: string;
+      default_vrf?: string;
+      base_url?: string;
+      stale_after_hours?: number;
+      auto_link_strong_matches?: boolean;
+      is_enabled?: boolean;
+      status?: components["schemas"]["IntegrationInstanceWriteStatusEnum"];
+    };
+    /**
+     * @description * `configured` - configured
+     * * `disconnected` - disconnected
+     * @enum {string}
+     */
+    IntegrationInstanceWriteStatusEnum: "configured" | "disconnected";
     Interface: {
       /** Format: uuid */
       id: string;
@@ -554,9 +848,32 @@ export interface components {
       kind?: components["schemas"]["LocationKindEnum"];
       is_active?: boolean;
     };
+    LockInfo: {
+      locked_by: string | null;
+      /** Format: date-time */
+      locked_at: string;
+      reason: string;
+    };
+    LockRequest: {
+      field: components["schemas"]["FieldEnum"];
+      reason: string;
+    };
     LoginRequest: {
       username: string;
       password: string;
+    };
+    Match: {
+      /** Format: uuid */
+      asset_id: string;
+      asset_name: string;
+      score: number;
+      keys: components["schemas"]["MatchKey"][];
+      category_agrees: boolean | null;
+    };
+    MatchKey: {
+      key: string;
+      strength: components["schemas"]["StrengthEnum"];
+      value: string;
     };
     Me: {
       /** Format: uuid */
@@ -570,6 +887,44 @@ export interface components {
       all_sites: boolean;
       must_change_password: boolean;
     };
+    MergeRequestRequest: {
+      /** Format: uuid */
+      source_asset: string;
+      reason: string;
+    };
+    /**
+     * @description * `approved_candidate` - Approved match
+     * * `created_from_candidate` - Created from discovery
+     * * `auto_strong_match` - Automatic strong match
+     * * `merge` - Moved by merge
+     * @enum {string}
+     */
+    MethodEnum: "approved_candidate" | "created_from_candidate" | "auto_strong_match" | "merge";
+    /**
+     * @description * `full` - Full
+     * * `incremental` - Incremental
+     * @enum {string}
+     */
+    ModeEnum: "full" | "incremental";
+    ObservationDetail: {
+      /** Format: uuid */
+      id: string;
+      external_id: string;
+      /** Format: date-time */
+      observed_at: string;
+      /** Format: date-time */
+      received_at: string;
+      checksum: string;
+      source_version: string;
+      normalized: {
+        [key: string]: unknown;
+      };
+      instance: components["schemas"]["InstanceRef"];
+      payload: {
+        [key: string]: unknown;
+      };
+      normalizer_version: number;
+    };
     /**
      * @description * `recently_seen` - Recently seen
      * * `stale` - Stale
@@ -579,6 +934,20 @@ export interface components {
      * @enum {string}
      */
     ObservationStatusEnum: "recently_seen" | "stale" | "unreachable" | "never_scanned" | "manual_only";
+    ObservationSummary: {
+      /** Format: uuid */
+      id: string;
+      external_id: string;
+      /** Format: date-time */
+      observed_at: string;
+      /** Format: date-time */
+      received_at: string;
+      checksum: string;
+      source_version: string;
+      normalized: {
+        [key: string]: unknown;
+      };
+    };
     /**
      * @description * `success` - Success
      * * `failure` - Failure
@@ -600,6 +969,36 @@ export interface components {
     };
     PaginatedAuditEventList: {
       items: components["schemas"]["AuditEvent"][];
+      next_cursor: string | null;
+      previous_cursor: string | null;
+      count: number;
+    };
+    PaginatedCandidateList: {
+      items: components["schemas"]["Candidate"][];
+      next_cursor: string | null;
+      previous_cursor: string | null;
+      count: number;
+    };
+    PaginatedFieldConflictList: {
+      items: components["schemas"]["FieldConflict"][];
+      next_cursor: string | null;
+      previous_cursor: string | null;
+      count: number;
+    };
+    PaginatedObservationDetailList: {
+      items: components["schemas"]["ObservationDetail"][];
+      next_cursor: string | null;
+      previous_cursor: string | null;
+      count: number;
+    };
+    PaginatedObservationSummaryList: {
+      items: components["schemas"]["ObservationSummary"][];
+      next_cursor: string | null;
+      previous_cursor: string | null;
+      count: number;
+    };
+    PaginatedSyncRunList: {
+      items: components["schemas"]["SyncRun"][];
       next_cursor: string | null;
       previous_cursor: string | null;
       count: number;
@@ -665,6 +1064,23 @@ export interface components {
       code?: string;
       is_active?: boolean;
     };
+    PatchedFieldAuthorityPolicyRequest: {
+      precedence?: {
+        [key: string]: string[];
+      };
+    };
+    PatchedIntegrationInstanceWriteRequest: {
+      source?: string;
+      name?: string;
+      /** Format: uuid */
+      default_site?: string;
+      default_vrf?: string;
+      base_url?: string;
+      stale_after_hours?: number;
+      auto_link_strong_matches?: boolean;
+      is_enabled?: boolean;
+      status?: components["schemas"]["IntegrationInstanceWriteStatusEnum"];
+    };
     PatchedLocationWriteRequest: {
       /** Format: uuid */
       site?: string;
@@ -700,6 +1116,21 @@ export interface components {
       code: string;
       description: string;
     };
+    Provenance: {
+      kind: components["schemas"]["ProvenanceKindEnum"];
+      instance: components["schemas"]["InstanceRef"] | null;
+      /** Format: date-time */
+      observed_at: string | null;
+      /** Format: date-time */
+      recorded_at: string;
+      recorded_by: string | null;
+    };
+    /**
+     * @description * `manual` - manual
+     * * `discovery` - discovery
+     * @enum {string}
+     */
+    ProvenanceKindEnum: "manual" | "discovery";
     Readiness: {
       status: components["schemas"]["ReadinessStatusEnum"];
       dependencies: {
@@ -723,6 +1154,16 @@ export interface components {
     ResetPasswordRequest: {
       password: string;
     };
+    /**
+     * @description * `accept_observed` - accept_observed
+     * * `keep_current` - keep_current
+     * @enum {string}
+     */
+    ResolutionEnum: "accept_observed" | "keep_current";
+    ResolveConflictRequest: {
+      resolution: components["schemas"]["ResolutionEnum"];
+      reason: string;
+    };
     Role: {
       code: string;
       name: string;
@@ -734,6 +1175,15 @@ export interface components {
       code: string;
       name: string;
     };
+    /**
+     * @description * `new_device` - No matching asset
+     * * `weak` - Weak identifier only
+     * * `corroborated` - Multiple corroborating identifiers
+     * * `strong` - Strong identifier
+     * * `conflict` - Conflicting identifiers
+     * @enum {string}
+     */
+    RuleEnum: "new_device" | "weak" | "corroborated" | "strong" | "conflict";
     SecuritySettings: {
       session_idle_timeout_minutes: number;
       session_absolute_timeout_hours: number;
@@ -780,6 +1230,49 @@ export interface components {
       description?: string;
       is_active?: boolean;
     };
+    SourceLink: {
+      /** Format: uuid */
+      id: string;
+      instance: components["schemas"]["InstanceRef"];
+      external_id: string;
+      status: components["schemas"]["SourceLinkStatusEnum"];
+      method: components["schemas"]["MethodEnum"];
+      /** Format: date-time */
+      first_seen_at: string;
+      /** Format: date-time */
+      last_seen_at: string;
+      /** Format: uuid */
+      last_observation_id: string | null;
+      /** Format: date-time */
+      linked_at: string;
+      linked_by: string | null;
+      /** Format: date-time */
+      unlinked_at: string | null;
+      unlinked_by: string | null;
+      unlink_reason: string;
+    };
+    /**
+     * @description * `active` - Active
+     * * `stale` - Stale
+     * * `unlinked` - Unlinked
+     * @enum {string}
+     */
+    SourceLinkStatusEnum: "active" | "stale" | "unlinked";
+    SourceValue: {
+      instance: components["schemas"]["InstanceRef"];
+      external_id: string;
+      value: string | null;
+      /** Format: date-time */
+      observed_at: string;
+      link_status: string;
+      differs: boolean;
+    };
+    /**
+     * @description * `strong` - strong
+     * * `corroborating` - corroborating
+     * @enum {string}
+     */
+    StrengthEnum: "strong" | "corroborating";
     /**
      * @description * `supported` - Supported
      * * `eol_announced` - EOL announced
@@ -791,6 +1284,39 @@ export interface components {
      * @enum {string}
      */
     SupportStatusEnum: "supported" | "eol_announced" | "expiring" | "security_maintenance_ended" | "eos" | "unknown" | "not_announced";
+    SyncRun: {
+      /** Format: uuid */
+      id: string;
+      mode: components["schemas"]["ModeEnum"];
+      status: components["schemas"]["SyncRunStatusEnum"];
+      triggered_by: string;
+      /** Format: date-time */
+      started_at: string;
+      /** Format: date-time */
+      finished_at: string | null;
+      records_received: number;
+      observations_created: number;
+      observations_unchanged: number;
+      links_refreshed: number;
+      links_marked_stale: number;
+      candidates_opened: number;
+      candidates_updated: number;
+      assets_updated: number;
+      conflicts_opened: number;
+      errors: number;
+      error_samples: readonly {
+          [key: string]: unknown;
+        }[];
+      error_message: string;
+    };
+    /**
+     * @description * `running` - Running
+     * * `succeeded` - Succeeded
+     * * `partial` - Partial
+     * * `failed` - Failed
+     * @enum {string}
+     */
+    SyncRunStatusEnum: "running" | "succeeded" | "partial" | "failed";
     User: {
       /** Format: uuid */
       id: string;
@@ -1137,6 +1663,62 @@ export interface operations {
       };
     };
   };
+  assets_evidence_retrieve: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["AssetEvidence"];
+        };
+      };
+    };
+  };
+  assets_field_locks_create: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LockRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["LockRequest"];
+        "multipart/form-data": components["schemas"]["LockRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["AssetEvidence"];
+        };
+      };
+    };
+  };
+  assets_field_locks_unlock_create: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LockRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["LockRequest"];
+        "multipart/form-data": components["schemas"]["LockRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["AssetEvidence"];
+        };
+      };
+    };
+  };
   assets_history_list: {
     parameters: {
       query?: {
@@ -1153,6 +1735,50 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["PaginatedAssetHistoryList"];
+        };
+      };
+    };
+  };
+  assets_merge_create: {
+    parameters: {
+      header: {
+        "If-Match": string;
+      };
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["MergeRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["MergeRequestRequest"];
+        "multipart/form-data": components["schemas"]["MergeRequestRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["AssetMerge"];
+        };
+      };
+    };
+  };
+  assets_observations_list: {
+    parameters: {
+      query?: {
+        /** @description The pagination cursor value. */
+        cursor?: string;
+        /** @description Number of results to return per page. */
+        page_size?: number;
+      };
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["PaginatedObservationDetailList"];
         };
       };
     };
@@ -1355,6 +1981,152 @@ export interface operations {
       };
     };
   };
+  discovery_candidates_list: {
+    parameters: {
+      query?: {
+        /** @description The pagination cursor value. */
+        cursor?: string;
+        instance?: string;
+        /** @description Number of results to return per page. */
+        page_size?: number;
+        rule?: "conflict" | "corroborated" | "new_device" | "strong" | "weak";
+        /** @description Default: open and held. Or one of open, held, linked, created, rejected, superseded, all. */
+        status?: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["PaginatedCandidateList"];
+        };
+      };
+    };
+  };
+  discovery_candidates_retrieve: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["Candidate"];
+        };
+      };
+    };
+  };
+  discovery_conflicts_list: {
+    parameters: {
+      query?: {
+        /** @description The pagination cursor value. */
+        cursor?: string;
+        /** @description Number of results to return per page. */
+        page_size?: number;
+        status?: "accepted" | "all" | "dismissed" | "open";
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["PaginatedFieldConflictList"];
+        };
+      };
+    };
+  };
+  discovery_conflicts_resolve_create: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ResolveConflictRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["ResolveConflictRequest"];
+        "multipart/form-data": components["schemas"]["ResolveConflictRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["FieldConflict"];
+        };
+      };
+    };
+  };
+  discovery_field_authority_retrieve: {
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["FieldAuthorityPolicy"];
+        };
+      };
+    };
+  };
+  discovery_field_authority_partial_update: {
+    parameters: {
+      header: {
+        "If-Match": string;
+      };
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["PatchedFieldAuthorityPolicyRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["PatchedFieldAuthorityPolicyRequest"];
+        "multipart/form-data": components["schemas"]["PatchedFieldAuthorityPolicyRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["FieldAuthorityPolicy"];
+        };
+      };
+    };
+  };
+  discovery_observations_list: {
+    parameters: {
+      query?: {
+        /** @description The pagination cursor value. */
+        cursor?: string;
+        external_id?: string;
+        instance?: string;
+        /** @description Number of results to return per page. */
+        page_size?: number;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["PaginatedObservationSummaryList"];
+        };
+      };
+    };
+  };
+  discovery_observations_retrieve: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["ObservationDetail"];
+        };
+      };
+    };
+  };
+  discovery_sources_list: {
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["DiscoverySource"][];
+        };
+      };
+    };
+  };
   /** @description Process is up and able to serve requests. No dependency checks. */
   health_live_retrieve: {
     responses: {
@@ -1371,6 +2143,89 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["Readiness"];
+        };
+      };
+    };
+  };
+  integrations_list: {
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["IntegrationInstance"][];
+        };
+      };
+    };
+  };
+  integrations_create: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["IntegrationInstanceWriteRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["IntegrationInstanceWriteRequest"];
+        "multipart/form-data": components["schemas"]["IntegrationInstanceWriteRequest"];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          "application/json": components["schemas"]["IntegrationInstance"];
+        };
+      };
+    };
+  };
+  integrations_retrieve: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["IntegrationInstance"];
+        };
+      };
+    };
+  };
+  integrations_partial_update: {
+    parameters: {
+      header: {
+        "If-Match": string;
+      };
+      path: {
+        id: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["PatchedIntegrationInstanceWriteRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["PatchedIntegrationInstanceWriteRequest"];
+        "multipart/form-data": components["schemas"]["PatchedIntegrationInstanceWriteRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["IntegrationInstance"];
+        };
+      };
+    };
+  };
+  integrations_runs_list: {
+    parameters: {
+      query?: {
+        /** @description The pagination cursor value. */
+        cursor?: string;
+        /** @description Number of results to return per page. */
+        page_size?: number;
+      };
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["PaginatedSyncRunList"];
         };
       };
     };
@@ -1450,11 +2305,104 @@ export interface operations {
       };
     };
   };
+  merges_revert_create: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ReasonRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["ReasonRequest"];
+        "multipart/form-data": components["schemas"]["ReasonRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["AssetMerge"];
+        };
+      };
+    };
+  };
   permissions_list: {
     responses: {
       200: {
         content: {
           "application/json": components["schemas"]["Permission"][];
+        };
+      };
+    };
+  };
+  reconciliation_approve_create: {
+    parameters: {
+      header: {
+        "If-Match": string;
+      };
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ApproveRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["ApproveRequest"];
+        "multipart/form-data": components["schemas"]["ApproveRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["Candidate"];
+        };
+      };
+    };
+  };
+  reconciliation_hold_create: {
+    parameters: {
+      header: {
+        "If-Match": string;
+      };
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ReasonRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["ReasonRequest"];
+        "multipart/form-data": components["schemas"]["ReasonRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["Candidate"];
+        };
+      };
+    };
+  };
+  reconciliation_reject_create: {
+    parameters: {
+      header: {
+        "If-Match": string;
+      };
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ReasonRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["ReasonRequest"];
+        "multipart/form-data": components["schemas"]["ReasonRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["Candidate"];
         };
       };
     };
@@ -1557,6 +2505,27 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["Site"];
+        };
+      };
+    };
+  };
+  source_links_unlink_create: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ReasonRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["ReasonRequest"];
+        "multipart/form-data": components["schemas"]["ReasonRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["SourceLink"];
         };
       };
     };

@@ -6,7 +6,7 @@ from apps.assets import selectors
 from apps.assets.models import Asset, AssetHistoryEntry
 from apps.organizations.models import UserSiteGrant
 
-from .conftest import grant
+from .fixtures import grant
 
 pytestmark = pytest.mark.django_db
 ASSETS = "/api/v1/assets/"

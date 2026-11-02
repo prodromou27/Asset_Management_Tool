@@ -6,6 +6,9 @@ from apps.accounts.models import Role, User
 
 PASSWORD = "Correct-Horse-Battery-9"
 
+# Shared asset/site fixtures (hq, branch, switch, make_asset, ...) for every test package.
+pytest_plugins = ["apps.assets.tests.fixtures"]
+
 
 @pytest.fixture(autouse=True)
 def _clear_cache():

@@ -46,6 +46,9 @@ INSTALLED_APPS = [
     "apps.accounts",
     "apps.organizations",
     "apps.assets",
+    "apps.integrations",
+    "apps.observations",
+    "apps.reconciliation",
 ]
 
 AUTH_USER_MODEL = "accounts.User"
@@ -177,6 +180,12 @@ CELERY_BROKER_URL = env("REDIS_URL")
 CELERY_RESULT_BACKEND = env("REDIS_URL")
 CELERY_TASK_ALWAYS_EAGER = False
 CELERY_TIMEZONE = "UTC"
+CELERY_BEAT_SCHEDULE = {
+    "refresh-source-freshness": {
+        "task": "reconciliation.refresh_source_freshness",
+        "schedule": 3600.0,
+    },
+}
 
 LOGGING = {
     "version": 1,

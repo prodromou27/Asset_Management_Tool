@@ -123,7 +123,11 @@ class _AssetMixin:
 
 
 class AssetDetailView(_AssetMixin, APIView):
-    permission_classes = [ReadAnyWritePermission((catalog.ASSETS_VIEW,), catalog.ASSETS_EDIT)]
+    permission_classes = [
+        ReadAnyWritePermission(
+            (catalog.ASSETS_VIEW,), (catalog.ASSETS_EDIT, catalog.ASSETS_EDIT_TECHNICAL)
+        )
+    ]
 
     @extend_schema(responses=AssetDetailSerializer)
     def get(self, request, pk):

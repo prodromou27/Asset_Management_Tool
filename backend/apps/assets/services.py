@@ -19,6 +19,7 @@ from config.request_context import get_request_id
 
 from . import custom_fields as cf
 from .models import (
+    TECHNICAL_FIELDS,
     Asset,
     AssetCategory,
     AssetHistoryEntry,
@@ -26,6 +27,8 @@ from .models import (
     AssetInterface,
     AssetIPAddress,
     CustomFieldDefinition,
+    FieldLock,
+    FieldProvenance,
     Source,
 )
 from .tree import CategoryTree
@@ -243,6 +246,79 @@ def _apply_network(asset: Asset, network: dict) -> None:
         )
 
 
+# --- Field-level authority (ASM-09) -----------------------------------------
+
+EDIT = "assets.edit"
+EDIT_TECHNICAL = "assets.edit_technical"
+
+
+def _field_denied(fields: dict) -> ApiError:
+    return ApiError(
+        "FIELD_PERMISSION_DENIED",
+        "You do not have permission to change some of these fields.",
+        status.HTTP_403_FORBIDDEN,
+        fields,
+    )
+
+
+def check_field_permissions(request, asset: Asset, data: dict, custom_changed: bool) -> list[str]:
+    """Business fields need assets.edit. Technical fields need assets.edit_technical
+    once a discovery source has supplied them; values that were only ever entered
+    manually stay editable by assets.edit. Returns the technical fields changed."""
+    granted = request.user.permission_codes()
+    technical = [f for f in TECHNICAL_FIELDS if f in data and data[f] != getattr(asset, f)]
+    business = [
+        f
+        for f in data
+        if f not in TECHNICAL_FIELDS and f not in NETWORK_KEYS and data[f] != getattr(asset, f)
+    ]
+    if custom_changed:
+        business.append("custom_fields")
+    denied = {}
+    if business and EDIT not in granted:
+        for field in business:
+            denied[field] = ["Business fields require the asset edit permission."]
+    if technical and EDIT_TECHNICAL not in granted:
+        discovered = set(
+            FieldProvenance.objects.filter(
+                asset=asset, field__in=technical, kind=FieldProvenance.Kind.DISCOVERY
+            ).values_list("field", flat=True)
+        )
+        for field in technical:
+            if field in discovered or EDIT not in granted:
+                denied[field] = [
+                    "This value comes from a discovery source; "
+                    "changing it needs technical edit rights."
+                ]
+    if denied:
+        raise _field_denied(denied)
+    return technical
+
+
+def record_manual_values(request, asset: Asset, fields, reason: str) -> None:
+    """A manual technical value is approved: record provenance and lock it so
+    discovery cannot overwrite it silently."""
+    for field in fields:
+        FieldProvenance.objects.update_or_create(
+            asset=asset,
+            field=field,
+            defaults={
+                "kind": FieldProvenance.Kind.MANUAL,
+                "instance": None,
+                "observation": None,
+                "value": getattr(asset, field) or "",
+                "observed_at": None,
+                "recorded_by": request.user,
+            },
+        )
+        if getattr(asset, field):
+            FieldLock.objects.get_or_create(
+                asset=asset, field=field, defaults={"locked_by": request.user, "reason": reason}
+            )
+        else:
+            FieldLock.objects.filter(asset=asset, field=field).delete()
+
+
 # --- Assets -------------------------------------------------------------------
 
 
@@ -285,6 +361,12 @@ def create_asset(request, data: dict) -> Asset:
         )
         _save(asset)
         _apply_network(asset, network)
+        record_manual_values(
+            request,
+            asset,
+            [f for f in TECHNICAL_FIELDS if getattr(asset, f)],
+            "Entered at registration",
+        )
         after = snapshot(asset, tree)
         changes = {
             key: {"before": None, "after": value}
@@ -314,13 +396,19 @@ def update_asset(request, asset: Asset, data: dict, expected_version: int | None
         tree = CategoryTree()
         before = snapshot(asset, tree)
 
-        for field, value in data.items():
-            setattr(asset, field, value)
+        new_custom = None
         if incoming_custom is not None:
             definitions = cf.applicable_definitions(asset.category_id, tree)
-            asset.custom_fields = cf.validate_values(
+            new_custom = cf.validate_values(
                 definitions, incoming_custom, asset.custom_fields, enforce_required=False
             )
+        technical_changed = check_field_permissions(
+            request, asset, data, new_custom is not None and new_custom != asset.custom_fields
+        )
+        for field, value in data.items():
+            setattr(asset, field, value)
+        if new_custom is not None:
+            asset.custom_fields = new_custom
         _apply_network(asset, network)
         after = snapshot(asset, tree)
         changes = diff(before, after)
@@ -330,6 +418,7 @@ def update_asset(request, asset: Asset, data: dict, expected_version: int | None
         asset.modified_by = request.user
         _save(asset)
         asset.refresh_from_db()
+        record_manual_values(request, asset, technical_changed, "Manual edit")
 
         reassigned = bool(REASSIGNMENT_FIELDS & set(changes))
         change_type = (

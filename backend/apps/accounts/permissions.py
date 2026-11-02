@@ -58,8 +58,10 @@ def HasMethodPermission(read: str, write: str):  # noqa: N802
     return _HasMethodPermission
 
 
-def ReadAnyWritePermission(read_any: tuple[str, ...], write: str):  # noqa: N802
-    """Safe methods need any one of `read_any`; unsafe methods need `write`."""
+def ReadAnyWritePermission(read_any: tuple[str, ...], write: str | tuple[str, ...]):  # noqa: N802
+    """Safe methods need any one of `read_any`; unsafe methods need `write` (or any
+    one of a tuple of codes; finer checks then happen per field in the service)."""
+    write_any = (write,) if isinstance(write, str) else write
 
     class _ReadAnyWrite(BasePermission):
         message = "You do not have permission to perform this action."
@@ -70,7 +72,7 @@ def ReadAnyWritePermission(read_any: tuple[str, ...], write: str):  # noqa: N802
             granted = request.user.permission_codes()
             if request.method in ("GET", "HEAD", "OPTIONS"):
                 return any(code in granted for code in read_any)
-            return write in granted
+            return any(code in granted for code in write_any)
 
     return _ReadAnyWrite
 
