@@ -64,7 +64,23 @@ Frontend:
   --fail-on-warn` clean (18 paths); committed schema in sync.
 - Frontend: vitest **38 passed** (no act/console warnings); oxlint clean; `tsc -b`
   clean; production build OK.
-- Not run: Playwright e2e (no browser/stack), PostgreSQL trigger test, CI.
+- Not run here: Playwright e2e (no browser/stack).
+
+## GitHub CI (2026-11-02, branch DEV, run 41511768274) — green
+
+Repository: https://github.com/prodromou27/Asset_Management_Tool (private).
+
+- Backend on **PostgreSQL 16 + Redis 7**: **107 passed, 0 skipped** (includes the
+  unmocked readiness integration tests and the audit append-only trigger test);
+  migrations apply, `migrate --check`, reverse to zero and re-apply; OpenAPI valid and
+  in sync; production `check --deploy` no issues.
+- Frontend: generated types in sync, lint, typecheck, 38 tests, build.
+- Compose: dev and prod `config` valid; prod publishes only 443, no Mailpit, DEBUG off;
+  production api and frontend images build.
+- CI found two PostgreSQL-only defects that the SQLite workstation run could not:
+  hard-coded `itam_test` DB name in test settings, and `%` in the audit trigger DDL
+  being treated as a placeholder. Both fixed on DEV.
+- `main` still has the first (red) run until DEV is merged.
 
 ## Pending verification (requires Docker host) — covers Tasks 001 and 002
 
@@ -79,9 +95,10 @@ Frontend:
    create a user, sign in as that user, forced password change, disable from admin
    and confirm the user's session ends.
 8. `scripts/compose.sh dev run --rm -e DJANGO_SETTINGS_MODULE=config.settings.test api
-   python -m pytest -q -rs` — **107 passed, 0 skipped**.
+   python -m pytest -q -rs` — **107 passed, 0 skipped** (already proven on PostgreSQL in
+   CI; this confirms the dev container image).
 9. Production images build; `compose.prod.yaml` published ports are 443 only.
-10. First CI run green once the repository is pushed.
+10. ~~First CI run green~~ Done on DEV (run 41511768274); merge DEV → main and confirm.
 
 ## Known gaps / blockers (recorded in docs/17_ADR_OPEN_DECISIONS.md)
 
