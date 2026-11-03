@@ -105,7 +105,9 @@ ActiveWithError, disabled account, unlicensed, unsubscribed SKU and missing stat
 - Ruff check and format are clean; no migration drift; the OpenAPI schema validates with
   `--fail-on-warn` and matches the committed file.
 - Frontend: typecheck, oxlint, **100 tests** (4 new) and the build all pass.
-- GitHub CI (PostgreSQL 16 + Redis 7): pending at the time of writing.
+- GitHub CI run 41672076454 on `563abbd` (PostgreSQL 16 + Redis 7): backend **535 passed,
+  0 skipped**; migrations applied and reversed (including `licensing`); OpenAPI drift check;
+  frontend 100 tests; Compose config and production image builds all pass.
 - Not run: the Docker stack, Playwright, a browser review, and **any tenant connection**
   (not authorised).
 
