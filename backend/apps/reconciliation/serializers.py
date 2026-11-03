@@ -3,10 +3,21 @@ from rest_framework import serializers
 
 from apps.assets.models import TECHNICAL_FIELDS, Asset, AssetCategory
 from apps.assets.selectors import visible_assets
-from apps.assets.serializers import RefSerializer, SiteRefSerializer
+from apps.assets.serializers import (
+    CategoryRefSerializer,
+    RefSerializer,
+    SiteRefSerializer,
+    UserRefSerializer,
+)
 from apps.observations.models import Observation
 
-from .models import AssetMerge, FieldConflict, ReconciliationCandidate, SourceLink
+from .models import (
+    AssetMerge,
+    CategoryReview,
+    FieldConflict,
+    ReconciliationCandidate,
+    SourceLink,
+)
 
 
 class InstanceRefSerializer(serializers.Serializer):
@@ -91,6 +102,7 @@ class CandidateSerializer(serializers.ModelSerializer):
         read_only=True, allow_null=True, slug_field="username"
     )
     resulting_asset = RefSerializer(read_only=True, allow_null=True)
+    assignee = UserRefSerializer(read_only=True, allow_null=True)
 
     class Meta:
         model = ReconciliationCandidate
@@ -113,6 +125,8 @@ class CandidateSerializer(serializers.ModelSerializer):
             "decided_by",
             "decided_at",
             "resulting_asset",
+            "assignee",
+            "assigned_at",
             "created_at",
             "modified_at",
             "version",
@@ -149,10 +163,16 @@ class ApproveSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=200, required=False, allow_blank=True)
     business_status = serializers.ChoiceField(choices=Asset.BusinessStatus.choices, required=False)
     reason = serializers.CharField(min_length=5, max_length=500)
+    # Link only (Task 011): also move the linked asset to `category` in the same audited
+    # step (asset reclassification permission; required template fields in custom_fields).
+    reclassify = serializers.BooleanField(required=False, default=False)
+    custom_fields = serializers.DictField(required=False, default=dict)
 
     def validate(self, attrs):
         if attrs["action"] == "link" and not attrs.get("asset"):
             raise serializers.ValidationError({"asset": ["Choose the asset to link."]})
+        if attrs.get("reclassify") and not attrs.get("category"):
+            raise serializers.ValidationError({"category": ["Choose the new category."]})
         return attrs
 
 
@@ -295,3 +315,106 @@ class AssetEvidenceSerializer(serializers.Serializer):
     field_evidence = FieldEvidenceSerializer(many=True)
     links = SourceLinkSerializer(many=True)
     merges = AssetMergeSerializer(many=True)
+
+
+class AssignSerializer(serializers.Serializer):
+    assignee = serializers.UUIDField(allow_null=True)
+
+
+class BulkItemSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    version = serializers.IntegerField(min_value=1)
+
+
+class BulkDecisionSerializer(serializers.Serializer):
+    items = BulkItemSerializer(many=True, min_length=1, max_length=200)
+    action = serializers.ChoiceField(choices=["hold", "reject", "assign"])
+    reason = serializers.CharField(min_length=5, max_length=500, required=False)
+    assignee = serializers.UUIDField(allow_null=True, required=False)
+
+    def validate(self, attrs):
+        if attrs["action"] in ("hold", "reject") and not attrs.get("reason", "").strip():
+            raise serializers.ValidationError(
+                {"reason": ["Give a reason (at least 5 characters)."]}
+            )
+        if attrs["action"] == "assign" and "assignee" not in attrs:
+            raise serializers.ValidationError({"assignee": ["Choose a user or null to unassign."]})
+        return attrs
+
+
+class BulkResultSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    ok = serializers.BooleanField()
+    error = serializers.CharField(allow_blank=True)
+
+
+class AssetRefWithSiteSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    name = serializers.CharField()
+    site = SiteRefSerializer()
+
+
+class CategoryReviewSerializer(serializers.ModelSerializer):
+    asset = serializers.SerializerMethodField()
+    instance = InstanceRefSerializer(read_only=True)
+    current_category = serializers.SerializerMethodField()
+    suggested_category = serializers.SerializerMethodField()
+    resolved_by = serializers.SlugRelatedField(
+        read_only=True, allow_null=True, slug_field="username"
+    )
+    observation_id = serializers.UUIDField(read_only=True)
+
+    class Meta:
+        model = CategoryReview
+        fields = [
+            "id",
+            "asset",
+            "instance",
+            "external_id",
+            "observation_id",
+            "current_category",
+            "suggested_category",
+            "reported_type",
+            "kind",
+            "status",
+            "resolved_by",
+            "resolved_at",
+            "resolution_reason",
+            "created_at",
+            "modified_at",
+            "version",
+        ]
+        read_only_fields = fields
+
+    def _category(self, category):
+        tree = self.context.get("tree")
+        if tree is None:
+            from apps.assets.tree import CategoryTree
+
+            tree = self.context["tree"] = CategoryTree()
+        return {"id": category.pk, "name": category.name, "path": tree.path(category.pk)}
+
+    @extend_schema_field(CategoryRefSerializer)
+    def get_current_category(self, obj):
+        return self._category(obj.current_category)
+
+    @extend_schema_field(CategoryRefSerializer)
+    def get_suggested_category(self, obj):
+        return self._category(obj.suggested_category)
+
+    @extend_schema_field(AssetRefWithSiteSerializer)
+    def get_asset(self, obj):
+        return {
+            "id": obj.asset_id,
+            "name": obj.asset.name,
+            "site": {
+                "id": obj.asset.site_id,
+                "code": obj.asset.site.code,
+                "name": obj.asset.site.name,
+            },
+        }
+
+
+class CategoryReviewDecisionSerializer(serializers.Serializer):
+    reason = serializers.CharField(min_length=5, max_length=500)
+    custom_fields = serializers.DictField(required=False, default=dict)

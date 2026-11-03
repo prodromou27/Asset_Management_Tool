@@ -89,6 +89,7 @@ const ALL_ADMIN = [
   'assets.view',
   'discovery.view',
   'integrations.manage',
+  'licenses.view',
   'reconciliation.decide',
   'audit.view',
   'categories.manage',

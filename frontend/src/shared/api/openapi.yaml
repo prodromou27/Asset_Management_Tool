@@ -1101,6 +1101,11 @@ paths:
     get:
       operationId: discovery_candidates_list
       parameters:
+      - in: query
+        name: assignee
+        schema:
+          type: string
+        description: me, none or a user ID
       - name: cursor
         required: false
         in: query
@@ -1111,12 +1116,30 @@ paths:
         name: instance
         schema:
           type: string
+      - in: query
+        name: older_than_days
+        schema:
+          type: integer
+        description: Opened at least N days ago
+      - in: query
+        name: ordering
+        schema:
+          type: string
+          enum:
+          - newest
+          - oldest
+          - score
       - name: page_size
         required: false
         in: query
         description: Number of results to return per page.
         schema:
           type: integer
+      - in: query
+        name: q
+        schema:
+          type: string
+        description: Source external ID or source name contains
       - in: query
         name: rule
         schema:
@@ -1127,6 +1150,11 @@ paths:
           - new_device
           - strong
           - weak
+      - in: query
+        name: site
+        schema:
+          type: string
+        description: Site ID
       - in: query
         name: status
         schema:
@@ -1164,6 +1192,130 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Candidate'
+          description: ''
+  /api/v1/discovery/category-reviews/:
+    get:
+      operationId: discovery_category_reviews_list
+      parameters:
+      - in: query
+        name: asset
+        schema:
+          type: string
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - in: query
+        name: instance
+        schema:
+          type: string
+      - in: query
+        name: kind
+        schema:
+          type: string
+          enum:
+          - different_class
+          - different_type
+          - more_specific
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: status
+        schema:
+          type: string
+        description: Default open; or reclassified, dismissed, resolved, all
+      tags:
+      - discovery
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedCategoryReviewList'
+          description: ''
+  /api/v1/discovery/category-reviews/{id}/dismiss/:
+    post:
+      operationId: discovery_category_reviews_dismiss_create
+      parameters:
+      - in: header
+        name: If-Match
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - discovery
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryReview'
+          description: ''
+  /api/v1/discovery/category-reviews/{id}/reclassify/:
+    post:
+      operationId: discovery_category_reviews_reclassify_create
+      parameters:
+      - in: header
+        name: If-Match
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - discovery
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoryReviewDecisionRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CategoryReviewDecisionRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CategoryReviewDecisionRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryReview'
           description: ''
   /api/v1/discovery/conflicts/:
     get:
@@ -1850,6 +2002,209 @@ paths:
                 items:
                   $ref: '#/components/schemas/Permission'
           description: ''
+  /api/v1/quality/findings/:
+    get:
+      operationId: quality_findings_list
+      parameters:
+      - in: query
+        name: assignee
+        schema:
+          type: string
+        description: me, none or a user ID
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - in: query
+        name: kind
+        schema:
+          type: string
+          enum:
+          - duplicate_candidate
+          - model_unknown
+          - owner_missing
+          - source_stale
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: severity
+        schema:
+          type: string
+          enum:
+          - high
+          - low
+          - medium
+      - in: query
+        name: site
+        schema:
+          type: string
+      - in: query
+        name: status
+        schema:
+          type: string
+        description: Default open; or dismissed, resolved, all
+      tags:
+      - quality
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedFindingList'
+          description: ''
+  /api/v1/quality/findings/{id}/assign/:
+    post:
+      operationId: quality_findings_assign_create
+      parameters:
+      - in: header
+        name: If-Match
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - quality
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FindingAssignRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/FindingAssignRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/FindingAssignRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Finding'
+          description: ''
+  /api/v1/quality/findings/{id}/dismiss/:
+    post:
+      operationId: quality_findings_dismiss_create
+      parameters:
+      - in: header
+        name: If-Match
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - quality
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Finding'
+          description: ''
+  /api/v1/quality/findings/{id}/reopen/:
+    post:
+      operationId: quality_findings_reopen_create
+      parameters:
+      - in: header
+        name: If-Match
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - quality
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Finding'
+          description: ''
+  /api/v1/quality/refresh/:
+    post:
+      operationId: quality_refresh_create
+      description: Recompute findings now (also runs hourly from Celery beat).
+      tags:
+      - quality
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefreshResult'
+          description: ''
+  /api/v1/quality/summary/:
+    get:
+      operationId: quality_summary_list
+      tags:
+      - quality
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SummaryRow'
+          description: ''
   /api/v1/reconciliation/{id}/approve/:
     post:
       operationId: reconciliation_approve_create
@@ -1878,6 +2233,44 @@ paths:
           multipart/form-data:
             schema:
               $ref: '#/components/schemas/ApproveRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Candidate'
+          description: ''
+  /api/v1/reconciliation/{id}/assign/:
+    post:
+      operationId: reconciliation_assign_create
+      parameters:
+      - in: header
+        name: If-Match
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - reconciliation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AssignRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AssignRequest'
         required: true
       security:
       - sessionAuth: []
@@ -1963,6 +2356,59 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Candidate'
+          description: ''
+  /api/v1/reconciliation/assignees/:
+    get:
+      operationId: reconciliation_assignees_list
+      description: Active users who may decide reconciliation items (optionally for
+        one site).
+      parameters:
+      - in: query
+        name: site
+        schema:
+          type: string
+      tags:
+      - reconciliation
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Assignee'
+          description: ''
+  /api/v1/reconciliation/bulk/:
+    post:
+      operationId: reconciliation_bulk_create
+      description: Hold, reject or assign many candidates. Linking and creating stay
+        one at a time.
+      tags:
+      - reconciliation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BulkDecisionRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/BulkDecisionRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/BulkDecisionRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BulkResult'
           description: ''
   /api/v1/roles/:
     get:
@@ -2529,14 +2975,6 @@ paths:
           description: ''
 components:
   schemas:
-    ActionEnum:
-      enum:
-      - link
-      - create
-      type: string
-      description: |-
-        * `link` - link
-        * `create` - create
     Allocation:
       type: object
       properties:
@@ -2620,11 +3058,19 @@ components:
         * `direct` - direct
         * `group` - group
         * `direct_and_group` - direct_and_group
+    ApproveActionEnum:
+      enum:
+      - link
+      - create
+      type: string
+      description: |-
+        * `link` - link
+        * `create` - create
     ApproveRequest:
       type: object
       properties:
         action:
-          $ref: '#/components/schemas/ActionEnum'
+          $ref: '#/components/schemas/ApproveActionEnum'
         asset:
           type: string
           format: uuid
@@ -2640,6 +3086,12 @@ components:
           type: string
           minLength: 5
           maxLength: 500
+        reclassify:
+          type: boolean
+          default: false
+        custom_fields:
+          type: object
+          additionalProperties: {}
       required:
       - action
       - reason
@@ -3134,6 +3586,20 @@ components:
       description: |-
         * `merged` - Merged
         * `reverted` - Reverted
+    AssetRefWithSite:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        site:
+          $ref: '#/components/schemas/SiteRef'
+      required:
+      - id
+      - name
+      - site
     AssetWriteRequest:
       type: object
       description: Create (all fields) and PATCH (partial; category excluded — use
@@ -3207,6 +3673,29 @@ components:
       - category
       - name
       - site
+    AssignRequest:
+      type: object
+      properties:
+        assignee:
+          type: string
+          format: uuid
+          nullable: true
+      required:
+      - assignee
+    Assignee:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        display_name:
+          type: string
+      required:
+      - display_name
+      - id
+      - username
     AuditEvent:
       type: object
       properties:
@@ -3347,6 +3836,62 @@ components:
     BlankEnum:
       enum:
       - ''
+    BulkDecisionActionEnum:
+      enum:
+      - hold
+      - reject
+      - assign
+      type: string
+      description: |-
+        * `hold` - hold
+        * `reject` - reject
+        * `assign` - assign
+    BulkDecisionRequest:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/BulkItemRequest'
+        action:
+          $ref: '#/components/schemas/BulkDecisionActionEnum'
+        reason:
+          type: string
+          minLength: 5
+          maxLength: 500
+        assignee:
+          type: string
+          format: uuid
+          nullable: true
+      required:
+      - action
+      - items
+    BulkItemRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        version:
+          type: integer
+          minimum: 1
+      required:
+      - id
+      - version
+    BulkResult:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        ok:
+          type: boolean
+        error:
+          type: string
+      required:
+      - error
+      - id
+      - ok
     BusinessStatusEnum:
       enum:
       - ordered
@@ -3443,6 +3988,16 @@ components:
           - $ref: '#/components/schemas/Ref'
           readOnly: true
           nullable: true
+        assignee:
+          allOf:
+          - $ref: '#/components/schemas/UserRef'
+          readOnly: true
+          nullable: true
+        assigned_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
         created_at:
           type: string
           format: date-time
@@ -3455,6 +4010,8 @@ components:
           type: integer
           readOnly: true
       required:
+      - assigned_at
+      - assignee
       - conflicts
       - created_at
       - decided_at
@@ -3506,6 +4063,121 @@ components:
       - id
       - name
       - path
+    CategoryReview:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        asset:
+          allOf:
+          - $ref: '#/components/schemas/AssetRefWithSite'
+          readOnly: true
+        instance:
+          allOf:
+          - $ref: '#/components/schemas/InstanceRef'
+          readOnly: true
+        external_id:
+          type: string
+          readOnly: true
+        observation_id:
+          type: string
+          format: uuid
+          readOnly: true
+        current_category:
+          allOf:
+          - $ref: '#/components/schemas/CategoryRef'
+          readOnly: true
+        suggested_category:
+          allOf:
+          - $ref: '#/components/schemas/CategoryRef'
+          readOnly: true
+        reported_type:
+          type: string
+          readOnly: true
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/CategoryReviewKindEnum'
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/CategoryReviewStatusEnum'
+          readOnly: true
+        resolved_by:
+          type: string
+          readOnly: true
+          nullable: true
+        resolved_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        resolution_reason:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        modified_at:
+          type: string
+          format: date-time
+          readOnly: true
+        version:
+          type: integer
+          readOnly: true
+      required:
+      - asset
+      - created_at
+      - current_category
+      - external_id
+      - id
+      - instance
+      - kind
+      - modified_at
+      - observation_id
+      - reported_type
+      - resolution_reason
+      - resolved_at
+      - resolved_by
+      - status
+      - suggested_category
+      - version
+    CategoryReviewDecisionRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          minLength: 5
+          maxLength: 500
+        custom_fields:
+          type: object
+          additionalProperties: {}
+      required:
+      - reason
+    CategoryReviewKindEnum:
+      enum:
+      - different_class
+      - different_type
+      - more_specific
+      type: string
+      description: |-
+        * `different_class` - Different asset class
+        * `different_type` - Different type in the same class
+        * `more_specific` - More specific type
+    CategoryReviewStatusEnum:
+      enum:
+      - open
+      - reclassified
+      - dismissed
+      - resolved
+      type: string
+      description: |-
+        * `open` - Open
+        * `reclassified` - Asset reclassified
+        * `dismissed` - Current category kept
+        * `resolved` - No longer suggested
     ChangePasswordRequest:
       type: object
       properties:
@@ -4279,6 +4951,131 @@ components:
         * `boolean` - Yes/No
         * `date` - Date
         * `choice` - Choice
+    Finding:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/FindingKindEnum'
+          readOnly: true
+        asset:
+          allOf:
+          - $ref: '#/components/schemas/FindingAsset'
+          readOnly: true
+        severity:
+          allOf:
+          - $ref: '#/components/schemas/SeverityEnum'
+          readOnly: true
+        summary:
+          type: string
+          readOnly: true
+        evidence:
+          type: object
+          additionalProperties: {}
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/FindingStatusEnum'
+          readOnly: true
+          default: open
+        assignee:
+          allOf:
+          - $ref: '#/components/schemas/UserRef'
+          readOnly: true
+          nullable: true
+        assigned_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        detected_at:
+          type: string
+          format: date-time
+          readOnly: true
+        last_confirmed_at:
+          type: string
+          format: date-time
+          readOnly: true
+        resolved_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        resolved_by:
+          type: string
+          readOnly: true
+          nullable: true
+        resolution_reason:
+          type: string
+          readOnly: true
+        version:
+          type: integer
+          readOnly: true
+      required:
+      - asset
+      - assigned_at
+      - assignee
+      - detected_at
+      - evidence
+      - id
+      - kind
+      - last_confirmed_at
+      - resolution_reason
+      - resolved_at
+      - resolved_by
+      - severity
+      - status
+      - summary
+      - version
+    FindingAsset:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        site:
+          $ref: '#/components/schemas/SiteRef'
+      required:
+      - id
+      - name
+      - site
+    FindingAssignRequest:
+      type: object
+      properties:
+        assignee:
+          type: string
+          format: uuid
+          nullable: true
+      required:
+      - assignee
+    FindingKindEnum:
+      enum:
+      - duplicate_candidate
+      - model_unknown
+      - source_stale
+      - owner_missing
+      type: string
+      description: |-
+        * `duplicate_candidate` - Duplicate candidate
+        * `model_unknown` - Model unknown
+        * `source_stale` - Source stale
+        * `owner_missing` - Owner missing
+    FindingStatusEnum:
+      enum:
+      - open
+      - dismissed
+      - resolved
+      type: string
+      description: |-
+        * `open` - Open
+        * `dismissed` - Dismissed (accepted as is)
+        * `resolved` - Resolved
     GroupRef:
       type: object
       properties:
@@ -5361,6 +6158,26 @@ components:
           nullable: true
         count:
           type: integer
+    PaginatedCategoryReviewList:
+      type: object
+      required:
+      - items
+      - next_cursor
+      - previous_cursor
+      - count
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CategoryReview'
+        next_cursor:
+          type: string
+          nullable: true
+        previous_cursor:
+          type: string
+          nullable: true
+        count:
+          type: integer
     PaginatedFieldConflictList:
       type: object
       required:
@@ -5373,6 +6190,26 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/FieldConflict'
+        next_cursor:
+          type: string
+          nullable: true
+        previous_cursor:
+          type: string
+          nullable: true
+        count:
+          type: integer
+    PaginatedFindingList:
+      type: object
+      required:
+      - items
+      - next_cursor
+      - previous_cursor
+      - count
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Finding'
         next_cursor:
           type: string
           nullable: true
@@ -5872,6 +6709,19 @@ components:
       required:
       - id
       - name
+    RefreshResult:
+      type: object
+      properties:
+        opened:
+          type: integer
+        refreshed:
+          type: integer
+        resolved:
+          type: integer
+      required:
+      - opened
+      - refreshed
+      - resolved
     ResetPasswordRequest:
       type: object
       properties:
@@ -6101,6 +6951,16 @@ components:
       - id
       - name
       - source
+    SeverityEnum:
+      enum:
+      - high
+      - medium
+      - low
+      type: string
+      description: |-
+        * `high` - High
+        * `medium` - Medium
+        * `low` - Low
     Site:
       type: object
       properties:
@@ -6566,6 +7426,19 @@ components:
       - snapshots
       - subscribed
       - tenant_id
+    SummaryRow:
+      type: object
+      properties:
+        kind:
+          $ref: '#/components/schemas/FindingKindEnum'
+        open:
+          type: integer
+        high:
+          type: integer
+      required:
+      - high
+      - kind
+      - open
     SupportStatusEnum:
       enum:
       - supported

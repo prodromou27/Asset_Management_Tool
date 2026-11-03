@@ -135,6 +135,12 @@ scripts/compose.sh dev exec api python manage.py load_observations \
 - Matching: the Entra device ID links a Defender machine to the asset of an Intune device from the **same tenant** when a hostname or MAC corroborates it and nothing conflicts (ADR-014); otherwise it is a review candidate. Hostname or IP alone never links.
 - Security facts (onboarding, sensor health, exposure, risk, tags, first/last seen, original values) are stored apart from asset fields and shown on the asset's **Security** tab (requires `discovery.view` and site access). "Last report received" is not an online status, and a machine missing from Defender's list is flagged, never treated as deleted. Sanitized fixtures: `fixtures/defender/api/README.md`.
 
+### Reconciliation review, category reviews and data quality (Task 011)
+
+- **Discovery → Reconciliation queue**: filter by assignee, waiting time and text, sort by age or confidence, select devices and assign, put on hold or reject them in bulk with a reason (each item keeps its own version check and audit entry). Linking and creating stay one device at a time.
+- **Discovery → Category reviews**: when a linked source reports a device type that maps to a different category, the asset is not changed; a review lets an authorised user reclassify (template impact preview, same asset ID and history) or keep the current category. Linking a candidate can also move the asset to the suggested category in the same step.
+- **Discovery → Data quality**: queues for duplicate candidates, unknown model, stale sources and missing owners, with severity, evidence, assignee and resolution state. Rechecked hourly; fixing the asset resolves the finding; dismissed findings stay dismissed while the condition holds.
+
 ### Microsoft 365 / Entra license connector (Task 010, Beta — live access off)
 
 - Reads only Graph v1.0 `GET /subscribedSkus` and `GET /users` (selected fields: ID, UPN, display name, enabled, assigned licenses and license assignment states). App registration (DEC-17): application permissions `Organization.Read.All` and `User.Read.All` with admin consent; certificate preferred (`file:<name>`), client secret fallback (`env:ITAM_INTEGRATION_M365_CLIENT_SECRET`). Optional `GroupMember.Read.All` lets the connector show the names of license-assigning groups; without it only group IDs are shown.

@@ -15,6 +15,17 @@ discovery_urlpatterns = [
         "observations/<uuid:pk>/", views.ObservationDetailView.as_view(), name="observation-detail"
     ),
     path("conflicts/", views.ConflictListView.as_view(), name="conflict-list"),
+    path("category-reviews/", views.CategoryReviewListView.as_view(), name="category-review-list"),
+    path(
+        "category-reviews/<uuid:pk>/reclassify/",
+        views.CategoryReviewReclassifyView.as_view(),
+        name="category-review-reclassify",
+    ),
+    path(
+        "category-reviews/<uuid:pk>/dismiss/",
+        views.CategoryReviewDismissView.as_view(),
+        name="category-review-dismiss",
+    ),
     path(
         "conflicts/<uuid:pk>/resolve/", views.ResolveConflictView.as_view(), name="conflict-resolve"
     ),
@@ -27,6 +38,9 @@ reconciliation_urlpatterns = [
     path("<uuid:pk>/approve/", views.ApproveCandidateView.as_view(), name="candidate-approve"),
     path("<uuid:pk>/reject/", views.RejectCandidateView.as_view(), name="candidate-reject"),
     path("<uuid:pk>/hold/", views.HoldCandidateView.as_view(), name="candidate-hold"),
+    path("<uuid:pk>/assign/", views.AssignCandidateView.as_view(), name="candidate-assign"),
+    path("bulk/", views.BulkDecisionView.as_view(), name="candidate-bulk"),
+    path("assignees/", views.AssigneeListView.as_view(), name="candidate-assignees"),
 ]
 
 integration_urlpatterns = [

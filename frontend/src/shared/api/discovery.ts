@@ -2,7 +2,10 @@ import { apiGet, apiRequest } from './client'
 import type {
   AssetEvidence,
   AssetMerge,
+  Assignee,
+  BulkResult,
   Candidate,
+  CategoryReview,
   ConnectionTest,
   DiscoverySource,
   EndpointSecurityState,
@@ -21,6 +24,11 @@ export interface CandidateFilters {
   status?: string
   rule?: string
   instance?: string
+  site?: string
+  assignee?: string
+  older_than_days?: string
+  q?: string
+  ordering?: string
 }
 
 export const discoveryKeys = {
@@ -36,6 +44,8 @@ export const discoveryKeys = {
   runs: (id: string) => ['integrations', id, 'runs'] as const,
   evidence: (assetId: string) => ['assets', 'evidence', assetId] as const,
   authority: ['discovery', 'field-authority'] as const,
+  categoryReviews: (status: string) => ['discovery', 'category-reviews', status] as const,
+  assignees: (site?: string) => ['discovery', 'assignees', site ?? ''] as const,
 }
 
 export const fetchCandidates = (filters: CandidateFilters, cursor?: string) =>
@@ -54,6 +64,8 @@ export const approveCandidate = (
     category?: string
     name?: string
     business_status?: string
+    reclassify?: boolean
+    custom_fields?: Record<string, unknown>
   },
 ) => apiRequest<Candidate>('POST', `/reconciliation/${id}/approve/`, { body, ifMatch: version })
 export const rejectCandidate = (id: string, version: number, reason: string) =>
@@ -111,5 +123,34 @@ export const fetchFieldAuthority = () => apiGet<FieldAuthorityPolicy>('/discover
 export const updateFieldAuthority = (version: number, precedence: Record<string, string[]>) =>
   apiRequest<FieldAuthorityPolicy>('PATCH', '/discovery/field-authority/', {
     body: { precedence },
+    ifMatch: version,
+  })
+
+export const assignCandidate = (id: string, version: number, assignee: string | null) =>
+  apiRequest<Candidate>('POST', `/reconciliation/${id}/assign/`, { body: { assignee }, ifMatch: version })
+export const bulkDecide = (body: {
+  action: 'hold' | 'reject' | 'assign'
+  items: { id: string; version: number }[]
+  reason?: string
+  assignee?: string | null
+}) => apiRequest<BulkResult[]>('POST', '/reconciliation/bulk/', { body })
+export const fetchAssignees = (site?: string) =>
+  apiGet<Assignee[]>('/reconciliation/assignees/', site ? { site } : undefined)
+
+export const fetchCategoryReviews = (status: string, cursor?: string) =>
+  apiGet<Paginated<CategoryReview>>('/discovery/category-reviews/', { status, cursor })
+export const reclassifyFromReview = (
+  id: string,
+  version: number,
+  reason: string,
+  custom_fields?: Record<string, unknown>,
+) =>
+  apiRequest<CategoryReview>('POST', `/discovery/category-reviews/${id}/reclassify/`, {
+    body: { reason, custom_fields },
+    ifMatch: version,
+  })
+export const dismissCategoryReview = (id: string, version: number, reason: string) =>
+  apiRequest<CategoryReview>('POST', `/discovery/category-reviews/${id}/dismiss/`, {
+    body: { reason },
     ifMatch: version,
   })

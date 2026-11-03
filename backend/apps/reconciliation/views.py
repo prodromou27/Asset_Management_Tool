@@ -1,7 +1,11 @@
+from datetime import timedelta
 from uuid import UUID
 
+from django.contrib.auth import get_user_model
+from django.db import transaction
 from django.db.models import Exists, OuterRef, Q
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import generics, serializers
 from rest_framework.response import Response
@@ -9,20 +13,33 @@ from rest_framework.views import APIView
 
 from apps.accounts import catalog
 from apps.accounts.permissions import HasPermission
-from apps.assets.models import TECHNICAL_FIELDS, FieldLock, FieldProvenance
+from apps.assets import services as asset_services
+from apps.assets.models import TECHNICAL_FIELDS, Asset, FieldLock, FieldProvenance
 from apps.assets.selectors import visible_assets
 from apps.assets.serializers import ReasonSerializer
 from apps.observations.models import Observation
 from apps.organizations import scope
+from apps.organizations.services import check_version
 from config.api import ApiError, ItemsCursorPagination
 
-from . import services
-from .models import AssetMerge, FieldConflict, ReconciliationCandidate, SourceLink
+from . import category_review, services, triage
+from .models import (
+    AssetMerge,
+    CategoryReview,
+    FieldConflict,
+    ReconciliationCandidate,
+    SourceLink,
+)
 from .serializers import (
     ApproveSerializer,
     AssetEvidenceSerializer,
     AssetMergeSerializer,
+    AssignSerializer,
+    BulkDecisionSerializer,
+    BulkResultSerializer,
     CandidateSerializer,
+    CategoryReviewDecisionSerializer,
+    CategoryReviewSerializer,
     FieldConflictSerializer,
     LockSerializer,
     MergeRequestSerializer,
@@ -112,12 +129,27 @@ class CandidatePagination(ItemsCursorPagination):
         ),
         OpenApiParameter("rule", str, enum=list(ReconciliationCandidate.Rule.values)),
         OpenApiParameter("instance", str),
+        OpenApiParameter("site", str, description="Site ID"),
+        OpenApiParameter("assignee", str, description="me, none or a user ID"),
+        OpenApiParameter("older_than_days", int, description="Opened at least N days ago"),
+        OpenApiParameter("q", str, description="Source external ID or source name contains"),
+        OpenApiParameter("ordering", str, enum=["newest", "oldest", "score"]),
     ]
 )
 class CandidateListView(generics.ListAPIView):
     serializer_class = CandidateSerializer
     pagination_class = CandidatePagination
     permission_classes = [HasPermission(catalog.DISCOVERY_VIEW)]
+
+    def paginate_queryset(self, queryset):
+        ordering = {
+            "oldest": ("created_at", "id"),
+            "score": ("-score", "-id"),
+            "newest": ("-created_at", "-id"),
+        }.get(self.request.query_params.get("ordering", ""))
+        if ordering is not None:
+            self.paginator.ordering = ordering
+        return super().paginate_queryset(queryset)
 
     def get_queryset(self):
         qs = visible_candidates(self.request.user)
@@ -135,6 +167,23 @@ class CandidateListView(generics.ListAPIView):
             qs = qs.filter(rule=rule) if rule in ReconciliationCandidate.Rule.values else qs.none()
         if instance := params.get("instance"):
             qs = qs.filter(instance_id=instance) if _is_uuid(instance) else qs.none()
+        if site := params.get("site"):
+            qs = qs.filter(site_id=site) if _is_uuid(site) else qs.none()
+        assignee = params.get("assignee")
+        if assignee == "me":
+            qs = qs.filter(assignee=self.request.user)
+        elif assignee == "none":
+            qs = qs.filter(assignee__isnull=True)
+        elif assignee:
+            qs = qs.filter(assignee_id=assignee) if _is_uuid(assignee) else qs.none()
+        if days := params.get("older_than_days"):
+            try:
+                cutoff = timezone.now() - timedelta(days=max(int(days), 0))
+            except ValueError:
+                return qs.none()
+            qs = qs.filter(created_at__lte=cutoff)
+        if q := params.get("q", "").strip():
+            qs = qs.filter(Q(external_id__icontains=q) | Q(instance__name__icontains=q))
         return qs
 
 
@@ -176,7 +225,32 @@ class ApproveCandidateView(_DecisionView):
             asset = visible_assets(request.user).filter(pk=values["asset"]).first()
             if asset is None:
                 raise serializers.ValidationError({"asset": ["Asset not found."]})
-            candidate = services.approve_link(request, candidate, asset, reason, _if_match(request))
+            if not values.get("reclassify"):
+                candidate = services.approve_link(
+                    request, candidate, asset, reason, _if_match(request)
+                )
+                return self.respond(request, candidate)
+            if catalog.ASSETS_RECLASSIFY not in request.user.permission_codes():
+                raise ApiError(
+                    "PERMISSION_DENIED",
+                    "Changing the category needs the reclassify permission.",
+                    403,
+                )
+            # Link and reclassify in one transaction: both happen or neither.
+            with transaction.atomic():
+                candidate = services.approve_link(
+                    request, candidate, asset, reason, _if_match(request)
+                )
+                current = Asset.objects.get(pk=asset.pk)
+                if current.category_id != values["category"].pk:
+                    asset_services.reclassify(
+                        request,
+                        current,
+                        values["category"],
+                        reason,
+                        values.get("custom_fields") or {},
+                        current.version,
+                    )
         else:
             if catalog.ASSETS_CREATE not in request.user.permission_codes():
                 raise ApiError(
@@ -463,3 +537,162 @@ class RevertMergeView(APIView):
         data.is_valid(raise_exception=True)
         record = services.revert_merge(request, record, data.validated_data["reason"].strip())
         return Response(AssetMergeSerializer(record).data)
+
+
+# --- Triage (Task 011) ----------------------------------------------------------------------
+
+
+class AssignCandidateView(_DecisionView):
+    @extend_schema(request=AssignSerializer, responses=CandidateSerializer, parameters=[IF_MATCH])
+    def post(self, request, pk):
+        candidate = self.candidate(request, pk)
+        data = AssignSerializer(data=request.data)
+        data.is_valid(raise_exception=True)
+        assignee = triage.validate_assignee(data.validated_data["assignee"], [candidate.site_id])
+        version = _if_match(request)
+        if version is None:
+            check_version(candidate, None)  # 428: If-Match required
+        return self.respond(request, triage.assign(request, candidate, assignee, version))
+
+
+class BulkDecisionView(APIView):
+    """Hold, reject or assign many candidates. Linking and creating stay one at a time."""
+
+    permission_classes = [HasPermission(catalog.RECONCILIATION_DECIDE)]
+
+    @extend_schema(request=BulkDecisionSerializer, responses=BulkResultSerializer(many=True))
+    def post(self, request):
+        data = BulkDecisionSerializer(data=request.data)
+        data.is_valid(raise_exception=True)
+        values = data.validated_data
+        versions = {str(item["id"]): item["version"] for item in values["items"]}
+        found = {
+            str(c.pk): c for c in visible_candidates(request.user).filter(pk__in=list(versions))
+        }
+        assignee = None
+        if values["action"] == "assign":
+            assignee = triage.validate_assignee(
+                values.get("assignee"), {c.site_id for c in found.values()}
+            )
+        items = [(found[i], versions[i]) for i in versions if i in found]
+        results = triage.bulk(
+            request, items, values["action"], (values.get("reason") or "").strip(), assignee
+        )
+        results += [
+            {"id": i, "ok": False, "error": "Candidate not found."}
+            for i in versions
+            if i not in found
+        ]
+        return Response(BulkResultSerializer(results, many=True).data)
+
+
+class AssigneeSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    username = serializers.CharField()
+    display_name = serializers.CharField()
+
+
+class AssigneeListView(APIView):
+    """Active users who may decide reconciliation items (optionally for one site)."""
+
+    permission_classes = [HasPermission(catalog.RECONCILIATION_DECIDE)]
+
+    @extend_schema(
+        parameters=[OpenApiParameter("site", str)], responses=AssigneeSerializer(many=True)
+    )
+    def get(self, request):
+        site = request.query_params.get("site")
+        users = []
+        for user in get_user_model().objects.filter(is_active=True).order_by("display_name"):
+            if catalog.RECONCILIATION_DECIDE not in user.permission_codes():
+                continue
+            if site and (not _is_uuid(site) or not scope.can_access_site(user, UUID(site))):
+                continue
+            users.append(user)
+        return Response(AssigneeSerializer(users, many=True).data)
+
+
+# --- Category reviews (Task 011) ------------------------------------------------------------
+
+
+def visible_category_reviews(user):
+    return CategoryReview.objects.select_related(
+        "asset__site", "instance", "current_category", "suggested_category", "resolved_by"
+    ).filter(asset__in=visible_assets(user).values("pk"))
+
+
+class CategoryReviewPagination(ItemsCursorPagination):
+    ordering = ("-modified_at", "-id")
+
+
+@extend_schema(
+    parameters=[
+        OpenApiParameter(
+            "status", str, description="Default open; or reclassified, dismissed, resolved, all"
+        ),
+        OpenApiParameter("kind", str, enum=list(CategoryReview.Kind.values)),
+        OpenApiParameter("instance", str),
+        OpenApiParameter("asset", str),
+    ]
+)
+class CategoryReviewListView(generics.ListAPIView):
+    serializer_class = CategoryReviewSerializer
+    pagination_class = CategoryReviewPagination
+    permission_classes = [HasPermission(catalog.DISCOVERY_VIEW)]
+
+    def get_queryset(self):
+        qs = visible_category_reviews(self.request.user)
+        params = self.request.query_params
+        wanted = params.get("status", "open")
+        if wanted != "all":
+            qs = qs.filter(status=wanted) if wanted in CategoryReview.Status.values else qs.none()
+        if kind := params.get("kind"):
+            qs = qs.filter(kind=kind) if kind in CategoryReview.Kind.values else qs.none()
+        for key in ("instance", "asset"):
+            if value := params.get(key):
+                qs = qs.filter(**{f"{key}_id": value}) if _is_uuid(value) else qs.none()
+        return qs
+
+
+class _CategoryReviewDecision(APIView):
+    permission_classes = [HasPermission(catalog.ASSETS_RECLASSIFY)]
+
+    def review(self, request, pk):
+        return get_object_or_404(visible_category_reviews(request.user), pk=pk)
+
+    def respond(self, request, review):
+        review = visible_category_reviews(request.user).get(pk=review.pk)
+        return Response(
+            CategoryReviewSerializer(review).data, headers={"ETag": f'"{review.version}"'}
+        )
+
+
+class CategoryReviewReclassifyView(_CategoryReviewDecision):
+    @extend_schema(
+        request=CategoryReviewDecisionSerializer,
+        responses=CategoryReviewSerializer,
+        parameters=[IF_MATCH],
+    )
+    def post(self, request, pk):
+        review = self.review(request, pk)
+        data = CategoryReviewDecisionSerializer(data=request.data)
+        data.is_valid(raise_exception=True)
+        values = data.validated_data
+        review = category_review.reclassify(
+            request, review, values["reason"].strip(), values["custom_fields"], _if_match(request)
+        )
+        return self.respond(request, review)
+
+
+class CategoryReviewDismissView(_CategoryReviewDecision):
+    @extend_schema(
+        request=ReasonSerializer, responses=CategoryReviewSerializer, parameters=[IF_MATCH]
+    )
+    def post(self, request, pk):
+        review = self.review(request, pk)
+        data = ReasonSerializer(data=request.data)
+        data.is_valid(raise_exception=True)
+        review = category_review.dismiss(
+            request, review, data.validated_data["reason"].strip(), _if_match(request)
+        )
+        return self.respond(request, review)

@@ -105,6 +105,15 @@ export interface paths {
   "/api/v1/discovery/candidates/{id}/": {
     get: operations["discovery_candidates_retrieve"];
   };
+  "/api/v1/discovery/category-reviews/": {
+    get: operations["discovery_category_reviews_list"];
+  };
+  "/api/v1/discovery/category-reviews/{id}/dismiss/": {
+    post: operations["discovery_category_reviews_dismiss_create"];
+  };
+  "/api/v1/discovery/category-reviews/{id}/reclassify/": {
+    post: operations["discovery_category_reviews_reclassify_create"];
+  };
   "/api/v1/discovery/conflicts/": {
     get: operations["discovery_conflicts_list"];
   };
@@ -180,14 +189,44 @@ export interface paths {
   "/api/v1/permissions/": {
     get: operations["permissions_list"];
   };
+  "/api/v1/quality/findings/": {
+    get: operations["quality_findings_list"];
+  };
+  "/api/v1/quality/findings/{id}/assign/": {
+    post: operations["quality_findings_assign_create"];
+  };
+  "/api/v1/quality/findings/{id}/dismiss/": {
+    post: operations["quality_findings_dismiss_create"];
+  };
+  "/api/v1/quality/findings/{id}/reopen/": {
+    post: operations["quality_findings_reopen_create"];
+  };
+  "/api/v1/quality/refresh/": {
+    /** @description Recompute findings now (also runs hourly from Celery beat). */
+    post: operations["quality_refresh_create"];
+  };
+  "/api/v1/quality/summary/": {
+    get: operations["quality_summary_list"];
+  };
   "/api/v1/reconciliation/{id}/approve/": {
     post: operations["reconciliation_approve_create"];
+  };
+  "/api/v1/reconciliation/{id}/assign/": {
+    post: operations["reconciliation_assign_create"];
   };
   "/api/v1/reconciliation/{id}/hold/": {
     post: operations["reconciliation_hold_create"];
   };
   "/api/v1/reconciliation/{id}/reject/": {
     post: operations["reconciliation_reject_create"];
+  };
+  "/api/v1/reconciliation/assignees/": {
+    /** @description Active users who may decide reconciliation items (optionally for one site). */
+    get: operations["reconciliation_assignees_list"];
+  };
+  "/api/v1/reconciliation/bulk/": {
+    /** @description Hold, reject or assign many candidates. Linking and creating stay one at a time. */
+    post: operations["reconciliation_bulk_create"];
   };
   "/api/v1/roles/": {
     get: operations["roles_list"];
@@ -245,12 +284,6 @@ export type webhooks = Record<string, never>;
 
 export interface components {
   schemas: {
-    /**
-     * @description * `link` - link
-     * * `create` - create
-     * @enum {string}
-     */
-    ActionEnum: "link" | "create";
     Allocation: {
       /** Format: uuid */
       id: string;
@@ -280,8 +313,14 @@ export interface components {
      * @enum {string}
      */
     AllocationMethodEnum: "direct" | "group" | "direct_and_group";
+    /**
+     * @description * `link` - link
+     * * `create` - create
+     * @enum {string}
+     */
+    ApproveActionEnum: "link" | "create";
     ApproveRequest: {
-      action: components["schemas"]["ActionEnum"];
+      action: components["schemas"]["ApproveActionEnum"];
       /** Format: uuid */
       asset?: string;
       /** Format: uuid */
@@ -289,6 +328,11 @@ export interface components {
       name?: string;
       business_status?: components["schemas"]["BusinessStatusEnum"];
       reason: string;
+      /** @default false */
+      reclassify?: boolean;
+      custom_fields?: {
+        [key: string]: unknown;
+      };
     };
     AssetCategory: {
       /** Format: uuid */
@@ -427,6 +471,12 @@ export interface components {
      * @enum {string}
      */
     AssetMergeStatusEnum: "merged" | "reverted";
+    AssetRefWithSite: {
+      /** Format: uuid */
+      id: string;
+      name: string;
+      site: components["schemas"]["SiteRef"];
+    };
     /** @description Create (all fields) and PATCH (partial; category excluded — use classification). */
     AssetWriteRequest: {
       name: string;
@@ -455,6 +505,16 @@ export interface components {
       hostnames?: components["schemas"]["HostnameInputRequest"][];
       interfaces?: components["schemas"]["InterfaceInputRequest"][];
       ip_addresses?: components["schemas"]["IPAddressInputRequest"][];
+    };
+    AssignRequest: {
+      /** Format: uuid */
+      assignee: string | null;
+    };
+    Assignee: {
+      /** Format: uuid */
+      id: string;
+      username: string;
+      display_name: string;
     };
     AuditEvent: {
       /** Format: uuid */
@@ -520,6 +580,31 @@ export interface components {
     /** @enum {unknown} */
     BlankEnum: "";
     /**
+     * @description * `hold` - hold
+     * * `reject` - reject
+     * * `assign` - assign
+     * @enum {string}
+     */
+    BulkDecisionActionEnum: "hold" | "reject" | "assign";
+    BulkDecisionRequest: {
+      items: components["schemas"]["BulkItemRequest"][];
+      action: components["schemas"]["BulkDecisionActionEnum"];
+      reason?: string;
+      /** Format: uuid */
+      assignee?: string | null;
+    };
+    BulkItemRequest: {
+      /** Format: uuid */
+      id: string;
+      version: number;
+    };
+    BulkResult: {
+      /** Format: uuid */
+      id: string;
+      ok: boolean;
+      error: string;
+    };
+    /**
      * @description * `ordered` - Ordered
      * * `in_stock` - In stock
      * * `deployed` - Deployed
@@ -552,6 +637,9 @@ export interface components {
       /** Format: date-time */
       decided_at: string | null;
       resulting_asset: components["schemas"]["Ref"] | null;
+      assignee: components["schemas"]["UserRef"] | null;
+      /** Format: date-time */
+      assigned_at: string | null;
       /** Format: date-time */
       created_at: string;
       /** Format: date-time */
@@ -574,6 +662,50 @@ export interface components {
       name: string;
       path: string;
     };
+    CategoryReview: {
+      /** Format: uuid */
+      id: string;
+      asset: components["schemas"]["AssetRefWithSite"];
+      instance: components["schemas"]["InstanceRef"];
+      external_id: string;
+      /** Format: uuid */
+      observation_id: string;
+      current_category: components["schemas"]["CategoryRef"];
+      suggested_category: components["schemas"]["CategoryRef"];
+      reported_type: string;
+      kind: components["schemas"]["CategoryReviewKindEnum"];
+      status: components["schemas"]["CategoryReviewStatusEnum"];
+      resolved_by: string | null;
+      /** Format: date-time */
+      resolved_at: string | null;
+      resolution_reason: string;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      modified_at: string;
+      version: number;
+    };
+    CategoryReviewDecisionRequest: {
+      reason: string;
+      custom_fields?: {
+        [key: string]: unknown;
+      };
+    };
+    /**
+     * @description * `different_class` - Different asset class
+     * * `different_type` - Different type in the same class
+     * * `more_specific` - More specific type
+     * @enum {string}
+     */
+    CategoryReviewKindEnum: "different_class" | "different_type" | "more_specific";
+    /**
+     * @description * `open` - Open
+     * * `reclassified` - Asset reclassified
+     * * `dismissed` - Current category kept
+     * * `resolved` - No longer suggested
+     * @enum {string}
+     */
+    CategoryReviewStatusEnum: "open" | "reclassified" | "dismissed" | "resolved";
     ChangePasswordRequest: {
       current_password: string;
       new_password: string;
@@ -869,6 +1001,56 @@ export interface components {
      * @enum {string}
      */
     FieldTypeEnum: "text" | "long_text" | "integer" | "decimal" | "boolean" | "date" | "choice";
+    Finding: {
+      /** Format: uuid */
+      id: string;
+      kind: components["schemas"]["FindingKindEnum"];
+      asset: components["schemas"]["FindingAsset"];
+      severity: components["schemas"]["SeverityEnum"];
+      summary: string;
+      evidence: {
+        [key: string]: unknown;
+      };
+      /** @default open */
+      status: components["schemas"]["FindingStatusEnum"];
+      assignee: components["schemas"]["UserRef"] | null;
+      /** Format: date-time */
+      assigned_at: string | null;
+      /** Format: date-time */
+      detected_at: string;
+      /** Format: date-time */
+      last_confirmed_at: string;
+      /** Format: date-time */
+      resolved_at: string | null;
+      resolved_by: string | null;
+      resolution_reason: string;
+      version: number;
+    };
+    FindingAsset: {
+      /** Format: uuid */
+      id: string;
+      name: string;
+      site: components["schemas"]["SiteRef"];
+    };
+    FindingAssignRequest: {
+      /** Format: uuid */
+      assignee: string | null;
+    };
+    /**
+     * @description * `duplicate_candidate` - Duplicate candidate
+     * * `model_unknown` - Model unknown
+     * * `source_stale` - Source stale
+     * * `owner_missing` - Owner missing
+     * @enum {string}
+     */
+    FindingKindEnum: "duplicate_candidate" | "model_unknown" | "source_stale" | "owner_missing";
+    /**
+     * @description * `open` - Open
+     * * `dismissed` - Dismissed (accepted as is)
+     * * `resolved` - Resolved
+     * @enum {string}
+     */
+    FindingStatusEnum: "open" | "dismissed" | "resolved";
     GroupRef: {
       id: string;
       display_name: string | null;
@@ -1257,8 +1439,20 @@ export interface components {
       previous_cursor: string | null;
       count: number;
     };
+    PaginatedCategoryReviewList: {
+      items: components["schemas"]["CategoryReview"][];
+      next_cursor: string | null;
+      previous_cursor: string | null;
+      count: number;
+    };
     PaginatedFieldConflictList: {
       items: components["schemas"]["FieldConflict"][];
+      next_cursor: string | null;
+      previous_cursor: string | null;
+      count: number;
+    };
+    PaginatedFindingList: {
+      items: components["schemas"]["Finding"][];
       next_cursor: string | null;
       previous_cursor: string | null;
       count: number;
@@ -1450,6 +1644,11 @@ export interface components {
       id: string;
       name: string;
     };
+    RefreshResult: {
+      opened: number;
+      refreshed: number;
+      resolved: number;
+    };
     ResetPasswordRequest: {
       password: string;
     };
@@ -1533,6 +1732,13 @@ export interface components {
       name: string;
       source: string;
     };
+    /**
+     * @description * `high` - High
+     * * `medium` - Medium
+     * * `low` - Low
+     * @enum {string}
+     */
+    SeverityEnum: "high" | "medium" | "low";
     Site: {
       /** Format: uuid */
       id: string;
@@ -1701,6 +1907,11 @@ export interface components {
       latest: components["schemas"]["Snapshot"] | null;
       service_plans: readonly string[];
       snapshots: readonly components["schemas"]["Snapshot"][];
+    };
+    SummaryRow: {
+      kind: components["schemas"]["FindingKindEnum"];
+      open: number;
+      high: number;
     };
     /**
      * @description * `supported` - Supported
@@ -2485,12 +2696,21 @@ export interface operations {
   discovery_candidates_list: {
     parameters: {
       query?: {
+        /** @description me, none or a user ID */
+        assignee?: string;
         /** @description The pagination cursor value. */
         cursor?: string;
         instance?: string;
+        /** @description Opened at least N days ago */
+        older_than_days?: number;
+        ordering?: "newest" | "oldest" | "score";
         /** @description Number of results to return per page. */
         page_size?: number;
+        /** @description Source external ID or source name contains */
+        q?: string;
         rule?: "conflict" | "corroborated" | "new_device" | "strong" | "weak";
+        /** @description Site ID */
+        site?: string;
         /** @description Default: open and held. Or one of open, held, linked, created, rejected, superseded, all. */
         status?: string;
       };
@@ -2513,6 +2733,76 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["Candidate"];
+        };
+      };
+    };
+  };
+  discovery_category_reviews_list: {
+    parameters: {
+      query?: {
+        asset?: string;
+        /** @description The pagination cursor value. */
+        cursor?: string;
+        instance?: string;
+        kind?: "different_class" | "different_type" | "more_specific";
+        /** @description Number of results to return per page. */
+        page_size?: number;
+        /** @description Default open; or reclassified, dismissed, resolved, all */
+        status?: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["PaginatedCategoryReviewList"];
+        };
+      };
+    };
+  };
+  discovery_category_reviews_dismiss_create: {
+    parameters: {
+      header: {
+        "If-Match": string;
+      };
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ReasonRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["ReasonRequest"];
+        "multipart/form-data": components["schemas"]["ReasonRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["CategoryReview"];
+        };
+      };
+    };
+  };
+  discovery_category_reviews_reclassify_create: {
+    parameters: {
+      header: {
+        "If-Match": string;
+      };
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CategoryReviewDecisionRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["CategoryReviewDecisionRequest"];
+        "multipart/form-data": components["schemas"]["CategoryReviewDecisionRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["CategoryReview"];
         };
       };
     };
@@ -2944,6 +3234,121 @@ export interface operations {
       };
     };
   };
+  quality_findings_list: {
+    parameters: {
+      query?: {
+        /** @description me, none or a user ID */
+        assignee?: string;
+        /** @description The pagination cursor value. */
+        cursor?: string;
+        kind?: "duplicate_candidate" | "model_unknown" | "owner_missing" | "source_stale";
+        /** @description Number of results to return per page. */
+        page_size?: number;
+        severity?: "high" | "low" | "medium";
+        site?: string;
+        /** @description Default open; or dismissed, resolved, all */
+        status?: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["PaginatedFindingList"];
+        };
+      };
+    };
+  };
+  quality_findings_assign_create: {
+    parameters: {
+      header: {
+        "If-Match": string;
+      };
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["FindingAssignRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["FindingAssignRequest"];
+        "multipart/form-data": components["schemas"]["FindingAssignRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["Finding"];
+        };
+      };
+    };
+  };
+  quality_findings_dismiss_create: {
+    parameters: {
+      header: {
+        "If-Match": string;
+      };
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ReasonRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["ReasonRequest"];
+        "multipart/form-data": components["schemas"]["ReasonRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["Finding"];
+        };
+      };
+    };
+  };
+  quality_findings_reopen_create: {
+    parameters: {
+      header: {
+        "If-Match": string;
+      };
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ReasonRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["ReasonRequest"];
+        "multipart/form-data": components["schemas"]["ReasonRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["Finding"];
+        };
+      };
+    };
+  };
+  /** @description Recompute findings now (also runs hourly from Celery beat). */
+  quality_refresh_create: {
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["RefreshResult"];
+        };
+      };
+    };
+  };
+  quality_summary_list: {
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["SummaryRow"][];
+        };
+      };
+    };
+  };
   reconciliation_approve_create: {
     parameters: {
       header: {
@@ -2958,6 +3363,30 @@ export interface operations {
         "application/json": components["schemas"]["ApproveRequest"];
         "application/x-www-form-urlencoded": components["schemas"]["ApproveRequest"];
         "multipart/form-data": components["schemas"]["ApproveRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["Candidate"];
+        };
+      };
+    };
+  };
+  reconciliation_assign_create: {
+    parameters: {
+      header: {
+        "If-Match": string;
+      };
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AssignRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["AssignRequest"];
+        "multipart/form-data": components["schemas"]["AssignRequest"];
       };
     };
     responses: {
@@ -3012,6 +3441,38 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["Candidate"];
+        };
+      };
+    };
+  };
+  /** @description Active users who may decide reconciliation items (optionally for one site). */
+  reconciliation_assignees_list: {
+    parameters: {
+      query?: {
+        site?: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["Assignee"][];
+        };
+      };
+    };
+  };
+  /** @description Hold, reject or assign many candidates. Linking and creating stay one at a time. */
+  reconciliation_bulk_create: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["BulkDecisionRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["BulkDecisionRequest"];
+        "multipart/form-data": components["schemas"]["BulkDecisionRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["BulkResult"][];
         };
       };
     };

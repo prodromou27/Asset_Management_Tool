@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useSession } from '../../app/useSession'
 import {
+  bulkDecide,
   discoveryKeys,
   fetchCandidates,
   fetchConflicts,
@@ -12,15 +13,18 @@ import {
   type CandidateFilters,
 } from '../../shared/api/discovery'
 import { isApiError } from '../../shared/api/client'
-import { PERMISSIONS, type FieldConflict } from '../../shared/api/types'
+import { PERMISSIONS, type BulkResult, type FieldConflict } from '../../shared/api/types'
 import { formatDateTime } from '../../shared/format'
 import { Button } from '../../shared/ui/Button'
 import { Dialog } from '../../shared/ui/Dialog'
-import { SelectField, TextAreaField } from '../../shared/ui/Field'
+import { SelectField, TextAreaField, TextField } from '../../shared/ui/Field'
 import { PageHeader } from '../../shared/ui/PageHeader'
 import { EmptyState, LoadingState, QueryErrorState } from '../../shared/ui/States'
 import { StatusBadge } from '../../shared/ui/StatusBadge'
 import { Tabs } from '../../shared/ui/Tabs'
+import { CategoryReviews } from './CategoryReviews'
+import { QualityQueues } from './QualityQueues'
+import { ReasonDialog } from './ReasonDialog'
 import {
   CANDIDATE_STATUS,
   FIELD_LABEL,
@@ -47,6 +51,8 @@ export function DiscoveryPage() {
         onSelect={(next) => setParams(next === 'queue' ? {} : { tab: next }, { replace: true })}
         tabs={[
           { id: 'queue', label: 'Reconciliation queue', content: <Queue /> },
+          { id: 'categories', label: 'Category reviews', content: <CategoryReviews /> },
+          { id: 'quality', label: 'Data quality', content: <QualityQueues /> },
           { id: 'conflicts', label: 'Field conflicts', content: <Conflicts /> },
           { id: 'sources', label: 'Sources', content: <Sources /> },
         ]}
@@ -57,13 +63,26 @@ export function DiscoveryPage() {
 
 // --- Queue ---------------------------------------------------------------------------
 
+type BulkAction = 'hold' | 'reject'
+
 function Queue() {
+  const { can, me } = useSession()
+  const queryClient = useQueryClient()
+  const decide = can(PERMISSIONS.reconciliationDecide)
   const [params, setParams] = useSearchParams()
   const filters: CandidateFilters = {
     status: params.get('status') ?? undefined,
     rule: params.get('rule') ?? undefined,
     instance: params.get('instance') ?? undefined,
+    assignee: params.get('assignee') ?? undefined,
+    older_than_days: params.get('older_than_days') ?? undefined,
+    ordering: params.get('ordering') ?? undefined,
+    q: params.get('q') ?? undefined,
   }
+  const [search, setSearch] = useState(filters.q ?? '')
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [asking, setAsking] = useState<BulkAction | null>(null)
+  const [outcome, setOutcome] = useState<BulkResult[] | null>(null)
   const integrations = useQuery({ queryKey: discoveryKeys.integrations, queryFn: fetchIntegrations })
   const candidates = useInfiniteQuery({
     queryKey: discoveryKeys.candidates(filters),
@@ -73,16 +92,37 @@ function Queue() {
   })
 
   function update(next: Partial<CandidateFilters>) {
-    const search = new URLSearchParams(params)
+    const query = new URLSearchParams(params)
     for (const [key, value] of Object.entries(next)) {
-      if (value) search.set(key, value)
-      else search.delete(key)
+      if (value) query.set(key, value)
+      else query.delete(key)
     }
-    setParams(search, { replace: true })
+    setSelected(new Set())
+    setParams(query, { replace: true })
   }
 
   const items = candidates.data?.pages.flatMap((p) => p.items) ?? []
   const total = candidates.data?.pages[0]?.count
+  const decidable = items.filter((c) => c.status === 'open' || c.status === 'held')
+  const chosen = decidable.filter((c) => selected.has(c.id))
+  const bulk = useMutation({
+    mutationFn: (body: { action: 'hold' | 'reject' | 'assign'; reason?: string; assignee?: string | null }) =>
+      bulkDecide({ ...body, items: chosen.map((c) => ({ id: c.id, version: c.version })) }),
+    onSuccess: async (results) => {
+      setOutcome(results)
+      setSelected(new Set())
+      setAsking(null)
+      await queryClient.invalidateQueries({ queryKey: ['discovery', 'candidates'] })
+    },
+  })
+  const toggle = (id: string) =>
+    setSelected((current) => {
+      const next = new Set(current)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  const allChosen = decidable.length > 0 && chosen.length === decidable.length
 
   return (
     <>
@@ -118,12 +158,85 @@ function Queue() {
           value={filters.instance ?? ''}
           onChange={(e) => update({ instance: e.target.value || undefined })}
         />
+        <SelectField
+          label="Assignee"
+          name="assignee"
+          options={[
+            { value: '', label: 'Anyone' },
+            { value: 'me', label: 'Assigned to me' },
+            { value: 'none', label: 'Unassigned' },
+          ]}
+          value={filters.assignee ?? ''}
+          onChange={(e) => update({ assignee: e.target.value || undefined })}
+        />
+        <SelectField
+          label="Waiting"
+          name="older_than_days"
+          options={[
+            { value: '', label: 'Any age' },
+            { value: '7', label: 'Over 7 days' },
+            { value: '30', label: 'Over 30 days' },
+          ]}
+          value={filters.older_than_days ?? ''}
+          onChange={(e) => update({ older_than_days: e.target.value || undefined })}
+        />
+        <SelectField
+          label="Sort"
+          name="ordering"
+          options={[
+            { value: '', label: 'Recently updated' },
+            { value: 'oldest', label: 'Oldest first' },
+            { value: 'score', label: 'Highest confidence' },
+          ]}
+          value={filters.ordering ?? ''}
+          onChange={(e) => update({ ordering: e.target.value || undefined })}
+        />
+        <form
+          role="search"
+          onSubmit={(e) => {
+            e.preventDefault()
+            update({ q: search.trim() || undefined })
+          }}
+        >
+          <TextField
+            label="Device ID or source"
+            name="q"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </form>
         {total !== undefined && (
           <p className="toolbar__count" aria-live="polite">
             {total} {total === 1 ? 'device' : 'devices'}
           </p>
         )}
       </div>
+      {decide && chosen.length > 0 && (
+        <div className="bulk-bar" role="region" aria-label="Bulk actions">
+          <p>{chosen.length} selected</p>
+          <Button busy={bulk.isPending} onClick={() => bulk.mutate({ action: 'assign', assignee: me?.id ?? null })}>
+            Assign to me
+          </Button>
+          <Button busy={bulk.isPending} onClick={() => bulk.mutate({ action: 'assign', assignee: null })}>
+            Unassign
+          </Button>
+          <Button onClick={() => setAsking('hold')}>Put on hold…</Button>
+          <Button variant="danger" onClick={() => setAsking('reject')}>
+            Reject…
+          </Button>
+          <p className="field__help">Linking and creating assets stay one device at a time.</p>
+        </div>
+      )}
+      {outcome && (
+        <p className={outcome.every((r) => r.ok) ? 'inline-success' : 'inline-note inline-note--warning'} role="status">
+          {outcome.filter((r) => r.ok).length} of {outcome.length} updated.
+          {outcome
+            .filter((r) => !r.ok)
+            .slice(0, 3)
+            .map((r) => ` ${r.error}`)}
+        </p>
+      )}
+      {bulk.error && <p className="field__error">{bulk.error.message}</p>}
       <section className="panel panel--flush" aria-live="polite">
         {candidates.isPending && <LoadingState label="Loading reconciliation queue…" />}
         {candidates.isError && <QueryErrorState error={candidates.error} what="the reconciliation queue" />}
@@ -138,13 +251,24 @@ function Queue() {
               <caption className="visually-hidden">Reconciliation candidates</caption>
               <thead>
                 <tr>
+                  {decide && (
+                    <th scope="col">
+                      <input
+                        type="checkbox"
+                        aria-label="Select all shown devices that need a decision"
+                        checked={allChosen}
+                        onChange={() => setSelected(allChosen ? new Set() : new Set(decidable.map((c) => c.id)))}
+                      />
+                    </th>
+                  )}
                   <th scope="col">Device</th>
                   <th scope="col">Source</th>
                   <th scope="col">Match</th>
                   <th scope="col">Confidence</th>
                   <th scope="col">Proposed asset</th>
                   <th scope="col">Site</th>
-                  <th scope="col">Observed</th>
+                  <th scope="col">Waiting since</th>
+                  <th scope="col">Assignee</th>
                   <th scope="col">Status</th>
                 </tr>
               </thead>
@@ -153,8 +277,21 @@ function Queue() {
                   const n = c.observation.normalized as Record<string, unknown>
                   const host = (n.hostnames as string[] | undefined)?.[0]
                   const label = host ?? [n.manufacturer, n.model].filter(Boolean).join(' ')
+                  const open = c.status === 'open' || c.status === 'held'
                   return (
-                    <tr key={c.id}>
+                    <tr key={c.id} className={selected.has(c.id) ? 'row--selected' : undefined}>
+                      {decide && (
+                        <td>
+                          {open && (
+                            <input
+                              type="checkbox"
+                              aria-label={`Select ${label || c.external_id}`}
+                              checked={selected.has(c.id)}
+                              onChange={() => toggle(c.id)}
+                            />
+                          )}
+                        </td>
+                      )}
                       <td>
                         <Link className="table-link" to={`/discovery/candidates/${c.id}`}>
                           {label || `Device ${c.external_id}`}
@@ -182,7 +319,11 @@ function Queue() {
                         )}
                       </td>
                       <td className="mono">{c.site.code}</td>
-                      <td className="nowrap">{formatDateTime(c.observation.observed_at)}</td>
+                      <td className="nowrap">
+                        {formatDateTime(c.created_at)}
+                        <span className="cell-secondary">Observed {formatDateTime(c.observation.observed_at)}</span>
+                      </td>
+                      <td>{c.assignee ? c.assignee.display_name : <span className="cell-muted">Unassigned</span>}</td>
                       <td>{CANDIDATE_STATUS[c.status]}</td>
                     </tr>
                   )
@@ -199,6 +340,20 @@ function Queue() {
           </div>
         )}
       </section>
+      {asking && (
+        <ReasonDialog
+          title={asking === 'hold' ? `Put ${chosen.length} on hold?` : `Reject ${chosen.length}?`}
+          confirmLabel={asking === 'hold' ? 'Put on hold' : 'Reject'}
+          help={
+            asking === 'hold'
+              ? 'They stay in the queue, marked as on hold.'
+              : 'Rejected devices stay rejected until the source reports a change.'
+          }
+          busy={bulk.isPending}
+          onClose={() => setAsking(null)}
+          onConfirm={(reason) => bulk.mutate({ action: asking, reason })}
+        />
+      )}
     </>
   )
 }

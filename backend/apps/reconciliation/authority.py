@@ -25,6 +25,7 @@ from apps.assets.models import (
 from apps.assets.services import network_snapshot
 from apps.integrations.models import FieldAuthorityPolicy
 
+from . import category_review
 from .models import FieldConflict, SourceLink
 
 
@@ -201,6 +202,7 @@ def apply_observation(asset: Asset, link: SourceLink, observation) -> dict:
             reason=f"Observation {observation.pk} from {instance.name}",
             version=asset.version,
         )
+    category_review.review_observation(asset, link, observation)
     return {"changes": changes, "conflicts_opened": conflicts_opened}
 
 

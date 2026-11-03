@@ -1,6 +1,13 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { AssetEvidence, Candidate, FieldConflict, IntegrationInstance } from '../../shared/api/types'
+import type {
+  AssetEvidence,
+  Candidate,
+  CategoryReview,
+  FieldConflict,
+  IntegrationInstance,
+  QualityFinding,
+} from '../../shared/api/types'
 import {
   ASSET_ID,
   CATEGORIES,
@@ -48,6 +55,8 @@ function makeCandidate(overrides: Partial<Candidate> = {}): Candidate {
     hidden_match_count: 1,
     conflicts: [],
     suggested_category: { id: CAT_SWITCH.id, name: 'Switch' },
+    assignee: null,
+    assigned_at: null,
     observation: {
       id: OBS_ID,
       external_id: '317',
@@ -439,5 +448,275 @@ describe('Integrations admin', () => {
         stale_after_hours: 168,
       }),
     )
+  })
+})
+
+describe('Queue triage (Task 011)', () => {
+  const second = () =>
+    makeCandidate({ id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2', external_id: '318', version: 5 })
+  const routes = () => ({
+    'GET /auth/me/': { body: makeMe() },
+    'GET /integrations/': { body: [integration] },
+    'GET /discovery/candidates/': { body: page([makeCandidate(), second()]) },
+  })
+
+  it('rejects selected devices in bulk with a reason and their versions', async () => {
+    const { calls } = mockApi({
+      ...routes(),
+      'POST /reconciliation/bulk/': {
+        body: [
+          { id: CANDIDATE_ID, ok: true, error: '' },
+          { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2', ok: false, error: 'This record was changed by someone else.' },
+        ],
+      },
+    })
+    renderApp('/discovery')
+
+    fireEvent.click(await screen.findByLabelText('Select all shown devices that need a decision'))
+    const bar = screen.getByRole('region', { name: 'Bulk actions' })
+    expect(within(bar).getByText('2 selected')).toBeInTheDocument()
+    fireEvent.click(within(bar).getByRole('button', { name: 'Reject…' }))
+    const dialog = screen.getByRole('dialog', { name: 'Reject 2?' })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Reject' }))
+    expect(within(dialog).getByText('Enter a reason of at least 5 characters.')).toBeInTheDocument()
+    fireEvent.change(within(dialog).getByLabelText('Reason'), { target: { value: 'Lab devices' } })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Reject' }))
+
+    expect(await screen.findByText(/1 of 2 updated\./)).toBeInTheDocument()
+    expect(calls.find((c) => c.path === '/reconciliation/bulk/')?.body).toEqual({
+      action: 'reject',
+      reason: 'Lab devices',
+      items: [
+        { id: CANDIDATE_ID, version: 2 },
+        { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2', version: 5 },
+      ],
+    })
+  })
+
+  it('assigns to me and filters by assignee, age and sort', async () => {
+    const { calls } = mockApi({
+      ...routes(),
+      'POST /reconciliation/bulk/': { body: [{ id: CANDIDATE_ID, ok: true, error: '' }] },
+    })
+    renderApp('/discovery')
+
+    const boxes = await screen.findAllByLabelText('Select sw-core-01.corp.example')
+    fireEvent.click(boxes[0])
+    fireEvent.click(screen.getByRole('button', { name: 'Assign to me' }))
+    await waitFor(() =>
+      expect(calls.find((c) => c.path === '/reconciliation/bulk/')?.body).toEqual({
+        action: 'assign',
+        assignee: '00000000-0000-4000-8000-000000000001',
+        items: [{ id: CANDIDATE_ID, version: 2 }],
+      }),
+    )
+
+    fireEvent.change(screen.getByLabelText('Assignee'), { target: { value: 'none' } })
+    fireEvent.change(screen.getByLabelText('Waiting'), { target: { value: '7' } })
+    fireEvent.change(screen.getByLabelText('Sort'), { target: { value: 'oldest' } })
+    await waitFor(() => {
+      const last = calls.filter((c) => c.path === '/discovery/candidates/').at(-1)!
+      expect(last.search.get('assignee')).toBe('none')
+      expect(last.search.get('older_than_days')).toBe('7')
+      expect(last.search.get('ordering')).toBe('oldest')
+    })
+  })
+
+  it('offers no selection or bulk actions without decide permission', async () => {
+    mockApi({ ...routes(), 'GET /auth/me/': { body: makeMe({ permissions: ['discovery.view', 'assets.view'] }) } })
+    renderApp('/discovery')
+
+    expect(await screen.findAllByText('sw-core-01.corp.example')).toHaveLength(2)
+    expect(screen.queryAllByRole('checkbox')).toHaveLength(0)
+  })
+
+  it('links and reclassifies in one decision', async () => {
+    const { calls } = mockApi({
+      'GET /auth/me/': { body: makeMe() },
+      [`GET /discovery/candidates/${CANDIDATE_ID}/`]: { body: makeCandidate() },
+      'GET /asset-categories/': { body: CATEGORIES },
+      [`POST /reconciliation/${CANDIDATE_ID}/approve/`]: { body: makeCandidate({ status: 'linked' }) },
+    })
+    renderApp(`/discovery/candidates/${CANDIDATE_ID}`)
+
+    const panel = (await screen.findByRole('heading', { name: 'Decision' })).closest('section')!
+    fireEvent.click(within(panel).getByLabelText(/Also change the asset.s category to Switch/))
+    fireEvent.change(within(panel).getByLabelText('Reason'), { target: { value: 'Same switch' } })
+    fireEvent.click(within(panel).getByRole('button', { name: 'Link device' }))
+
+    await waitFor(() =>
+      expect(calls.find((c) => c.method === 'POST')?.body).toEqual({
+        action: 'link',
+        asset: ASSET_ID,
+        reason: 'Same switch',
+        reclassify: true,
+        category: CAT_SWITCH.id,
+      }),
+    )
+  })
+})
+
+describe('Category reviews (Task 011)', () => {
+  const REVIEW_ID = 'cccccccc-cccc-4ccc-8ccc-ccccccccccc1'
+  const review: CategoryReview = {
+    id: REVIEW_ID,
+    asset: { id: ASSET_ID, name: 'LT-0042', site: { id: SITE_HQ.id, code: 'HQ', name: 'Headquarters' } },
+    instance: INSTANCE,
+    external_id: '301',
+    observation_id: OBS_ID,
+    current_category: { id: 'c-desktop', name: 'Desktop', path: 'Workstations / Desktop' },
+    suggested_category: { id: 'c-laptop', name: 'Laptop', path: 'Workstations / Laptop' },
+    reported_type: 'laptop',
+    kind: 'different_type',
+    status: 'open',
+    resolved_by: null,
+    resolved_at: null,
+    resolution_reason: '',
+    created_at: '2026-11-02T08:00:00Z',
+    modified_at: '2026-11-02T08:00:00Z',
+    version: 3,
+  }
+  const impact = (missing: string[] = []) => ({
+    from_category: 'Workstations / Desktop',
+    to_category: 'Workstations / Laptop',
+    fields_added: [{ key: 'battery_model', label: 'Battery model', required: missing.length > 0 }],
+    fields_kept: [],
+    values_retained_read_only: [],
+    required_missing: missing,
+  })
+
+  it('reclassifies after showing the template impact', async () => {
+    const { calls } = mockApi({
+      'GET /auth/me/': { body: makeMe() },
+      'GET /discovery/category-reviews/': { body: page([review]) },
+      [`POST /assets/${ASSET_ID}/classification/preview/`]: { body: impact() },
+      [`POST /discovery/category-reviews/${REVIEW_ID}/reclassify/`]: { body: { ...review, status: 'reclassified' } },
+    })
+    renderApp('/discovery?tab=categories')
+
+    const table = await screen.findByRole('region', { name: 'Category reviews' })
+    expect(await within(table).findByText('Workstations / Laptop')).toBeInTheDocument()
+    expect(within(table).getByText('Different type')).toBeInTheDocument()
+    fireEvent.click(within(table).getByRole('button', { name: /Reclassify… LT-0042/ }))
+    const dialog = screen.getByRole('dialog', { name: 'Reclassify LT-0042?' })
+    expect(await within(dialog).findByText('Adds fields: Battery model')).toBeInTheDocument()
+    fireEvent.change(within(dialog).getByLabelText('Reason'), { target: { value: 'Confirmed laptop' } })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Change to Laptop' }))
+
+    await waitFor(() => {
+      const call = calls.find((c) => c.path.endsWith('/reclassify/'))!
+      expect(call.headers['If-Match']).toBe('"3"')
+      expect(call.body).toEqual({ reason: 'Confirmed laptop' })
+    })
+  })
+
+  it('sends the reviewer to the asset when required fields are missing', async () => {
+    mockApi({
+      'GET /auth/me/': { body: makeMe() },
+      'GET /discovery/category-reviews/': { body: page([review]) },
+      [`POST /assets/${ASSET_ID}/classification/preview/`]: { body: impact(['battery_model']) },
+    })
+    renderApp('/discovery?tab=categories')
+
+    fireEvent.click(await screen.findByRole('button', { name: /Reclassify… LT-0042/ }))
+    const dialog = screen.getByRole('dialog', { name: 'Reclassify LT-0042?' })
+    expect(await within(dialog).findByRole('link', { name: 'Change category on the asset' })).toHaveAttribute(
+      'href',
+      `/assets/${ASSET_ID}`,
+    )
+    expect(within(dialog).getByRole('button', { name: 'Change to Laptop' })).toBeDisabled()
+  })
+
+  it('keeps the current category with a reason', async () => {
+    const { calls } = mockApi({
+      'GET /auth/me/': { body: makeMe() },
+      'GET /discovery/category-reviews/': { body: page([review]) },
+      [`POST /discovery/category-reviews/${REVIEW_ID}/dismiss/`]: { body: { ...review, status: 'dismissed' } },
+    })
+    renderApp('/discovery?tab=categories')
+
+    fireEvent.click(await screen.findByRole('button', { name: /Keep current… category of LT-0042/ }))
+    const dialog = screen.getByRole('dialog', { name: 'Keep Desktop for LT-0042?' })
+    fireEvent.change(within(dialog).getByLabelText('Reason'), { target: { value: 'Docked laptop as desktop' } })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Keep current category' }))
+    await waitFor(() =>
+      expect(calls.find((c) => c.path.endsWith('/dismiss/'))?.body).toEqual({ reason: 'Docked laptop as desktop' }),
+    )
+  })
+})
+
+describe('Data-quality queues (Task 011)', () => {
+  const FINDING_ID = 'dddddddd-dddd-4ddd-8ddd-ddddddddddd1'
+  const finding: QualityFinding = {
+    id: FINDING_ID,
+    kind: 'duplicate_candidate',
+    asset: { id: ASSET_ID, name: 'sw-a', site: { id: SITE_HQ.id, code: 'HQ', name: 'Headquarters' } },
+    severity: 'high',
+    summary: 'Same manufacturer and serial (Cisco FOC1) as 1 other asset(s).',
+    evidence: { match: 'manufacturer_serial', value: 'Cisco FOC1', assets: [{ id: 'other-asset', name: 'sw-b' }] },
+    status: 'open',
+    assignee: null,
+    assigned_at: null,
+    detected_at: '2026-11-03T08:00:00Z',
+    last_confirmed_at: '2026-11-04T08:00:00Z',
+    resolved_at: null,
+    resolved_by: null,
+    resolution_reason: '',
+    version: 1,
+  }
+  const summary = [
+    { kind: 'duplicate_candidate', open: 2, high: 2 },
+    { kind: 'model_unknown', open: 5, high: 0 },
+    { kind: 'source_stale', open: 0, high: 0 },
+    { kind: 'owner_missing', open: 1, high: 0 },
+  ]
+
+  it('shows queues with counts, evidence, assignment and dismissal', async () => {
+    const { calls } = mockApi({
+      'GET /auth/me/': { body: makeMe() },
+      'GET /quality/summary/': { body: summary },
+      'GET /quality/findings/': { body: page([finding]) },
+      [`POST /quality/findings/${FINDING_ID}/assign/`]: { body: { ...finding, version: 2 } },
+      [`POST /quality/findings/${FINDING_ID}/dismiss/`]: { body: { ...finding, status: 'dismissed' } },
+    })
+    renderApp('/discovery?tab=quality')
+
+    const queues = await screen.findByRole('navigation', { name: 'Data-quality queues' })
+    expect(await within(queues).findByRole('button', { name: /Model unknown 5/ })).toBeInTheDocument()
+    const table = screen.getByRole('region', { name: 'Data-quality findings' })
+    expect(await within(table).findByText(/Same manufacturer and serial/)).toBeInTheDocument()
+    expect(within(table).getByRole('link', { name: 'sw-b' })).toHaveAttribute('href', '/assets/other-asset')
+    expect(within(table).getByText('High')).toBeInTheDocument()
+
+    fireEvent.click(within(table).getByRole('button', { name: 'Assign to me sw-a' }))
+    await waitFor(() => {
+      const call = calls.find((c) => c.path.endsWith('/assign/'))!
+      expect(call.body).toEqual({ assignee: '00000000-0000-4000-8000-000000000001' })
+      expect(call.headers['If-Match']).toBe('"1"')
+    })
+
+    fireEvent.click(within(table).getByRole('button', { name: 'Dismiss… sw-a' }))
+    const dialog = screen.getByRole('dialog', { name: 'Dismiss finding for sw-a?' })
+    fireEvent.change(within(dialog).getByLabelText('Reason'), { target: { value: 'Spare chassis, same serial by design' } })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Dismiss' }))
+    await waitFor(() => expect(calls.some((c) => c.path.endsWith('/dismiss/'))).toBe(true))
+
+    fireEvent.click(within(queues).getByRole('button', { name: /Model unknown 5/ }))
+    await waitFor(() =>
+      expect(calls.filter((c) => c.path === '/quality/findings/').at(-1)?.search.get('kind')).toBe('model_unknown'),
+    )
+  })
+
+  it('is read-only without decide permission', async () => {
+    mockApi({
+      'GET /auth/me/': { body: makeMe({ permissions: ['discovery.view', 'assets.view'] }) },
+      'GET /quality/summary/': { body: summary },
+      'GET /quality/findings/': { body: page([finding]) },
+    })
+    renderApp('/discovery?tab=quality')
+
+    expect(await screen.findByText(/Same manufacturer and serial/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Assign to me/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Re-check now' })).not.toBeInTheDocument()
   })
 })

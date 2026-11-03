@@ -289,6 +289,7 @@ function Decision({ candidate }: { candidate: Candidate }) {
   const [name, setName] = useState('')
   const [category, setCategory] = useState(candidate.suggested_category?.id ?? '')
   const [businessStatus, setBusinessStatus] = useState('deployed')
+  const [reclassify, setReclassify] = useState(false)
   const [reason, setReason] = useState('')
   const [clientErrors, setClientErrors] = useState<Record<string, string[]>>({})
   const categories = useQuery({
@@ -302,7 +303,15 @@ function Decision({ candidate }: { candidate: Candidate }) {
       const why = reason.trim()
       if (action === 'reject') return rejectCandidate(candidate.id, candidate.version, why)
       if (action === 'hold') return holdCandidate(candidate.id, candidate.version, why)
-      if (action === 'link') return approveCandidate(candidate.id, candidate.version, { action, asset, reason: why })
+      if (action === 'link')
+        return approveCandidate(candidate.id, candidate.version, {
+          action,
+          asset,
+          reason: why,
+          ...(reclassify && candidate.suggested_category
+            ? { reclassify: true, category: candidate.suggested_category.id }
+            : {}),
+        })
       return approveCandidate(candidate.id, candidate.version, {
         action,
         reason: why,
@@ -390,6 +399,17 @@ function Decision({ candidate }: { candidate: Candidate }) {
             error={errors.asset}
             help="Links this source device to the asset. Technical fields update under field authority; locked values raise conflicts."
           />
+        )}
+        {action === 'link' && candidate.suggested_category && can(PERMISSIONS.assetsReclassify) && (
+          <label className="checkbox">
+            <input type="checkbox" checked={reclassify} onChange={(e) => setReclassify(e.target.checked)} />
+            Also change the asset&apos;s category to {candidate.suggested_category.name}
+            <span className="field__help">
+              Same audited reclassification as on the asset page; nothing changes if the asset is already in it. If the
+              category needs extra fields, use Change category on the asset instead. Without this, a differing source
+              type opens a category review.
+            </span>
+          </label>
         )}
         {action === 'create' && (
           <>

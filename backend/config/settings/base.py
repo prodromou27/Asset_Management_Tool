@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     "apps.network",
     "apps.security",
     "apps.licensing",
+    "apps.quality",
 ]
 
 AUTH_USER_MODEL = "accounts.User"
@@ -176,6 +177,8 @@ SPECTACULAR_SETTINGS = {
         "LocationKindEnum": "apps.organizations.models.Location.Kind",
         "AuthProviderKindEnum": ["local", "oidc"],
         "SyncRunStatusEnum": "apps.integrations.models.SyncRun.Status",
+        "CategoryReviewKindEnum": "apps.reconciliation.models.CategoryReview.Kind",
+        "FindingKindEnum": "apps.quality.models.DataQualityFinding.Kind",
     },
 }
 
@@ -194,6 +197,10 @@ CELERY_BEAT_SCHEDULE = {
     "dispatch-due-syncs": {
         "task": "integrations.dispatch_due_syncs",
         "schedule": 300.0,
+    },
+    "refresh-quality-findings": {
+        "task": "quality.refresh_findings",
+        "schedule": 3600.0,
     },
 }
 

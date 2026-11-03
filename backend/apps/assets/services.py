@@ -31,6 +31,7 @@ from .models import (
     FieldProvenance,
     Source,
 )
+from .signals import asset_reclassified
 from .tree import CategoryTree
 
 SCALAR_FIELDS = (
@@ -491,6 +492,7 @@ def reclassify(
             after={k: v["after"] for k, v in changes.items()},
             action="assets.reclassify",
         )
+        asset_reclassified.send(sender=Asset, asset=asset, request=request, reason=reason)
     return asset
 
 
