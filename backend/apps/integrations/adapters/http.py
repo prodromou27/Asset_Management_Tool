@@ -20,6 +20,7 @@ from .base import (
     NotSupported,
     SourceError,
     Unavailable,
+    UnsafeTarget,
     check_base_url,
     check_host_addresses,
 )
@@ -100,18 +101,55 @@ class ReadOnlyClient:
         """GET {api_prefix}{path}. Raises AuthError, NotSupported, Unavailable or SourceError."""
         if path and not path.startswith("/"):
             raise ValueError("path must start with /")
-        url = f"{self.api_prefix}{path}"
+        return self._send(f"{self.api_prefix}{path}", params)
+
+    def get_continuation(self, url: str) -> dict:
+        """GET an absolute continuation URL returned by the source (e.g. @odata.nextLink).
+        The URL must pass ``check_continuation``; credentials are never sent elsewhere."""
+        return self._send(self.check_continuation(url), None)
+
+    def check_continuation(self, url: str) -> str:
+        """Same scheme, host and port as the base URL, under the API prefix, no userinfo
+        or fragment. Raises UnsafeTarget otherwise. Connectors may narrow this further."""
+        base = urlparse(self.base_url)
+        parsed = urlparse(url)
+        if (
+            parsed.scheme != "https"
+            or (parsed.hostname or "").lower() != (base.hostname or "").lower()
+            or (parsed.port or 443) != (base.port or 443)
+            or parsed.username
+            or parsed.password
+            or parsed.fragment
+            or not parsed.path.startswith(urlparse(f"{self.base_url}{self.api_prefix}").path)
+        ):
+            raise UnsafeTarget(
+                f"{self.source_label} returned a continuation link outside its API; "
+                "it was not followed."
+            )
+        return url
+
+    def _auth_headers(self) -> dict:
+        return AUTH_HEADERS[self._auth_scheme](self._token)
+
+    def _on_unauthorized(self, response: httpx.Response) -> bool:
+        """Called once per request on HTTP 401. Return True to retry the request with
+        fresh credentials (e.g. an expired OAuth token). Static tokens cannot refresh."""
+        return False
+
+    def _send(self, url: str, params: dict | None) -> dict:
+        label = url if len(url) <= 120 else f"{url[:117]}..."
         attempt = 0
+        refreshed = False
         while True:
             self._throttle()
             self.requests += 1
             try:
                 response = self._client.request(
-                    "GET", url, params=params, headers=AUTH_HEADERS[self._auth_scheme](self._token)
+                    "GET", url, params=params, headers=self._auth_headers()
                 )
             except httpx.TimeoutException as exc:
                 error: SourceError = Unavailable(
-                    f"{self.source_label} did not respond within the timeout ({url})."
+                    f"{self.source_label} did not respond within the timeout ({label})."
                 )
                 cause: Exception | None = exc
             except httpx.TransportError as exc:
@@ -120,7 +158,15 @@ class ReadOnlyClient:
                 )
                 cause = exc
             else:
-                result = self._handle(response, url)
+                if (
+                    response.status_code == 401
+                    and not refreshed
+                    and self._on_unauthorized(response)
+                ):
+                    refreshed = True
+                    logger.info("%s credentials refreshed after HTTP 401", self.source_label)
+                    continue
+                result = self._handle(response, label)
                 if not isinstance(result, SourceError):
                     return result
                 error, cause = result, None
@@ -133,6 +179,8 @@ class ReadOnlyClient:
             if error.retryable and attempt < self.max_retries:
                 attempt += 1
                 delay = min(2 ** (attempt - 1), 30) + random.uniform(0, 0.5)  # noqa: S311
+                if cause is None and "Retry-After" in response.headers:
+                    delay = self._retry_after(response)  # e.g. 503 with Retry-After
                 logger.info("Request failed (%s); retry %d in %.1fs", error.code, attempt, delay)
                 self._sleep(delay)
                 continue

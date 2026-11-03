@@ -278,4 +278,17 @@ def _identifier_conflicts(instance, normalized: dict, asset) -> list:
                 "The source reports a hardware UUID that differs from the one other "
                 "sources report for this asset."
             )
+    # One live record per device per source: a second active record from the same
+    # integration (re-enrollment, duplicate MDM record) is never merged automatically.
+    sibling = (
+        SourceLink.objects.filter(asset=asset, instance=instance, status=SourceLink.Status.ACTIVE)
+        .exclude(external_id=normalized["external_id"])
+        .values_list("external_id", flat=True)
+        .first()
+    )
+    if sibling:
+        out.append(
+            f"The asset is already linked to another active {instance.name} record "
+            f"({sibling}); check for a re-enrollment or a duplicate record."
+        )
     return out

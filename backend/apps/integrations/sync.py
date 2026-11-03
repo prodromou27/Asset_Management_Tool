@@ -64,8 +64,13 @@ def check_live_access(instance: IntegrationInstance) -> None:
             "LIVE_ACCESS_NOT_APPROVED",
             "An administrator must record approval for live access to this source first.",
         )
-    if not instance.base_url:
+    connector = connector_for(instance)
+    if not (instance.base_url or connector.fixed_base_url):
         raise SyncRefused("NOT_CONFIGURED", "Set the source base URL first.")
+    labels = {"tenant_id": "tenant ID", "client_id": "application (client) ID"}
+    for name in connector.required_settings:
+        if not getattr(instance, name):
+            raise SyncRefused("NOT_CONFIGURED", f"Set the {labels.get(name, name)} first.")
 
 
 def build_client(instance: IntegrationInstance) -> ReadOnlyClient:
@@ -73,24 +78,29 @@ def build_client(instance: IntegrationInstance) -> ReadOnlyClient:
     connector = connector_for(instance)
     if instance.auth_scheme not in connector.auth_schemes:
         raise SyncRefused(
-            "NOT_CONFIGURED", "The selected authentication header is not supported by this source."
+            "NOT_CONFIGURED", "The selected authentication method is not supported by this source."
         )
     try:
         token = secrets.resolve(instance.credential_ref)
         verify = secrets.resolve_path(instance.ca_bundle_ref) or True
     except secrets.SecretError as exc:
         raise SyncRefused("CREDENTIAL_UNAVAILABLE", str(exc)) from exc
-    return connector.client_class(
-        instance.base_url,
-        token,
-        auth_scheme=instance.auth_scheme,
-        timeout=instance.timeout_seconds,
-        max_retries=instance.max_retries,
-        requests_per_second=instance.requests_per_second,
-        verify=verify,
-        transport=TRANSPORT_FACTORY(instance) if TRANSPORT_FACTORY else None,
-        resolver=RESOLVER,
+    options = {
+        "timeout": instance.timeout_seconds,
+        "max_retries": instance.max_retries,
+        "requests_per_second": instance.requests_per_second,
+        "verify": verify,
+        "transport": TRANSPORT_FACTORY(instance) if TRANSPORT_FACTORY else None,
+        "resolver": RESOLVER,
         **({"sleep": SLEEP} if SLEEP else {}),
+    }
+    if connector.client_factory is not None:
+        try:
+            return connector.client_factory(instance, token, **options)
+        except AuthError as exc:  # unreadable certificate, malformed tenant/client ID
+            raise SyncRefused("CREDENTIAL_UNAVAILABLE", str(exc)) from exc
+    return connector.client_class(
+        instance.base_url, token, auth_scheme=instance.auth_scheme, **options
     )
 
 
@@ -102,9 +112,12 @@ def test_connection(request, instance: IntegrationInstance) -> dict:
     try:
         with build_client(instance) as client:
             details = connector_for(instance).test_connection(client)
+        message = "Connected. Read-only API access works."
+        if details.get("warning"):
+            message = f"{message} Warning: {details['warning']}"
         result.update(
             ok=True,
-            message="Connected. Read-only API access works.",
+            message=message,
             **{"version": details["version"], "capabilities": details["capabilities"]},
         )
     except SyncRefused as exc:
@@ -244,7 +257,7 @@ def execute(run_id) -> SyncRun:
                 run.phase = "evidence"
                 progress()
                 _store_evidence(instance, run, adapter)
-            run.api_requests = client.requests
+            run.api_requests = getattr(client, "total_requests", client.requests)
     except (SyncRefused, AuthError, SourceError) as exc:
         _fail(run, instance, exc)
         return run

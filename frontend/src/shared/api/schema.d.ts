@@ -460,9 +460,11 @@ export interface components {
      * @description * `bearer` - Authorization: Bearer
      * * `x_auth_token` - X-Auth-Token header
      * * `authorization` - Authorization: <token>
+     * * `client_secret` - OAuth client secret
+     * * `client_certificate` - OAuth client certificate
      * @enum {string}
      */
-    AuthSchemeEnum: "bearer" | "x_auth_token" | "authorization";
+    AuthSchemeEnum: "bearer" | "x_auth_token" | "authorization" | "client_secret" | "client_certificate";
     /**
      * @description * `planned` - Planned
      * * `beta` - Beta (fixture-tested)
@@ -599,6 +601,11 @@ export interface components {
     ConnectorInfo: {
       auth_schemes: string[];
       supports_evidence: boolean;
+      fixed_base_url: string | null;
+      required_settings: string[];
+      permissions: string[];
+      uses_source_timezone: boolean;
+      uses_detail_refresh: boolean;
     };
     CustomFieldCreateRequest: {
       key: string;
@@ -834,6 +841,8 @@ export interface components {
       credential_status: string;
       auth_scheme: components["schemas"]["AuthSchemeEnum"];
       ca_bundle_ref: string;
+      tenant_id: string;
+      client_id: string;
       timeout_seconds: number;
       max_retries: number;
       requests_per_second: number;
@@ -890,6 +899,8 @@ export interface components {
       credential_ref?: string;
       auth_scheme?: components["schemas"]["AuthSchemeEnum"];
       ca_bundle_ref?: string;
+      tenant_id?: string;
+      client_id?: string;
       timeout_seconds?: number;
       max_retries?: number;
       requests_per_second?: number;
@@ -1246,6 +1257,8 @@ export interface components {
       credential_ref?: string;
       auth_scheme?: components["schemas"]["AuthSchemeEnum"];
       ca_bundle_ref?: string;
+      tenant_id?: string;
+      client_id?: string;
       timeout_seconds?: number;
       max_retries?: number;
       requests_per_second?: number;

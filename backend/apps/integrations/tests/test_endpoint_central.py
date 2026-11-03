@@ -391,10 +391,9 @@ def test_auth_header_must_suit_the_source(client_for, admin_user, hq, live):
         format="json",
     )
     assert created.status_code == 201 and created.json()["auth_scheme"] == "authorization"
-    assert created.json()["connector"] == {
-        "auth_schemes": ["authorization", "bearer"],
-        "supports_evidence": False,
-    }
+    connector = created.json()["connector"]
+    assert connector["auth_schemes"] == ["authorization", "bearer"]
+    assert connector["supports_evidence"] is False and connector["fixed_base_url"] is None
     bad = client.patch(
         f"/api/v1/integrations/{created.json()['id']}/",
         {"auth_scheme": "x_auth_token"},

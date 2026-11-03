@@ -37,6 +37,8 @@ SNAPSHOT_FIELDS = (
     "credential_ref",
     "auth_scheme",
     "ca_bundle_ref",
+    "tenant_id",
+    "client_id",
     "timeout_seconds",
     "max_retries",
     "requests_per_second",

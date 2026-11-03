@@ -118,6 +118,15 @@ scripts/compose.sh dev exec api python manage.py load_observations \
 - Laptops, desktops, servers and virtual machines are proposed in the Discovery queue with category hints; nothing is merged on hostname, IP or MAC. Sanitized fixtures and scenarios: `fixtures/endpoint_central/README.md`.
 - Do not enable live access until the Docker-host verification has passed and DEC-06 (read-only key, build, sample responses) is approved.
 
+### Microsoft Intune connector (Task 008, Beta — live access off)
+
+- Reads `GET https://graph.microsoft.com/v1.0/deviceManagement/managedDevices` only, following `@odata.nextLink` (continuation links must stay on `graph.microsoft.com`, https, under the same collection, or they are not followed and the run is treated as incomplete). Beta endpoints are not used. Devices are never modified.
+- **App registration (DEC-07):** single-tenant Microsoft Entra application with the **application** permission `DeviceManagementManagedDevices.Read.All` and admin consent. Do not grant `DeviceManagementManagedDevices.ReadWrite.All`, `PrivilegedOperations` or other write permissions; the connection test and every sync warn if the token carries them.
+- **Credential (certificate preferred):** upload the certificate to the app registration and give the server one PEM file holding the unencrypted RSA private key and the certificate, mounted read-only into the `api` and `worker` containers under `/run/secrets` (for example with a Compose `secrets:` entry in a host-specific override file), then reference it as `file:<name>` with the method "OAuth client certificate". A client secret (`env:ITAM_INTEGRATION_INTUNE_CLIENT_SECRET`, method "OAuth client secret") is supported as a fallback. Neither the credential nor any access token is stored, logged or returned by the API.
+- On the integration page enter the **tenant ID** (directory GUID or verified domain) and **application (client) ID**. The Graph endpoint is fixed and cannot be changed. New Intune integrations default to a daily sync and report a device stale after 7 days without an Intune check-in.
+- Stored per device: Intune managed device ID (external ID), Entra device ID, tenant, device name, manufacturer, model, serial, OS and version, enrollment type and time, compliance, management agent, ownership and registration state, Wi-Fi MAC. User names, e-mail addresses and phone identifiers are not requested.
+- Matching follows the shared rules: Intune gives no chassis type, so only unambiguous models (for example MacBook, Latitude, EliteDesk, virtual machines) get a category hint, and devices without one are never linked automatically. A second active Intune record for an already linked asset (re-enrollment) becomes a conflict candidate. Sanitized fixtures and scenarios: `fixtures/intune/graph/README.md`.
+
 After changing an API serializer, regenerate the contract: `cd backend && uv run python manage.py spectacular --file ../frontend/src/shared/api/openapi.yaml`, then `cd frontend && pnpm run gen:api`. CI fails on drift.
 
 Dev ports are bound to 127.0.0.1 only. Stop with `scripts/compose.sh dev down` (add `-v` only to discard the local PostgreSQL volume).

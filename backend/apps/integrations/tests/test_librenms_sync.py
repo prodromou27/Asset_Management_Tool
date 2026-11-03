@@ -384,11 +384,11 @@ def test_queue_refusals(lnms, changes, code):
 def test_sources_without_adapter_cannot_sync(hq, live):
     from apps.reconciliation.tests.conftest import make_instance
 
-    intune = make_instance(
-        "Intune", "intune", hq, live_access_approved=True, base_url="https://graph.example"
+    defender = make_instance(
+        "Defender", "defender", hq, live_access_approved=True, base_url="https://api.example"
     )
     with pytest.raises(sync.SyncRefused) as exc:
-        sync.queue_sync(intune, mode="full", triggered_by="test")
+        sync.queue_sync(defender, mode="full", triggered_by="test")
     assert exc.value.code == "NO_ADAPTER"
 
 

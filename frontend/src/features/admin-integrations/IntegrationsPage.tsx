@@ -116,6 +116,11 @@ export function IntegrationsPage() {
   )
 }
 
+// Cloud sources whose endpoint is fixed by the connector (the server enforces it too).
+const FIXED_ENDPOINT: Record<string, string> = { intune: 'https://graph.microsoft.com' }
+// Per-source default for "stale after"; Intune devices are often offline for days.
+const STALE_DEFAULT: Record<string, number> = { intune: 168 }
+
 function IntegrationDialog({
   instance,
   sources,
@@ -166,6 +171,7 @@ function IntegrationDialog({
   const errors = { ...server, ...client }
   const summary = mutation.error && !Object.keys(server).length ? mutation.error.message : null
   const chosen = sources.find((s) => s.code === source)
+  const fixedUrl = FIXED_ENDPOINT[source] ?? instance?.connector?.fixed_base_url ?? null
 
   return (
     <Dialog
@@ -198,7 +204,10 @@ function IntegrationDialog({
             })),
           ]}
           value={source}
-          onChange={(e) => setSource(e.target.value)}
+          onChange={(e) => {
+            setSource(e.target.value)
+            setStaleHours(String(STALE_DEFAULT[e.target.value] ?? 48))
+          }}
           error={errors.source}
           help={chosen?.availability === 'planned' ? 'No adapter yet: the integration can be configured but will not synchronise.' : chosen?.description}
         />
@@ -217,16 +226,22 @@ function IntegrationDialog({
         <TextField label="Default VRF" name="int_vrf" value={vrf} onChange={(e) => setVrf(e.target.value)} error={errors.default_vrf} help="Leave empty for the global table." />
         <TextField label="Stale after (hours)" name="int_stale" inputMode="numeric" value={staleHours} onChange={(e) => setStaleHours(e.target.value)} error={errors.stale_after_hours} />
       </div>
-      <TextField
-        label="Base URL"
-        name="int_url"
-        className="field__control mono"
-        placeholder="https://"
-        value={baseUrl}
-        onChange={(e) => setBaseUrl(e.target.value)}
-        error={errors.base_url}
-        help="HTTPS only, no credentials in the URL. Tokens are referenced as server secrets on the integration page, never entered here."
-      />
+      {fixedUrl ? (
+        <p className="field__help">
+          Endpoint: <span className="mono">{fixedUrl}</span> (fixed for this source).
+        </p>
+      ) : (
+        <TextField
+          label="Base URL"
+          name="int_url"
+          className="field__control mono"
+          placeholder="https://"
+          value={baseUrl}
+          onChange={(e) => setBaseUrl(e.target.value)}
+          error={errors.base_url}
+          help="HTTPS only, no credentials in the URL. Tokens are referenced as server secrets on the integration page, never entered here."
+        />
+      )}
       <CheckboxGroup
         legend="Options"
         name="int_flags"
@@ -235,7 +250,8 @@ function IntegrationDialog({
           {
             value: 'auto_link',
             label: 'Link strong matches automatically',
-            description: 'Only verified manufacturer + serial or hardware UUID with an agreeing category. IP, hostname or MAC never auto-link.',
+            description:
+              'Only a verified serial or hardware UUID with the same manufacturer and category and no conflicting identifier. IP, hostname, MAC or serial alone never auto-link.',
           },
         ]}
         value={flags}

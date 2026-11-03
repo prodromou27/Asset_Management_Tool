@@ -50,6 +50,11 @@ class SyncRunSummarySerializer(serializers.ModelSerializer):
 class ConnectorInfoSerializer(serializers.Serializer):
     auth_schemes = serializers.ListField(child=serializers.CharField())
     supports_evidence = serializers.BooleanField()
+    fixed_base_url = serializers.CharField(allow_null=True)
+    required_settings = serializers.ListField(child=serializers.CharField())
+    permissions = serializers.ListField(child=serializers.CharField())
+    uses_source_timezone = serializers.BooleanField()
+    uses_detail_refresh = serializers.BooleanField()
 
 
 class IntegrationInstanceSerializer(serializers.ModelSerializer):
@@ -94,6 +99,8 @@ class IntegrationInstanceSerializer(serializers.ModelSerializer):
             "credential_status",
             "auth_scheme",
             "ca_bundle_ref",
+            "tenant_id",
+            "client_id",
             "timeout_seconds",
             "max_retries",
             "requests_per_second",
@@ -139,6 +146,11 @@ class IntegrationInstanceSerializer(serializers.ModelSerializer):
         return {
             "auth_schemes": list(connector.auth_schemes),
             "supports_evidence": connector.supports_evidence,
+            "fixed_base_url": connector.fixed_base_url,
+            "required_settings": list(connector.required_settings),
+            "permissions": list(connector.permissions),
+            "uses_source_timezone": connector.uses_source_timezone,
+            "uses_detail_refresh": connector.uses_detail_refresh,
         }
 
     def get_live_integrations_enabled(self, obj) -> bool:
@@ -183,6 +195,8 @@ class IntegrationInstanceWriteSerializer(serializers.Serializer):
         choices=IntegrationInstance.AuthScheme.choices, required=False
     )
     ca_bundle_ref = serializers.CharField(max_length=200, allow_blank=True, required=False)
+    tenant_id = serializers.CharField(max_length=100, allow_blank=True, required=False)
+    client_id = serializers.CharField(max_length=36, allow_blank=True, required=False)
     timeout_seconds = serializers.IntegerField(min_value=5, max_value=120, required=False)
     max_retries = serializers.IntegerField(min_value=0, max_value=6, required=False)
     requests_per_second = serializers.IntegerField(min_value=1, max_value=20, required=False)
@@ -202,6 +216,25 @@ class IntegrationInstanceWriteSerializer(serializers.Serializer):
         if value and not value.startswith("file:"):
             raise serializers.ValidationError("A CA bundle must be a file: reference.")
         return self.validate_credential_ref(value)
+
+    def validate_tenant_id(self, value):
+        from .adapters.intune.auth import valid_tenant
+
+        value = value.strip()
+        if value and not valid_tenant(value):
+            raise serializers.ValidationError(
+                "Use the directory (tenant) ID GUID or a verified domain such as "
+                "contoso.onmicrosoft.com."
+            )
+        return value
+
+    def validate_client_id(self, value):
+        from .adapters.intune.auth import valid_client_id
+
+        value = value.strip()
+        if value and not valid_client_id(value):
+            raise serializers.ValidationError("Use the application (client) ID GUID.")
+        return value.lower()
 
     def validate_source_timezone(self, value):
         try:
@@ -242,10 +275,16 @@ class IntegrationInstanceWriteSerializer(serializers.Serializer):
             scheme = attrs.get("auth_scheme")
             if scheme and scheme not in connector.auth_schemes:
                 raise serializers.ValidationError(
-                    {"auth_scheme": ["This source does not support that authentication header."]}
+                    {"auth_scheme": ["This source does not support that authentication method."]}
                 )
             if self.instance is None and not scheme:
                 attrs["auth_scheme"] = connector.default_auth_scheme
+            if connector.fixed_base_url:
+                # Cloud endpoint: never configurable, so no request can be redirected.
+                attrs["base_url"] = connector.fixed_base_url
+            if self.instance is None:
+                for key, value in connector.defaults.items():
+                    attrs.setdefault(key, value)
         return attrs
 
 

@@ -23,6 +23,10 @@ x-backend-env: &backend-env
   ITAM_INTEGRATION_LIBRENMS_TOKEN: ${ITAM_INTEGRATION_LIBRENMS_TOKEN:-}
   # Referenced as env:ITAM_INTEGRATION_ENDPOINT_CENTRAL_KEY (read-only API key).
   ITAM_INTEGRATION_ENDPOINT_CENTRAL_KEY: ${ITAM_INTEGRATION_ENDPOINT_CENTRAL_KEY:-}
+  # Intune (Task 008): fallback client secret, referenced as
+  # env:ITAM_INTEGRATION_INTUNE_CLIENT_SECRET. Prefer a certificate PEM mounted as a
+  # Compose secret under /run/secrets and referenced as file:<name> (see README).
+  ITAM_INTEGRATION_INTUNE_CLIENT_SECRET: ${ITAM_INTEGRATION_INTUNE_CLIENT_SECRET:-}
 
 x-backend-depends: &backend-depends
   postgres:

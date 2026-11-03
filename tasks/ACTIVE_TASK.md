@@ -1,136 +1,170 @@
-# Current Task: 007 | Endpoint Central on-prem adapter
+# Current Task: 008 | Microsoft Intune managedDevice adapter
 
 Status: **Provisionally Complete / Fixture-validated only. Live synchronisation NOT activated**
-(2026-11-03, branch DEV). Endpoint Central source availability is **Beta**.
+(2026-11-03, branch DEV). Microsoft Intune source availability is **Beta**.
 
-**Read:** AGENTS.md, docs/00, 05 (§2, shared normalisation, failure behaviour, fixtures), 15, 17.
-Previous task: 006 LibreNMS (Provisionally Complete, CI run 41629185647 green).
+**Read:** AGENTS.md, docs/00, 05 (§3, shared normalisation, failure behaviour, fixtures),
+09, 12, 14, 15, 17.
+
+**Previous:** 007 Endpoint Central (Provisionally Complete, CI run 41638482133 green) and
+change request 007a, the stricter strong-match gate (ADR-013 / ASM-32; CI run 41654481991
+green on `de8cfa0`).
+
+**Pre-check (done):** the Task 007a matching rules are in force and tested
+(`apps/reconciliation/tests/test_matching.py`). A matching serial alone never auto-links:
+the manufacturer and category must be known and the same, and conflicting identifiers
+create a conflict candidate. Task 008 tests exercise the same rules with Intune data.
 
 ## Scope
 
-- A read-only adapter for ManageEngine Endpoint Central on-premises that uses the Task 004
-  observation and reconciliation pipeline and the Task 006 sync engine, gates and admin
-  screen.
-- docs/05 §2:
-  - verify the API generation by handshake (`/dcapi` current, `/api/1.4` older);
-  - least privilege, no device or patch actions;
-  - data covers endpoint ID, hostname/domain, OS/build, manufacturer/model/serial/UUID,
-    and interface MAC/IP.
-- docs/05 fixtures: normal, empty, missing serial, duplicate hostname, changed IP,
-  pagination, unauthorized, rate limit, incomplete date and schema drift.
+- A read-only Intune connector on Microsoft Graph **v1.0**:
+  `GET /deviceManagement/managedDevices` only.
+- Microsoft Entra client-credentials authentication (certificate preferred, secret as
+  fallback). Only the application permission `DeviceManagementManagedDevices.Read.All` is
+  needed.
+- It uses the existing observation/reconciliation pipeline, the sync engine, the gates and
+  the admin screens.
 
-Out of scope: installed software (Task 016), monitors and peripherals (need a real
-payload), and any live connection.
+Out of scope: Defender (Task 009), M365 licences (Task 010), detected apps/software
+(Task 016), any device or policy change, agents, scans and any live tenant connection.
 
 ## Outcome
 
-**Shared connector framework (refactor; LibreNMS behaviour unchanged, its 68 tests pass):**
-- `adapters/http.py` is a generic GET-only client, now used by both connectors.
-- `adapters/registry.py` lists the available connectors.
-- The sync engine and serializers no longer hard-code LibreNMS.
-- Allowed auth headers are validated per source on save; new integrations get the source
-  default.
-- The API exposes `connector` (allowed auth headers, whether there is an evidence pass).
+**Connector (`backend/apps/integrations/adapters/intune/`):**
+- `auth.py` (token provider):
+  - client credentials against the fixed `login.microsoftonline.com/{tenant}` token endpoint
+    (its only non-GET request);
+  - an RS256 client assertion from a PEM key and certificate, or a client secret;
+  - tokens are cached in memory, renewed 5 minutes before expiry and after a 401;
+  - Entra errors are reduced to the AADSTS code and first sentence;
+  - Retry-After is honoured and retries are bounded.
+- `client.py` (`GraphClient`):
+  - GET only, fixed to `https://graph.microsoft.com/v1.0`;
+  - one token renewal plus a repeat on 401; a 403 names the missing permission;
+  - Graph error envelopes are mapped to errors;
+  - `@odata.nextLink` is followed only when it is https, on the same host and port 443,
+    without userinfo, and for the same collection path.
+- `adapter.py`:
+  - pagination with protection against incomplete listings (a failed later page, an unsafe
+    or repeated link, or the page cap);
+  - fallback to full objects if `$select` is rejected;
+  - the connection test (`$top=1`) reports whether the read permission is present and any
+    excess write or privileged roles; syncs warn about them too.
+- `mapping.py`:
+  - documented v1.0 properties only;
+  - provenance keeps the tenant, managed device ID, Entra device ID and original values;
+  - the check-in time stays outside the checksum, but compliance and enrollment changes
+    create new observations;
+  - phone labels are never used as hostnames;
+  - category hints come only from unambiguous models;
+  - no user principal name, e-mail or phone data.
 
-**Endpoint Central adapter (`adapters/endpoint_central/`):**
-- **Detection:** the API generation is detected during the connection test or the first
-  sync and stored as a capability.
-- **Server version:** the build is read from `api/1.4 serverproperties` when available.
-- **Listing:** the computer list is paginated (500 per page). Duplicate IDs, repeated
-  pages, a failed later page or a short total are processed as an incomplete listing, so
-  nothing is marked stale.
-- **Details:** they are cached by successful-scan time and age, and re-read only for new or
-  rescanned computers.
-- **Mapping:** fields are looked up tolerantly so modest schema drift works.
-  - The device type is guessed only from chassis, server OS or VM model.
-  - OEM placeholders are treated as unknown.
-  - Scan time falls back to agent contact time, with a warning.
-- **Errors:** error envelopes are mapped to auth or source errors.
+**Shared framework:**
+- `ReadOnlyClient` gains per-request auth headers, validated absolute continuation URLs,
+  a one-time refresh after a 401, and Retry-After on 503.
+- Registry `Connector` gains `client_factory`, `fixed_base_url`, `required_settings`,
+  `permissions`, setting-applicability flags and per-source defaults.
+- The sync engine refuses with `NOT_CONFIGURED` until the tenant and client IDs are set, and
+  counts token requests as API requests.
 
-**Migrations:** `integrations.0005_authorization_scheme` (new `authorization` raw-header
-choice) and `integrations.0006_endpoint_central_beta` (data: Planned → Beta). Both are
-reversible.
+**Reconciliation (all connectors, ASM-36):** an asset already linked to another active
+record from the same integration (a re-enrollment or duplicate) turns a new matching record
+into a `conflict` candidate. It is never linked automatically.
 
-**APIs:** no new paths (63 total). `GET /integrations/{id}/` adds `connector`. PATCH/POST
-validate `auth_scheme` per source.
+**Model / migrations:**
+- `integrations.0007_intune_oauth_settings`: `tenant_id`, `client_id`, and the auth methods
+  `client_secret` and `client_certificate`.
+- `integrations.0008_intune_beta`: data migration, Planned → Beta.
+- Both are reversible.
 
-**UI:** the integration page is generic. Texts, placeholders and the auth-header options
-come from the source/connector. FDB and neighbour settings are shown only for connectors
-with an evidence pass. The capability labels cover the EC API generation and the fact that
-software is not collected.
+**APIs:**
+- No new paths.
+- The integration adds `tenant_id` and `client_id`; `connector` adds `fixed_base_url`,
+  `required_settings`, `permissions`, `uses_source_timezone` and `uses_detail_refresh`.
+- Tenant ID (GUID or verified domain) and client ID (GUID) are validated; the Graph endpoint
+  is forced; new Intune integrations default to a 24 h sync and stale after 168 h.
 
-**Also changed:** interface names may contain `( ) # + ,` (Windows adapter names), which
-also applies to manual entry (ASM-31).
+**UI:**
+- Catalogue: Intune (beta) with the fixed endpoint and a 168 h stale default.
+- Integration page:
+  - tenant ID and application ID fields;
+  - authentication method (certificate recommended, or secret);
+  - credential reference help;
+  - a "Required permissions" panel with an excess-permission warning;
+  - Intune capability labels;
+  - the time zone and detail-refresh settings are hidden for Intune;
+  - health shows devices, matched assets, candidates, errors and warnings, and history as
+    for the other connectors.
+- The auto-link option text now reflects ADR-013.
 
-**Fixtures:** `fixtures/endpoint_central/api/responses.json` covers both generations, with
-10 computers for api/1.4 and 3 for dcapi (see its README for the scenarios).
+**Fixtures:** `fixtures/intune/graph/responses.json` holds 12 invented devices: laptop,
+desktop, Surface, Mac, iPhone, personal Android without a serial, VM, two `KIOSK-01`, a
+device with missing properties, a re-enrolled duplicate and OEM placeholders. The fake
+serves them as 3 pages.
 
-**Verification (workstation; SQLite test-only fallback):**
-- Backend: **413 passed, 6 skipped** (the skips are PostgreSQL-only). This includes 30 new
-  Endpoint Central tests:
-  - generation detection and preference;
-  - per-computer mapping;
-  - placeholders, schema drift and scan-time fallback;
-  - GET only, raw Authorization header, no software reads and no stored secrets;
-  - pagination, a failed later page, a short total and stale removal;
-  - detail failure;
-  - 401 and error-envelope auth failures, 429 Retry-After and transport retries;
-  - idempotent repeat sync (list only);
-  - re-read on a newer scan, with an IP change, and refresh after max age;
-  - same hostname never merged;
-  - strong-serial auto-link only when enabled;
-  - locked fields;
-  - connection test, per-source auth header validation, Beta status and the scheduler.
-- Ruff and format are clean; no migration drift; the OpenAPI schema validates with
-  `--fail-on-warn` and was regenerated.
-- Frontend: typecheck, oxlint, **86 tests** (1 new) and the build all pass.
-- GitHub CI run 41638482133 on `747c7bf` (PostgreSQL 16 + Redis 7): backend **419 passed,
-  0 skipped**; frontend, Compose config and image builds all pass.
-- Not run: the Docker stack, Playwright, a browser review, and **any live Endpoint Central
+**Configuration:** `.env.example` and Compose gain `ITAM_INTEGRATION_INTUNE_CLIENT_SECRET`
+(the fallback). The README explains how to mount the certificate PEM as a Compose secret.
+New dependency: `cryptography>=50.0.2,<51` (RS256 assertions and PEM parsing).
+
+**Docs:** docs/17 updates DEC-07 and adds ASM-33 to ASM-36; README has an Intune section.
+
+## Verification (workstation; SQLite test-only fallback, no Docker/PostgreSQL here)
+
+- **Backend: 465 passed, 6 skipped** (the 6 skips are PostgreSQL/Redis-only). This includes
+  46 new tests in `test_intune.py`:
+  - multiple pages via nextLink;
+  - mapping, provenance and tenant;
+  - category hints, phone labels, missing serial and properties, OEM placeholders and
+    schema drift;
+  - idempotent repeat sync; check-in versus state-change observations;
+  - duplicate names never merged; re-enrollment with shared identifiers → conflict;
+  - a changed device name keeps the link;
+  - strong serial without class corroboration → review only;
+  - Endpoint Central + Intune laptop → one asset, with Endpoint Central's OS version kept;
+  - locked field never overwritten;
+  - removed device → stale only after a complete listing; a device that stopped checking
+    in → stale via freshness;
+  - a failed later page or 6 kinds of unsafe continuation link → incomplete, nothing stale;
+  - a repeated link stops the listing;
+  - token 401 with an AADSTS message (secret and trace not shown);
+  - Graph 403 naming the permission;
+  - expired token renewed once mid-run; persistent 401 fails;
+  - token cache and renewal before expiry;
+  - Graph 429 Retry-After, token-endpoint 429 and bounded 503 retries;
+  - `$select` fallback;
+  - certificate assertion signature, header and claims verified; certificate without a key
+    refused before any request;
+  - secrets and tokens absent from logs and the API;
+  - connection test with permissions and excess roles;
+  - configuration API (fixed endpoint, ID validation, auth methods, defaults);
+  - NOT_CONFIGURED gate, live switch and scheduler.
+- Updated tests: Intune is now Beta (Defender is the planned-source example), and the
+  connector info assertion for Endpoint Central.
+- Ruff check and format are clean; no migration drift; the OpenAPI schema validates with
+  `--fail-on-warn` and matches the committed file.
+- Frontend: typecheck, oxlint, **91 tests** (4 new: 3 on the Intune page, 1 in the
+  catalogue) and the build all pass.
+- GitHub CI (PostgreSQL 16 + Redis 7): pending at the time of writing; see below.
+- Not run: the Docker stack, Playwright, a browser review, and **any Microsoft tenant
   connection** (not authorised).
 
 **Activation prerequisites (not done):**
 1. The Docker-host verification passes.
-2. DEC-06 is approved: a read-only API key, the build, the listener URL and port, and
-   sanitized real responses.
-3. Compare the real responses with the fixtures and adjust the mapping key lists if needed.
-4. Put the key in `ITAM_INTEGRATION_ENDPOINT_CENTRAL_KEY`, set
-   `ITAM_ALLOW_LIVE_INTEGRATIONS=true`, record the approval, run a connection test, then
-   enable the schedule.
+2. DEC-07 is approved: the tenant ID, an app registration with only
+   `DeviceManagementManagedDevices.Read.All` (application, admin consent), a certificate,
+   egress to `login.microsoftonline.com` and `graph.microsoft.com`, a sanitized sample
+   response and written approval.
+3. Mount the PEM as a secret file, set the tenant and client IDs, run the connection test,
+   and confirm that `excess_permissions` is false and the `$select` is accepted.
+4. Set `ITAM_ALLOW_LIVE_INTEGRATIONS=true`, record the approval, then enable the schedule.
 
-**Unresolved:** ASM-28 to ASM-31 in docs/17. The `dcapi` envelope and pagination parameter
-names are unconfirmed. No software, monitor or peripheral data yet. Not load-tested
-(Task 022).
+**Unresolved:**
+- ASM-33 to ASM-36 in docs/17.
+- Property names and enum values are not verified against a live tenant.
+- National clouds are not supported.
+- The Entra device ID is not yet a matching key (Task 009).
+- There are no phone or tablet categories.
+- Not load-tested (Task 022).
 
-## Change request 007a | Stricter strong-match gate (2026-11-03)
-
-Status: **Complete (workstation-verified)**. Operator direction: a matching serial alone must
-not merge assets; the manufacturer, asset class and other identifiers must also agree.
-Recorded as ADR-013 / ASM-32 in docs/17. This aligns the code with docs/03 step 2.
-
-- **Auto-link:** happens only when the instance allows it and all of these hold:
-  - the manufacturer is known and the same on both sides;
-  - the category root is known and the same;
-  - no identifier contradicts the match.
-- **Conflict candidates:** these clashes now produce a `conflict` candidate; previously
-  they gave `strong` with a note, or a silent `new_device`:
-  - a different manufacturer or category;
-  - a different serial on the asset;
-  - a hardware UUID that differs from what other linked sources report;
-  - another asset sharing several identifiers;
-  - the same serial with a different manufacturer (new `serial_other_make` key, strength
-    `conflicting`).
-- **Unknown values:** an unknown manufacturer or class stays a `strong` candidate for review.
-- **API:** each match adds `manufacturer_agrees` (nullable, so old candidates still
-  serialise), and the key strength gains `conflicting`. No migration is needed.
-- **UI:** the candidate page shows a Manufacturer column and a red "Conflicting" key badge.
-- **Verification:**
-  - backend 419 passed, 6 skipped (6 new and 2 updated matching tests);
-  - ruff clean; OpenAPI regenerated with `--fail-on-warn`;
-  - frontend typecheck, lint, 87 tests (1 new) and build pass;
-  - GitHub CI run 41654481991 on `de8cfa0` (PostgreSQL 16 + Redis 7): backend, frontend,
-    Compose config and image builds all pass.
-
-Proposed next task: **008 | Intune managedDevice adapter** (tasks/BACKLOG.md). It needs
-DEC-07 (tenant, app registration and consent) before any live test. Do not start
-automatically.
+Proposed next task: **009 | Defender machine/discovery adapter** (tasks/BACKLOG.md). Do
+not start automatically.

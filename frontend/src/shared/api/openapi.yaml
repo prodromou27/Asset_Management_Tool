@@ -3129,11 +3129,15 @@ components:
       - bearer
       - x_auth_token
       - authorization
+      - client_secret
+      - client_certificate
       type: string
       description: |-
         * `bearer` - Authorization: Bearer
         * `x_auth_token` - X-Auth-Token header
         * `authorization` - Authorization: <token>
+        * `client_secret` - OAuth client secret
+        * `client_certificate` - OAuth client certificate
     AvailabilityEnum:
       enum:
       - planned
@@ -3464,9 +3468,29 @@ components:
             type: string
         supports_evidence:
           type: boolean
+        fixed_base_url:
+          type: string
+          nullable: true
+        required_settings:
+          type: array
+          items:
+            type: string
+        permissions:
+          type: array
+          items:
+            type: string
+        uses_source_timezone:
+          type: boolean
+        uses_detail_refresh:
+          type: boolean
       required:
       - auth_schemes
+      - fixed_base_url
+      - permissions
+      - required_settings
       - supports_evidence
+      - uses_detail_refresh
+      - uses_source_timezone
     CustomFieldCreateRequest:
       type: object
       properties:
@@ -4106,6 +4130,12 @@ components:
         ca_bundle_ref:
           type: string
           readOnly: true
+        tenant_id:
+          type: string
+          readOnly: true
+        client_id:
+          type: string
+          readOnly: true
         timeout_seconds:
           type: integer
           readOnly: true
@@ -4208,6 +4238,7 @@ components:
       - base_url
       - ca_bundle_ref
       - capabilities
+      - client_id
       - connector
       - consecutive_failures
       - created_at
@@ -4247,6 +4278,7 @@ components:
       - stale_links
       - status
       - sync_interval_minutes
+      - tenant_id
       - timeout_seconds
       - version
     IntegrationInstanceStatusEnum:
@@ -4298,6 +4330,12 @@ components:
         ca_bundle_ref:
           type: string
           maxLength: 200
+        tenant_id:
+          type: string
+          maxLength: 100
+        client_id:
+          type: string
+          maxLength: 36
         timeout_seconds:
           type: integer
           maximum: 120
@@ -5236,6 +5274,12 @@ components:
         ca_bundle_ref:
           type: string
           maxLength: 200
+        tenant_id:
+          type: string
+          maxLength: 100
+        client_id:
+          type: string
+          maxLength: 36
         timeout_seconds:
           type: integer
           maximum: 120

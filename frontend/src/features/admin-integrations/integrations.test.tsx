@@ -18,6 +18,13 @@ afterEach(() => vi.unstubAllGlobals())
 
 const ID = '99999999-9999-4999-8999-999999999901'
 const URL = `/admin/integrations/${ID}`
+const CONNECTOR = {
+  fixed_base_url: null,
+  required_settings: [],
+  permissions: [],
+  uses_source_timezone: true,
+  uses_detail_refresh: true,
+}
 
 function librenms(overrides: Partial<IntegrationInstance> = {}): IntegrationInstance {
   return makeIntegration({
@@ -35,7 +42,7 @@ function librenms(overrides: Partial<IntegrationInstance> = {}): IntegrationInst
     credential_ref: 'env:ITAM_INTEGRATION_LIBRENMS_TOKEN',
     credential_status: 'configured',
     has_adapter: true,
-    connector: { auth_schemes: ['bearer', 'x_auth_token'], supports_evidence: true },
+    connector: { ...CONNECTOR, auth_schemes: ['bearer', 'x_auth_token'], supports_evidence: true },
     live_integrations_enabled: true,
     live_access_approved: true,
     live_access_approved_by: 'admin.one',
@@ -344,7 +351,7 @@ describe('Endpoint Central integration page', () => {
       },
       base_url: 'https://ec.corp.example:8383',
       auth_scheme: 'authorization',
-      connector: { auth_schemes: ['authorization', 'bearer'], supports_evidence: false },
+      connector: { ...CONNECTOR, auth_schemes: ['authorization', 'bearer'], supports_evidence: false },
       source_software_version: '11.3.2416.1',
       capabilities: { computers: true, route_api_1_4: true, route_dcapi: false, software: false },
     })
@@ -371,5 +378,107 @@ describe('Endpoint Central integration page', () => {
     expect(within(caps).getByText('Installed software (not collected yet)').parentElement).toHaveTextContent(
       'Not available',
     )
+  })
+})
+
+describe('Microsoft Intune integration page', () => {
+  const TENANT = '6d1f0c2e-5a7b-4c3d-9e8f-0a1b2c3d4e5f'
+  const CLIENT = '3b9a7c1d-2e4f-4a6b-8c0d-1e2f3a4b5c6d'
+  const intune = (overrides: Partial<IntegrationInstance> = {}) =>
+    librenms({
+      name: 'Intune',
+      source: {
+        code: 'intune',
+        name: 'Microsoft Intune',
+        kind: 'endpoint',
+        availability: 'beta',
+        description: '',
+        instance_count: 1,
+      },
+      base_url: 'https://graph.microsoft.com',
+      credential_ref: 'file:intune-app.pem',
+      auth_scheme: 'client_certificate',
+      tenant_id: TENANT,
+      client_id: CLIENT,
+      connector: {
+        auth_schemes: ['client_certificate', 'client_secret'],
+        supports_evidence: false,
+        fixed_base_url: 'https://graph.microsoft.com',
+        required_settings: ['tenant_id', 'client_id'],
+        permissions: ['DeviceManagementManagedDevices.Read.All'],
+        uses_source_timezone: false,
+        uses_detail_refresh: false,
+      },
+      source_software_version: 'Microsoft Graph v1.0',
+      capabilities: {
+        managed_devices: true,
+        detected_apps: false,
+        permission_read_all: true,
+        excess_permissions: false,
+      },
+      ...overrides,
+    })
+
+  it('shows tenant settings, the fixed Graph endpoint and the required permission', async () => {
+    mockApi(routes(intune()))
+    renderApp(URL)
+
+    const form = await screen.findByRole('region', { name: 'Configuration' })
+    expect(within(form).queryByLabelText('Base URL')).not.toBeInTheDocument()
+    expect(within(form).getByText('https://graph.microsoft.com')).toBeInTheDocument()
+    expect(within(form).getByLabelText('Tenant ID')).toHaveValue(TENANT)
+    expect(within(form).getByLabelText('Application (client) ID')).toHaveValue(CLIENT)
+    const method = within(form).getByLabelText('Authentication method')
+    expect(within(method).getAllByRole('option').map((o) => o.textContent)).toEqual([
+      'OAuth client certificate (recommended)',
+      'OAuth client secret',
+    ])
+    expect(within(form).getByLabelText('Credential reference')).toHaveValue('file:intune-app.pem')
+    expect(within(form).queryByLabelText('Source server time zone')).not.toBeInTheDocument()
+    expect(within(form).queryByLabelText('Re-read device details after (hours)')).not.toBeInTheDocument()
+
+    const perms = screen.getByRole('region', { name: 'Required permissions' })
+    expect(within(perms).getByText('DeviceManagementManagedDevices.Read.All')).toBeInTheDocument()
+    expect(within(perms).queryByRole('status')).not.toBeInTheDocument()
+    const caps = screen.getByRole('region', { name: 'API capabilities' })
+    expect(within(caps).getByText('Detected apps (not collected yet)').parentElement).toHaveTextContent('Not available')
+    expect(within(caps).queryByText('excess_permissions')).not.toBeInTheDocument()
+  })
+
+  it('warns when the app registration has write permissions', async () => {
+    mockApi(
+      routes(
+        intune({
+          capabilities: { managed_devices: true, detected_apps: false, permission_read_all: true, excess_permissions: true },
+        }),
+      ),
+    )
+    renderApp(URL)
+
+    const perms = await screen.findByRole('region', { name: 'Required permissions' })
+    expect(within(perms).getByRole('status')).toHaveTextContent('write or privileged permissions')
+  })
+
+  it('validates and saves the tenant and application IDs', async () => {
+    const { calls } = mockApi({ ...routes(intune({ tenant_id: '', client_id: '' })), [`PATCH /integrations/${ID}/`]: { body: intune() } })
+    renderApp(URL)
+
+    expect(await screen.findByText(/Set the tenant ID and application \(client\) ID before synchronising/)).toBeInTheDocument()
+    const form = screen.getByRole('region', { name: 'Configuration' })
+    fireEvent.change(within(form).getByLabelText('Tenant ID'), { target: { value: 'common' } })
+    fireEvent.change(within(form).getByLabelText('Application (client) ID'), { target: { value: 'app' } })
+    fireEvent.click(within(form).getByRole('button', { name: 'Save configuration' }))
+    expect(await within(form).findByText('Use the application (client) ID GUID.')).toBeInTheDocument()
+    expect(calls.some((c) => c.method === 'PATCH')).toBe(false)
+
+    fireEvent.change(within(form).getByLabelText('Tenant ID'), { target: { value: TENANT } })
+    fireEvent.change(within(form).getByLabelText('Application (client) ID'), { target: { value: CLIENT } })
+    fireEvent.click(within(form).getByRole('button', { name: 'Save configuration' }))
+    await waitFor(() => expect(calls.some((c) => c.method === 'PATCH')).toBe(true))
+    expect(calls.find((c) => c.method === 'PATCH')?.body).toMatchObject({
+      tenant_id: TENANT,
+      client_id: CLIENT,
+      auth_scheme: 'client_certificate',
+    })
   })
 })

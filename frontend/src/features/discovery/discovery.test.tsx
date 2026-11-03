@@ -395,4 +395,49 @@ describe('Integrations admin', () => {
       }),
     )
   })
+
+  it('offers Microsoft Intune with a fixed Graph endpoint and a weekly stale default', async () => {
+    const { calls } = mockApi({
+      'GET /auth/me/': { body: makeMe() },
+      'GET /integrations/': { body: [] },
+      'GET /discovery/sources/': {
+        body: [
+          {
+            code: 'intune',
+            name: 'Microsoft Intune',
+            kind: 'endpoint',
+            availability: 'beta',
+            description: 'Microsoft Graph v1.0 managedDevices (GET only)',
+            instance_count: 0,
+          },
+        ],
+      },
+      'GET /discovery/field-authority/': {
+        body: { precedence: {}, version: 1, modified_at: '2026-11-02T08:00:00Z', modified_by: null },
+      },
+      'GET /sites/': { body: [SITE_HQ] },
+      'POST /integrations/': { status: 201, body: integration },
+    })
+    renderApp('/admin/integrations')
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Add integration' }))
+    const dialog = screen.getByRole('dialog', { name: 'Add integration' })
+    expect(within(dialog).getByRole('option', { name: 'Microsoft Intune (beta)' })).toBeInTheDocument()
+    fireEvent.change(within(dialog).getByLabelText('Source type'), { target: { value: 'intune' } })
+    expect(within(dialog).queryByLabelText('Base URL')).not.toBeInTheDocument()
+    expect(within(dialog).getByText('https://graph.microsoft.com')).toBeInTheDocument()
+    expect(within(dialog).getByLabelText('Stale after (hours)')).toHaveValue('168')
+    fireEvent.change(within(dialog).getByLabelText('Name'), { target: { value: 'Intune' } })
+    await within(dialog).findByRole('option', { name: /HQ — Headquarters/ })
+    fireEvent.change(within(dialog).getByLabelText('Default site'), { target: { value: SITE_HQ.id } })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Add integration' }))
+
+    await waitFor(() =>
+      expect(calls.find((c) => c.method === 'POST')?.body).toMatchObject({
+        source: 'intune',
+        name: 'Intune',
+        stale_after_hours: 168,
+      }),
+    )
+  })
 })

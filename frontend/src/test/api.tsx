@@ -400,6 +400,8 @@ export function makeIntegration(overrides: Partial<IntegrationInstance> = {}): I
     credential_status: 'not_set',
     auth_scheme: 'bearer',
     ca_bundle_ref: '',
+    tenant_id: '',
+    client_id: '',
     timeout_seconds: 30,
     max_retries: 3,
     requests_per_second: 5,

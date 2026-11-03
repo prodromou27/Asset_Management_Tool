@@ -46,7 +46,12 @@ const CAPABILITY_LABEL: Record<string, string> = {
   route_api_1_4: 'Inventory API: api/1.4 (older builds)',
   links: 'LLDP/CDP neighbours',
   route_listing: 'API route listing',
+  managed_devices: 'Managed device inventory (Graph v1.0)',
+  detected_apps: 'Detected apps (not collected yet)',
+  permission_read_all: 'DeviceManagementManagedDevices.Read.All granted',
 }
+// Shown in the permissions panel instead (a "yes" here is a problem, not a feature).
+const HIDDEN_CAPABILITIES = new Set(['excess_permissions'])
 
 const ACTIVE: SyncRun['status'][] = ['queued', 'running']
 
@@ -54,6 +59,8 @@ const AUTH_LABEL: Record<string, string> = {
   bearer: 'Authorization: Bearer <token>',
   x_auth_token: 'X-Auth-Token: <token>',
   authorization: 'Authorization: <token>',
+  client_certificate: 'OAuth client certificate (recommended)',
+  client_secret: 'OAuth client secret',
 }
 
 interface SourceProfile {
@@ -61,6 +68,10 @@ interface SourceProfile {
   token: string
   api: string
   schemeHelp?: string
+  credentialLabel?: string
+  credentialHelp?: string
+  schemeLabel?: string
+  accountHint?: string
 }
 
 const PROFILES: Record<string, SourceProfile> = {
@@ -75,6 +86,17 @@ const PROFILES: Record<string, SourceProfile> = {
     token: 'env:ITAM_INTEGRATION_ENDPOINT_CENTRAL_KEY',
     api: 'Use the verified HTTPS listener and port. The connector only sends GET requests to the inventory API (dcapi or api/1.4, detected automatically).',
     schemeHelp: 'On-premises API keys are normally sent as the raw Authorization header value.',
+  },
+  intune: {
+    url: 'https://graph.microsoft.com',
+    token: 'file:intune-app.pem',
+    api: 'The connector only sends GET requests to Microsoft Graph v1.0 managedDevices.',
+    credentialLabel: 'Credential reference',
+    credentialHelp:
+      'Certificate: file:<name> holding the private key and certificate (PEM). Secret: env:ITAM_INTEGRATION_<NAME>. The credential itself is never entered or shown here.',
+    schemeLabel: 'Authentication method',
+    schemeHelp: 'Prefer a certificate uploaded to the app registration; use a client secret only if a certificate is not possible.',
+    accountHint: 'Use a dedicated app registration with read-only application permissions.',
   },
 }
 const GENERIC: SourceProfile = {
@@ -240,6 +262,7 @@ export function IntegrationDetailPage() {
         </div>
         <div className="detail-layout__side">
           {i.has_adapter && <LiveAccessPanel instance={i} onChanged={refresh} />}
+          {i.has_adapter && Boolean(i.connector?.permissions.length) && <Permissions instance={i} />}
           {i.has_adapter && <Capabilities instance={i} />}
         </div>
       </div>
@@ -254,8 +277,20 @@ function gateMessage(i: IntegrationInstance): string | null {
   if (!i.live_access_approved) return 'Record live-access approval before the first connection.'
   if (!i.is_enabled) return 'The integration is disabled.'
   if (!i.base_url) return 'Set the base URL before synchronising.'
-  if (i.credential_status !== 'configured') return 'The API token secret is not available to the server.'
+  if (missingSettings(i).length) return `Set the ${missingSettings(i).join(' and ')} before synchronising.`
+  if (i.credential_status !== 'configured') return 'The credential is not available to the server.'
   return null
+}
+
+const SETTING_LABEL: Record<string, string> = {
+  tenant_id: 'tenant ID',
+  client_id: 'application (client) ID',
+}
+
+function missingSettings(i: IntegrationInstance): string[] {
+  return (i.connector?.required_settings ?? [])
+    .filter((key) => !i[key as 'tenant_id' | 'client_id'])
+    .map((key) => SETTING_LABEL[key] ?? key)
 }
 
 function Health({ instance: i }: { instance: IntegrationInstance }) {
@@ -445,7 +480,7 @@ function LiveAccessPanel({ instance: i, onChanged }: { instance: IntegrationInst
       ) : (
         <p className="field__help">
           No request reaches {i.source.name} until access is approved here and live integrations are enabled on
-          the host. Use a read-only {i.source.name} API account.
+          the host. {(PROFILES[i.source.code] ?? GENERIC).accountHint ?? `Use a read-only ${i.source.name} API account.`}
         </p>
       )}
       <TextAreaField
@@ -478,8 +513,36 @@ function LiveAccessPanel({ instance: i, onChanged }: { instance: IntegrationInst
   )
 }
 
+function Permissions({ instance: i }: { instance: IntegrationInstance }) {
+  const excess = i.capabilities.excess_permissions === true
+  return (
+    <section className="panel" aria-labelledby="perm-heading">
+      <h2 className="section-title" id="perm-heading">
+        Required permissions
+      </h2>
+      <ul className="plain-list">
+        {(i.connector?.permissions ?? []).map((name) => (
+          <li key={name} className="mono">
+            {name}
+          </li>
+        ))}
+      </ul>
+      <p className="field__help">
+        Application permission with admin consent. Do not grant ReadWrite, PrivilegedOperations or other write
+        permissions: the connector only reads.
+      </p>
+      {excess && (
+        <p className="inline-note inline-note--warning" role="status">
+          The last connection test found write or privileged permissions on the app registration. Remove them; see
+          the connection test message for the list.
+        </p>
+      )}
+    </section>
+  )
+}
+
 function Capabilities({ instance: i }: { instance: IntegrationInstance }) {
-  const entries = Object.entries(i.capabilities)
+  const entries = Object.entries(i.capabilities).filter(([key]) => !HIDDEN_CAPABILITIES.has(key))
   return (
     <section className="panel" aria-labelledby="caps-heading">
       <h2 className="section-title" id="caps-heading">
@@ -500,6 +563,9 @@ function Capabilities({ instance: i }: { instance: IntegrationInstance }) {
     </section>
   )
 }
+
+const GUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const TENANT = /^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|([a-z0-9-]{1,63}\.)+[a-z]{2,63})$/i
 
 const NUMBER_RULES: Record<string, [number, number, string]> = {
   timeout_seconds: [5, 120, 'Enter 5 to 120 seconds.'],
@@ -526,6 +592,10 @@ function ConfigurationForm({
   const [credential, setCredential] = useState(i.credential_ref)
   const [scheme, setScheme] = useState(i.auth_scheme)
   const [caBundle, setCaBundle] = useState(i.ca_bundle_ref)
+  const [tenantId, setTenantId] = useState(i.tenant_id)
+  const [clientId, setClientId] = useState(i.client_id)
+  const fixedUrl = i.connector?.fixed_base_url ?? null
+  const required = new Set(i.connector?.required_settings ?? [])
   const [timezone, setTimezone] = useState(i.source_timezone)
   const [enabled, setEnabled] = useState(i.is_enabled)
   const [numbers, setNumbers] = useState<Record<NumberKey, string>>(
@@ -542,6 +612,7 @@ function ConfigurationForm({
         credential_ref: credential.trim(),
         auth_scheme: scheme,
         ca_bundle_ref: caBundle.trim(),
+        ...(required.size ? { tenant_id: tenantId.trim(), client_id: clientId.trim() } : {}),
         source_timezone: timezone.trim(),
         is_enabled: enabled,
         ...Object.fromEntries(Object.entries(numbers).map(([k, v]) => [k, Number(v)])),
@@ -580,6 +651,10 @@ function ConfigurationForm({
             if (!Number.isInteger(value) || value < min || value > max) errs[key] = [message]
           }
           if (baseUrl.trim() && !baseUrl.trim().startsWith('https://')) errs.base_url = ['Use an https:// URL.']
+          if (required.has('tenant_id') && tenantId.trim() && !TENANT.test(tenantId.trim()))
+            errs.tenant_id = ['Use the directory (tenant) ID GUID or a verified domain.']
+          if (required.has('client_id') && clientId.trim() && !GUID.test(clientId.trim()))
+            errs.client_id = ['Use the application (client) ID GUID.']
           setClient(errs)
           if (!Object.keys(errs).length) mutation.mutate()
         }}
@@ -587,29 +662,62 @@ function ConfigurationForm({
         {summary && <p className="field__error">{summary}</p>}
         <h3 className="subsection-title">Connection</h3>
         {/* Profile texts are per source; unknown sources get generic wording. */}
-        <TextField
-          label="Base URL"
-          name="cfg_url"
-          className="field__control mono"
-          placeholder={profile.url}
-          value={baseUrl}
-          onChange={(e) => setBaseUrl(e.target.value)}
-          error={errors.base_url}
-          help={`HTTPS with a valid certificate. ${profile.api}`}
-        />
+        {fixedUrl ? (
+          <p className="field__help">
+            Endpoint: <span className="mono">{fixedUrl}</span> (fixed). {profile.api}
+          </p>
+        ) : (
+          <TextField
+            label="Base URL"
+            name="cfg_url"
+            className="field__control mono"
+            placeholder={profile.url}
+            value={baseUrl}
+            onChange={(e) => setBaseUrl(e.target.value)}
+            error={errors.base_url}
+            help={`HTTPS with a valid certificate. ${profile.api}`}
+          />
+        )}
+        {required.size > 0 && (
+          <div className="form-grid">
+            <TextField
+              label="Tenant ID"
+              name="cfg_tenant"
+              className="field__control mono"
+              placeholder="00000000-0000-0000-0000-000000000000"
+              value={tenantId}
+              onChange={(e) => setTenantId(e.target.value)}
+              error={errors.tenant_id}
+              help="Directory (tenant) ID or verified domain of the Microsoft Entra tenant."
+            />
+            <TextField
+              label="Application (client) ID"
+              name="cfg_client"
+              className="field__control mono"
+              placeholder="00000000-0000-0000-0000-000000000000"
+              value={clientId}
+              onChange={(e) => setClientId(e.target.value)}
+              error={errors.client_id}
+              help="From the app registration's overview page."
+            />
+          </div>
+        )}
         <div className="form-grid">
           <TextField
-            label="API token reference"
+            label={profile.credentialLabel ?? 'API token reference'}
             name="cfg_credential"
             className="field__control mono"
             placeholder={profile.token}
             value={credential}
             onChange={(e) => setCredential(e.target.value)}
             error={errors.credential_ref}
-            help="env:ITAM_INTEGRATION_<NAME> or file:<name> in the server secrets directory. The token itself is never entered or shown here."
+            help={
+              profile.credentialHelp ??
+              'env:ITAM_INTEGRATION_<NAME> or file:<name> in the server secrets directory. The token itself is never entered or shown here.'
+            }
           />
           <SelectField
-            label="Authentication header"
+            label={profile.schemeLabel ?? 'Authentication header'}
             name="cfg_scheme"
             options={(i.connector?.auth_schemes ?? [i.auth_scheme]).map((value) => ({
               value,
@@ -640,16 +748,19 @@ function ConfigurationForm({
         <div className="form-grid">
           {numberField('sync_interval_minutes', 'Sync every (minutes)')}
           {i.connector?.supports_evidence && numberField('evidence_interval_hours', 'FDB/neighbours every (hours)')}
-          {numberField('enrichment_max_age_hours', 'Re-read device details after (hours)')}
+          {(i.connector?.uses_detail_refresh ?? true) &&
+            numberField('enrichment_max_age_hours', 'Re-read device details after (hours)')}
         </div>
-        <TextField
-          label="Source server time zone"
-          name="cfg_tz"
-          value={timezone}
-          onChange={(e) => setTimezone(e.target.value)}
-          error={errors.source_timezone}
-          help="Used for times the source reports without a zone; for example UTC or Europe/Nicosia."
-        />
+        {(i.connector?.uses_source_timezone ?? true) && (
+          <TextField
+            label="Source server time zone"
+            name="cfg_tz"
+            value={timezone}
+            onChange={(e) => setTimezone(e.target.value)}
+            error={errors.source_timezone}
+            help="Used for times the source reports without a zone; for example UTC or Europe/Nicosia."
+          />
+        )}
         <CheckboxGroup
           legend="State"
           name="cfg_enabled"

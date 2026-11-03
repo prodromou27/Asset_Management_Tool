@@ -51,6 +51,10 @@ class IntegrationInstance(models.Model):
         BEARER = "bearer", "Authorization: Bearer"
         X_AUTH_TOKEN = "x_auth_token", "X-Auth-Token header"
         AUTHORIZATION = "authorization", "Authorization: <token>"
+        # Microsoft Entra OAuth 2.0 client credentials (the reference holds the secret,
+        # or a PEM with the private key and certificate).
+        CLIENT_SECRET = "client_secret", "OAuth client secret"
+        CLIENT_CERTIFICATE = "client_certificate", "OAuth client certificate"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     source = models.ForeignKey(DiscoverySource, on_delete=models.PROTECT, related_name="instances")
@@ -79,6 +83,10 @@ class IntegrationInstance(models.Model):
         max_length=20, choices=AuthScheme.choices, default=AuthScheme.BEARER
     )
     ca_bundle_ref = models.CharField(max_length=200, blank=True)
+    # Cloud sources (Microsoft Graph): directory tenant and application (client) ID.
+    # Identifiers, not secrets.
+    tenant_id = models.CharField(max_length=100, blank=True)
+    client_id = models.CharField(max_length=36, blank=True)
     timeout_seconds = models.PositiveSmallIntegerField(
         default=30, validators=[MinValueValidator(5), MaxValueValidator(120)]
     )
