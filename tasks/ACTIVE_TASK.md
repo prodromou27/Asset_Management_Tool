@@ -136,8 +136,9 @@ a zero Entra ID and schema drift.
   `--fail-on-warn` and matches the committed file.
 - Frontend: typecheck, oxlint, **96 tests** (5 new: 4 Security tab, 1 Defender integration
   page) and the build all pass.
-- GitHub CI (PostgreSQL 16 + Redis 7, migration reversal, OpenAPI drift, production image
-  build): pending at the time of writing.
+- GitHub CI run 41664784779 on `f630306` (PostgreSQL 16 + Redis 7): backend **510 passed,
+  0 skipped**; migrations applied and reversed (including `security`); OpenAPI drift check;
+  frontend 96 tests; Compose config and production image builds all pass.
 - Not run: the Docker stack, Playwright, a browser review, and **any Defender tenant
   connection** (not authorised).
 
