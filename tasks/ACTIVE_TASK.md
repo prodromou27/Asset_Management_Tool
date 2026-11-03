@@ -1,161 +1,127 @@
-# Current Task: 010 | Entra/M365 SKU + license assignments
+# Current Task: 011 | Reconciliation review and category reclassification
 
-Status: **Provisionally Complete / Fixture-validated only. Live synchronisation NOT activated**
-(2026-11-03, branch DEV). Microsoft 365 / Entra source availability is **Beta**.
+Status: **Complete (workstation-verified; CI pending at the time of writing)**
+(2026-11-04, branch DEV).
 
-**Read:** AGENTS.md, docs/00, 03 (licensing entities), 04 (licenses endpoints), 05 (§5,
-failure behaviour, fixtures), 06 (software and license model), 08 (§6), 15, 17.
+**Read:** AGENTS.md, docs/00, 01 (Reclassify, Reconcile discovery, dedicated queues), 03, 07,
+08, 15 (A06), 17.
 
-**Previous:** 009 Defender for Endpoint (Provisionally Complete, CI run 41664784779 green on
-`f630306`). ADR-014 (Entra device ID auto-link with corroboration) is kept as implemented.
+**Previous:**
+- 010 Microsoft 365 licenses (CI run 41672076454 green).
+- Follow-up fixes for Tasks 008–010 (`5afb2a1`, CI run 41736399569 green: backend 542
+  passed, frontend 100):
+  - a per-tenant Defender rate budget shared through Redis;
+  - optional M365 group names (`GroupMember.Read.All`);
+  - licensed-users wording on the M365 integration page;
+  - a prefetch for the subscriptions list.
 
-## Scope
+**Scope (operator choice, 2026-11-04):**
+- Category mismatch review.
+- Queue triage.
+- Data-quality queues.
 
-- A read-only Graph v1.0 connector for subscribed SKUs and user license assignments
-  (direct and group-based).
-- Storage of subscription snapshots and allocations that never double-counts a user.
-- A license API and a Licenses screen with an SKU drilldown.
+Already present from earlier tasks and reused: asset reclassification with impact preview
+and reason (Task 003), and the candidate link/create/hold/reject decisions (Tasks 004–005).
 
-Out of scope: entitlements and agreements, software products and installations (Task 016),
-billing or compliance calculations, group names, `licenseDetails`, any write to the tenant
-and any live connection.
+Out of scope: review metrics (not chosen); the docs/01 queues "EOL evidence missing",
+"certificate expiring" and "import errors" (Tasks 015, 017 and 013).
 
 ## Outcome
 
-**Connector (`adapters/m365/`):**
-- `M365Client` (`GraphClient` subclass): GET only, with continuation links limited to
-  `/subscribedSkus` and `/users`.
-- Adapter:
-  - reads `/subscribedSkus` and paged `/users` (`$select` of ID, UPN, display name,
-    enabled, assignedLicenses and licenseAssignmentStates; `$top=999`; nextLink);
-  - tracks whether each listing is complete;
-  - the connection test reports missing or excess permissions (both required:
-    `Organization.Read.All`, `User.Read.All`);
-  - it produces no device records: data goes to `apps.licensing` through the
-    `store_facts` hook, which now receives the adapter.
+**Category review (ADR-015, ASM-44):**
+- Sources never change an asset's category.
+- After each applied observation, a source type that maps to a different category opens
+  one `CategoryReview` per asset and source, of kind `more_specific`, `different_type` or
+  `different_class`.
+- A reviewer with `assets.reclassify` either reclassifies through the existing audited
+  service or keeps the current category with a reason. A kept category is not
+  re-proposed for the same suggestion.
+- Any reclassification (review, asset page or link-time) settles open reviews through a
+  new `asset_reclassified` signal. Reviews also resolve when the source agrees again.
+- Linking a candidate can reclassify in the same transaction (`reclassify=true`); a
+  missing required template field rolls back both.
 
-**Licensing model (new app `apps.licensing`, ASM-42):**
-- `LicenseSku` (per instance).
-- Append-only `SubscriptionSnapshot`: reported enabled, warning, suspended, locked-out and
-  consumed units, plus ITAM's distinct assigned/direct/group user counts. A new row is
-  written only on change; otherwise it is confirmed.
-- `DirectoryUser`: minimal identity, licensed users only.
-- `LicenseAllocation`: one active row per user and SKU across all paths. Ended, never
-  deleted; a re-assignment opens a new row.
+**Queue triage (ASM-45):**
+- Candidates have an `assignee` (validated: may decide, has site access).
+- New filters: site, assignee (me / none / user), `older_than_days`, `q`; ordering by
+  newest, oldest or score.
+- Bulk hold, reject or assign: at most 200 items, each with its viewed version, its own
+  transaction, audit entry and result. Linking and creating stay one at a time.
+- The assignee picker is backed by `GET /reconciliation/assignees/`.
 
-**Rules:**
-- Only a complete listing ends allocations, flags users or SKUs missing, or produces
-  counts; otherwise the counts are "Unknown".
-- Assigned users count Active, ActiveWithError and Unknown; not Error or Disabled.
-- SKUs assigned but not subscribed are kept without quantities.
+**Data-quality queues (`apps.quality`, ASM-46):**
+- `DataQualityFinding` per asset and kind:
+  - duplicate candidate: same manufacturer + serial (high) or same MAC (medium);
+  - model unknown (medium; VMs exempt);
+  - source stale (medium);
+  - owner missing (low when deployed, medium when assigned).
+- Each finding has severity, summary, evidence, assignee and status (open, dismissed,
+  resolved).
+- Findings are recomputed hourly (Celery beat `quality.refresh_findings`) or on demand.
+  They auto-resolve when the condition clears; dismissed findings stay dismissed while it
+  holds. Assets are never changed.
 
-**Permissions:** new `licenses.view` (System Admin, ITAM Manager, Auditor;
-`accounts.0005_license_permissions`).
-
-**Migrations (all reversible):**
-- `licensing.0001_license_inventory`
-- `integrations.0010_m365_beta` (Planned → Beta)
-- `accounts.0005_license_permissions`
-
-CI reverses `licensing` too.
+**Migrations (all reversible; CI reverses `quality` too):**
+- `reconciliation.0002_category_review_and_triage`
+- `quality.0001_data_quality_findings`
 
 **APIs (new):**
-- `GET /api/v1/licenses/subscriptions/`: latest snapshot, available = enabled − consumed,
-  freshness.
-- `GET /api/v1/licenses/subscriptions/{id}/`: service plans, up to 100 snapshots.
-- `GET /api/v1/licenses/allocations/`: cursor pagination; filters `sku`, `q`, `method`
-  (direct / group / direct_and_group) and `include_ended`.
+
+| Area | Endpoints |
+|---|---|
+| Category reviews | `GET /discovery/category-reviews/`; `POST .../{id}/reclassify/` and `.../{id}/dismiss/` (If-Match) |
+| Triage | `POST /reconciliation/{id}/assign/` (If-Match), `POST /reconciliation/bulk/`, `GET /reconciliation/assignees/` |
+| Data quality | `GET /quality/findings/`, `GET /quality/summary/`; `POST /quality/findings/{id}/assign/`, `.../dismiss/`, `.../reopen/` (If-Match); `POST /quality/refresh/` |
+
+Changed:
+- Candidates add `assignee` and `assigned_at`.
+- The candidate list adds the new filters.
+- Approve-link accepts `reclassify`, `category` and `custom_fields`.
 
 **UI:**
-- Navigation item **Licenses**, shown only with `licenses.view`.
-- Subscriptions table: purchased, consumed (tenant), assigned users (ITAM), available,
-  status, snapshot time and freshness, with an inventory-not-compliance note.
-- SKU drilldown: quantity strip, assigned users (method, groups, state, first and last
-  seen; filters; load more), quantity history and details.
-- Integration page: M365 profile, permission panel and capability labels; a `licenses` run
-  phase; the catalogue has the fixed endpoint.
-- Numeric table columns are right-aligned.
+- Discovery reconciliation queue: assignee, waiting-time and sort filters, search, row
+  selection with a bulk bar (assign to me, unassign, hold, reject) and a reason dialog
+  that reports per-item results, plus assignee and waiting-since columns.
+- New **Category reviews** tab: current versus suggested path, kind, source, a reclassify
+  dialog with template impact (it links to the asset's Change category form when
+  required fields are missing), and keep-current.
+- New **Data quality** tab: queue selector with counts, status, severity and assignee
+  filters, evidence links to the other duplicate assets, assign to me, dismiss, reopen,
+  and re-check now.
+- Candidate page: an "Also change the asset's category" option when linking.
+- Shared `ReasonDialog`; new `.segmented` and `.bulk-bar` styles.
 
-**Fixtures:** `fixtures/m365/graph/responses.json` holds 5 SKUs (enabled, warning,
-suspended, free) and 10 users: direct, group, direct + group, two groups, Error,
-ActiveWithError, disabled account, unlicensed, unsubscribed SKU and missing states.
-
-**Config and docs:**
-- `ITAM_INTEGRATION_M365_CLIENT_SECRET` (fallback) in Compose and `.env.example`.
-- docs/17 DEC-17 and ASM-41 to ASM-43; README section.
+**Docs:** docs/17 ADR-015 and ASM-44 to ASM-46; README section.
 
 ## Verification (workstation; SQLite test-only fallback, no Docker/PostgreSQL here)
 
-- **Backend: 529 passed, 6 skipped** (the 6 skips are PostgreSQL/Redis-only). This includes
-  25 new tests in `test_m365.py`:
-  - GET-only reads and paging; no device records;
-  - reported versus counted quantities;
-  - direct + group counted once; assignment states; minimal identity;
-  - unsubscribed SKU;
-  - idempotent confirm; changed purchased units keep history;
-  - ended and re-assigned allocations; path change;
-  - incomplete user listing (nothing ended, counts Unknown); unsafe link;
-  - SKU and user missing flags; allocation helper;
-  - 403 naming both permissions; AADSTS error; expired token plus 429;
-  - connection test (excess and missing permissions); configuration defaults;
-  - subscription and allocation API with filters; `licenses.view` enforcement;
-  - no secret or token in logs; scheduler.
-- Updated tests: the planned-source tests now create their own planned source (none
-  remain seeded).
+- **Backend: 560 passed, 6 skipped** (the 6 skips are PostgreSQL/Redis-only). 24 new
+  tests:
+  - `test_category_review.py` (11): open, kinds, class versus agreement, reclassify with
+    audit and same UUID, required fields, dismiss not re-proposed, reopen on a new
+    suggestion, asset-page reclassify settles, agree again resolves, link + reclassify,
+    all-or-nothing rollback, scope and permissions;
+  - `test_triage.py` (6): assign with 428 without If-Match, assignee validation and
+    picker, filters and ordering, bulk with stale versions and invisible IDs, bulk
+    assign and validation, permissions and site scope;
+  - `apps/quality/tests` (7): every rule including VM exemption and severities, stale
+    links, auto-resolve and reopen history, dismissed stays dismissed, assign, filters
+    and summary, scope and permissions, refresh with archived assets.
 - Ruff check and format are clean; no migration drift; the OpenAPI schema validates with
   `--fail-on-warn` and matches the committed file.
-- Frontend: typecheck, oxlint, **100 tests** (4 new) and the build all pass.
-- GitHub CI run 41672076454 on `563abbd` (PostgreSQL 16 + Redis 7): backend **535 passed,
-  0 skipped**; migrations applied and reversed (including `licensing`); OpenAPI drift check;
-  frontend 100 tests; Compose config and production image builds all pass.
-- Not run: the Docker stack, Playwright, a browser review, and **any tenant connection**
-  (not authorised).
+- Frontend: typecheck, oxlint, **109 tests** (9 new) and the build all pass.
+- Not run: Docker stack, Playwright, browser review at 1440×900 and 390×844.
 
-**Activation prerequisites (not done):**
-1. The Docker-host verification passes.
-2. DEC-17 is approved: the tenant ID, an app registration with only `Organization.Read.All`
-   and `User.Read.All`, a certificate, egress, a sanitized sample, privacy approval for
-   UPNs and names (DEC-15) and written approval.
-3. Run the connection test; confirm no excess permissions and that
-   `licenseAssignmentStates` is returned.
-4. Set `ITAM_ALLOW_LIVE_INTEGRATIONS=true`, record the approval, then enable the schedule.
+**Still open from earlier tasks (need decisions or outside input):**
+- Regional Defender hosts.
+- Whether excess roles should block syncs.
+- Phone and tablet categories.
+- DEC-15, DEC-16 and DEC-17.
 
-**Outstanding issues:**
-- Permission names (including whether `LicenseAssignment.Read.All` suffices) and property
-  shapes are from documentation.
-- Group names are shown only when the optional `GroupMember.Read.All` is granted (fixed
-  2026-11-04, see below); otherwise IDs only.
-- No entitlement or agreement data (Task 016).
-- Personal-data retention for directory users awaits DEC-15.
-- Not load-tested (Task 022).
+**Open in this task:**
+- Severity thresholds and the exemption list are initial (ASM-46).
+- Review metrics were not built.
+- Bulk link/create is intentionally absent.
 
-## Follow-up fixes (2026-11-04)
-
-Open issues from Tasks 008 to 010 that needed no live tenant or policy decision:
-
-1. **Defender rate budget shared** (ASM-37): the per-run counter is replaced by a per-tenant
-   sliding-window budget in the Django cache (Redis). It is shared by every run and worker:
-   90 calls per minute (the client waits) and 1,400 per hour (the listing stops as
-   incomplete). If the cache is down it falls back to a per-process budget.
-2. **Group names on license assignments** (ASM-41): these are read only when the token
-   holds the optional `GroupMember.Read.All` (or `Group.Read.All` / `Directory.Read.All`):
-   one `GET /groups/{id}` per assigning group (GUIDs only, at most 500). A refused or
-   failed read only warns. Names are stored in `licensing.DirectoryGroup`
-   (migration `licensing.0002_directory_group`). The allocation API adds
-   `groups[{id, display_name}]`, and the UI shows the names.
-3. **Integration page wording**: Microsoft 365 health and run history say "licensed users",
-   hide asset-matching and candidate counts, and link to Licenses. "Re-read" is shown only
-   for connectors that re-read details.
-4. **Subscriptions list**: snapshots are prefetched in one query instead of one per SKU.
-
-**Verification:**
-- Backend: 536 passed, 6 skipped (7 new tests: shared, minute and fallback Defender
-  budgets; group names with, without and refused; query count).
-- Frontend: 100 tests, typecheck, lint and build pass.
-
-**Still open:** regional Defender hosts (needs a verified host list), whether excess roles
-should block syncs, phone and tablet categories (product decision), and DEC-15, DEC-16 and
-DEC-17.
-
-Proposed next task: **011 | Reconciliation review and category reclassification**
-(tasks/BACKLOG.md). Do not start automatically.
+Proposed next task: **012 | Static/dynamic groups + editor** (tasks/BACKLOG.md). Do not start
+automatically.
