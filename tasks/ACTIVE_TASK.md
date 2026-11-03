@@ -144,7 +144,9 @@ New dependency: `cryptography>=50.0.2,<51` (RS256 assertions and PEM parsing).
   `--fail-on-warn` and matches the committed file.
 - Frontend: typecheck, oxlint, **91 tests** (4 new: 3 on the Intune page, 1 in the
   catalogue) and the build all pass.
-- GitHub CI (PostgreSQL 16 + Redis 7): pending at the time of writing; see below.
+- GitHub CI run 41658532706 on `d0419e2` (PostgreSQL 16 + Redis 7): backend **471 passed,
+  0 skipped**; migrations applied and reversed; frontend 91 tests; Compose config and image
+  builds all pass.
 - Not run: the Docker stack, Playwright, a browser review, and **any Microsoft tenant
   connection** (not authorised).
 
