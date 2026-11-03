@@ -127,7 +127,9 @@ Recorded as ADR-013 / ASM-32 in docs/17. This aligns the code with docs/03 step 
 - **Verification:**
   - backend 419 passed, 6 skipped (6 new and 2 updated matching tests);
   - ruff clean; OpenAPI regenerated with `--fail-on-warn`;
-  - frontend typecheck, lint, 87 tests (1 new) and build pass.
+  - frontend typecheck, lint, 87 tests (1 new) and build pass;
+  - GitHub CI run 41654481991 on `de8cfa0` (PostgreSQL 16 + Redis 7): backend, frontend,
+    Compose config and image builds all pass.
 
 Proposed next task: **008 | Intune managedDevice adapter** (tasks/BACKLOG.md). It needs
 DEC-07 (tenant, app registration and consent) before any live test. Do not start
