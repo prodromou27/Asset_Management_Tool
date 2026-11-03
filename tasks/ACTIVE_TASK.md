@@ -90,7 +90,13 @@ FDB and links.
 - Ruff check and format clean; `makemigrations --check` clean; OpenAPI validates with
   `--fail-on-warn` and matches `openapi.yaml`.
 - Frontend: typecheck, oxlint, **85 tests** (9 new) and the production build all pass.
-- PostgreSQL CI: see the commit after this one (recorded below once the run finishes).
+- GitHub CI run 41629185647 on `ecd15fb` (PostgreSQL 16 + Redis 7): backend **389 passed,
+  0 skipped** (migrations apply and reverse, including `network`; OpenAPI has no drift);
+  frontend 85 tests, lint, typecheck and build pass; Compose is valid and the images build.
+  The first run (41628756336 on `9db85db`) failed 1 test. It exposed a real
+  PostgreSQL-only bug: on a first sync, evidence port names showed as "port N" because the
+  pre-run observation cache was used. This is fixed in `ecd15fb`, which takes port names
+  from the current run's records.
 - Not run: the Docker dev stack, Playwright, a manual browser review, and **any live
   LibreNMS connection** (not authorised).
 
