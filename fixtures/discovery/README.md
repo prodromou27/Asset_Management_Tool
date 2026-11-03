@@ -29,6 +29,7 @@ Load into an instance created under Administration → Integrations (source "San
 fixture import"):
 
 ```bash
+scripts/compose.sh dev cp fixtures/discovery/network_devices.json api:/tmp/network_devices.json
 scripts/compose.sh dev exec api python manage.py load_observations \
-  --instance "Fixture network" --file /app/../fixtures/discovery/network_devices.json --mode full
+  --instance "Fixture network" --file /tmp/network_devices.json --mode full
 ```

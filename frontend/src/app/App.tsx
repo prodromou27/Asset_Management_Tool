@@ -3,6 +3,9 @@ import { useState, type ReactNode } from 'react'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { AuditLogPage } from '../features/admin-audit/AuditLogPage'
 import { CategoriesPage } from '../features/admin-categories/CategoriesPage'
+import { IntegrationsPage } from '../features/admin-integrations/IntegrationsPage'
+import { CandidatePage } from '../features/discovery/CandidatePage'
+import { DiscoveryPage } from '../features/discovery/DiscoveryPage'
 import { SitesPage } from '../features/admin-sites/SitesPage'
 import { AssetDetailPage } from '../features/assets/AssetDetailPage'
 import { AssetFormPage } from '../features/assets/AssetFormPage'
@@ -79,6 +82,30 @@ export function AppRoutes() {
         element={
           <Protected permission={PERMISSIONS.assetsEdit} what="asset editing">
             <AssetFormPage />
+          </Protected>
+        }
+      />
+      <Route
+        path="/discovery"
+        element={
+          <Protected permission={PERMISSIONS.discoveryView} what="discovery">
+            <DiscoveryPage />
+          </Protected>
+        }
+      />
+      <Route
+        path="/discovery/candidates/:id"
+        element={
+          <Protected permission={PERMISSIONS.discoveryView} what="discovery">
+            <CandidatePage />
+          </Protected>
+        }
+      />
+      <Route
+        path="/admin/integrations"
+        element={
+          <Protected permission={PERMISSIONS.integrationsManage} what="integration administration">
+            <IntegrationsPage />
           </Protected>
         }
       />

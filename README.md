@@ -83,6 +83,19 @@ Sign in at http://localhost:5173 with that account. Create a second named admin 
 - **Site access**: on each user's page under Users & roles. Users see only assets in granted sites (and their child sites) unless "All sites" is set. `bootstrap_admin` creates admins with all sites.
 - Every create, edit, reassignment, reclassification, archive and restore is recorded in the asset's history (append-only) and the audit log. Edits require the current version (If-Match); stale edits are rejected.
 
+### Discovery and reconciliation (Task 004)
+
+- **Discovery** (`/discovery`): reconciliation queue (new devices and uncertain matches with confidence and matching identifiers), field conflicts, and sources with freshness and sync history. Candidate pages show normalised values, warnings, the raw payload, matches and a decision panel (link, create, hold, reject; reason required).
+- **Source evidence** tab on each asset: current value, who/what set it and when, lock state, every source's reported value (flagged when it differs), linked sources (unlink) and merges (merge/revert).
+- **Administration → Integrations**: integration instances (vendor sources are Planned until their adapters exist), default site/VRF, stale threshold, optional automatic linking of strong matches, and per-field source precedence.
+- No vendor APIs are called and nothing scans the network. Sanitised records can be loaded for pilots and testing:
+
+```bash
+scripts/compose.sh dev cp fixtures/discovery/network_devices.json api:/tmp/network_devices.json
+scripts/compose.sh dev exec api python manage.py load_observations \
+  --instance "<integration name>" --file /tmp/network_devices.json --mode full
+```
+
 After changing an API serializer, regenerate the contract: `cd backend && uv run python manage.py spectacular --file ../frontend/src/shared/api/openapi.yaml`, then `cd frontend && pnpm run gen:api`. CI fails on drift.
 
 Dev ports are bound to 127.0.0.1 only. Stop with `scripts/compose.sh dev down` (add `-v` only to discard the local PostgreSQL volume).

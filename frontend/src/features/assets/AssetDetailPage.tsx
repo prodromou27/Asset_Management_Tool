@@ -23,6 +23,7 @@ import { PageHeader } from '../../shared/ui/PageHeader'
 import { EmptyState, LoadingState, QueryErrorState } from '../../shared/ui/States'
 import { StatusBadge } from '../../shared/ui/StatusBadge'
 import { Tabs } from '../../shared/ui/Tabs'
+import { EvidencePanel } from '../discovery/EvidencePanel'
 import { CustomFieldInputs } from './CustomFieldInputs'
 import { toApiValues, type CustomValues } from './customValues'
 import {
@@ -51,10 +52,18 @@ const CHANGE_LABEL: Record<AssetHistoryEntry['change_type'], string> = {
   reclassified: 'Reclassified',
   archived: 'Archived',
   restored: 'Restored',
+  discovered: 'Updated from source',
+  linked: 'Source linked',
+  unlinked: 'Source unlinked',
+  merged: 'Merged',
+  unmerged: 'Merge reverted',
+  field_locked: 'Field locked',
+  field_unlocked: 'Field unlocked',
 }
 
 export function AssetDetailPage() {
   const { id = '' } = useParams()
+  const { can } = useSession()
   const location = useLocation()
   const [params, setParams] = useSearchParams()
   const asset = useQuery({ queryKey: assetKeys.detail(id), queryFn: () => fetchAsset(id) })
@@ -144,6 +153,9 @@ export function AssetDetailPage() {
         tabs={[
           { id: 'overview', label: 'Overview', content: <Overview asset={data} /> },
           { id: 'network', label: 'Network', content: <Network asset={data} /> },
+          ...(can(PERMISSIONS.discoveryView)
+            ? [{ id: 'evidence', label: 'Source evidence', content: <EvidencePanel asset={data} /> }]
+            : []),
           { id: 'history', label: 'History', content: <History assetId={data.id} /> },
         ]}
       />

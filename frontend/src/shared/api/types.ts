@@ -24,6 +24,19 @@ export type ClassificationImpact = Schemas['ClassificationImpact']
 export type UserLookup = Schemas['UserLookup']
 export type FieldType = CustomFieldDefinition['field_type']
 export type BusinessStatus = NonNullable<AssetWrite['business_status']>
+export type Candidate = Schemas['Candidate']
+export type CandidateMatch = Schemas['Match']
+export type DiscoverySource = Schemas['DiscoverySource']
+export type IntegrationInstance = Schemas['IntegrationInstance']
+export type IntegrationWrite = Schemas['IntegrationInstanceWriteRequest']
+export type SyncRun = Schemas['SyncRun']
+export type FieldConflict = Schemas['FieldConflict']
+export type AssetEvidence = Schemas['AssetEvidence']
+export type FieldEvidence = Schemas['FieldEvidence']
+export type SourceLink = Schemas['SourceLink']
+export type AssetMerge = Schemas['AssetMerge']
+export type ObservationDetail = Schemas['ObservationDetail']
+export type FieldAuthorityPolicy = Schemas['FieldAuthorityPolicy']
 export type Paginated<T> = {
   items: T[]
   next_cursor: string | null
@@ -45,4 +58,9 @@ export const PERMISSIONS = {
   assetsArchive: 'assets.archive',
   categoriesManage: 'categories.manage',
   sitesManage: 'sites.manage',
+  assetsEditTechnical: 'assets.edit_technical',
+  assetsMerge: 'assets.merge',
+  discoveryView: 'discovery.view',
+  reconciliationDecide: 'reconciliation.decide',
+  integrationsManage: 'integrations.manage',
 } as const

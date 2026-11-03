@@ -13,12 +13,14 @@ interface NavItem {
 
 const PRIMARY: NavItem[] = [
   { to: '/assets', label: 'Assets', permission: PERMISSIONS.assetsView },
+  { to: '/discovery', label: 'Discovery', permission: PERMISSIONS.discoveryView },
   { to: '/', label: 'System health' },
 ]
 
 const ADMINISTRATION: NavItem[] = [
   { to: '/admin/sites', label: 'Sites & locations', permission: PERMISSIONS.sitesManage },
   { to: '/admin/categories', label: 'Categories & fields', permission: PERMISSIONS.categoriesManage },
+  { to: '/admin/integrations', label: 'Integrations', permission: PERMISSIONS.integrationsManage },
   { to: '/admin/users', label: 'Users & roles', permission: PERMISSIONS.usersView },
   { to: '/admin/audit', label: 'Audit log', permission: PERMISSIONS.auditView },
   { to: '/admin/security', label: 'Security policy', permission: PERMISSIONS.securityView },
