@@ -986,6 +986,7 @@ export interface components {
       score: number;
       keys: components["schemas"]["MatchKey"][];
       category_agrees: boolean | null;
+      manufacturer_agrees?: boolean | null;
     };
     MatchKey: {
       key: string;
@@ -1484,9 +1485,10 @@ export interface components {
     /**
      * @description * `strong` - strong
      * * `corroborating` - corroborating
+     * * `conflicting` - conflicting
      * @enum {string}
      */
-    StrengthEnum: "strong" | "corroborating";
+    StrengthEnum: "strong" | "corroborating" | "conflicting";
     /**
      * @description * `supported` - Supported
      * * `eol_announced` - EOL announced

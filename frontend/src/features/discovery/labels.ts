@@ -30,10 +30,23 @@ export const KEY_LABEL: Record<string, string> = {
   hardware_uuid: 'Hardware UUID',
   serial: 'Manufacturer + serial',
   serial_unverified: 'Serial (manufacturer unknown)',
+  serial_other_make: 'Same serial, different manufacturer',
   mac: 'MAC address',
   hostname: 'Hostname',
   name: 'Asset name',
   ip: 'IP address (same site/VRF)',
+}
+
+export const KEY_STRENGTH: Record<string, { label: string; tone: StatusTone }> = {
+  strong: { label: 'Strong', tone: 'success' },
+  corroborating: { label: 'Corroborating', tone: 'neutral' },
+  conflicting: { label: 'Conflicting', tone: 'danger' },
+}
+
+/** Whether a source attribute agrees with the asset (null: one side unknown). */
+export function agreement(value: boolean | null | undefined, unknown: string): string {
+  if (value === null || value === undefined) return unknown
+  return value ? 'Agrees' : 'Differs'
 }
 
 export const FIELD_LABEL: Record<string, string> = {

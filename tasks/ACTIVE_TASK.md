@@ -102,6 +102,33 @@ also applies to manual entry (ASM-31).
 names are unconfirmed. No software, monitor or peripheral data yet. Not load-tested
 (Task 022).
 
+## Change request 007a | Stricter strong-match gate (2026-11-03)
+
+Status: **Complete (workstation-verified)**. Operator direction: a matching serial alone must
+not merge assets; the manufacturer, asset class and other identifiers must also agree.
+Recorded as ADR-013 / ASM-32 in docs/17. This aligns the code with docs/03 step 2.
+
+- **Auto-link:** happens only when the instance allows it and all of these hold:
+  - the manufacturer is known and the same on both sides;
+  - the category root is known and the same;
+  - no identifier contradicts the match.
+- **Conflict candidates:** these clashes now produce a `conflict` candidate; previously
+  they gave `strong` with a note, or a silent `new_device`:
+  - a different manufacturer or category;
+  - a different serial on the asset;
+  - a hardware UUID that differs from what other linked sources report;
+  - another asset sharing several identifiers;
+  - the same serial with a different manufacturer (new `serial_other_make` key, strength
+    `conflicting`).
+- **Unknown values:** an unknown manufacturer or class stays a `strong` candidate for review.
+- **API:** each match adds `manufacturer_agrees` (nullable, so old candidates still
+  serialise), and the key strength gains `conflicting`. No migration is needed.
+- **UI:** the candidate page shows a Manufacturer column and a red "Conflicting" key badge.
+- **Verification:**
+  - backend 419 passed, 6 skipped (6 new and 2 updated matching tests);
+  - ruff clean; OpenAPI regenerated with `--fail-on-warn`;
+  - frontend typecheck, lint, 87 tests (1 new) and build pass.
+
 Proposed next task: **008 | Intune managedDevice adapter** (tasks/BACKLOG.md). It needs
 DEC-07 (tenant, app registration and consent) before any live test. Do not start
 automatically.

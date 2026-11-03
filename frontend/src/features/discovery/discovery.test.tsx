@@ -161,6 +161,34 @@ describe('Candidate decision', () => {
     expect(await screen.findByLabelText('Raw source payload')).toHaveTextContent('Cisco Systems, Inc.')
   })
 
+  it('shows a same-serial, different-manufacturer conflict', async () => {
+    mockApi(
+      routes(
+        makeCandidate({
+          rule: 'conflict',
+          conflicts: ['The serial number matches an asset from a different manufacturer.'],
+          matches: [
+            {
+              asset_id: ASSET_ID,
+              asset_name: 'sw-core-01',
+              score: 10,
+              keys: [{ key: 'serial_other_make', strength: 'conflicting', value: 'FOC2233X0AB (HP)' }],
+              category_agrees: true,
+              manufacturer_agrees: false,
+            },
+          ],
+        }),
+      ),
+    )
+    renderApp(`/discovery/candidates/${CANDIDATE_ID}`)
+
+    const table = (await screen.findByText('sw-core-01', { selector: 'a' })).closest('table')!
+    expect(within(table).getByText('Conflicting')).toBeInTheDocument()
+    expect(within(table).getByText(/Same serial, different manufacturer/)).toBeInTheDocument()
+    expect(within(table).getByText('Differs')).toBeInTheDocument()
+    expect(within(table).getByText('Agrees')).toBeInTheDocument()
+  })
+
   it('links to the proposed asset with a reason and If-Match', async () => {
     const { calls } = mockApi({
       ...routes(),

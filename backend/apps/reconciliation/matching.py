@@ -2,12 +2,17 @@
 
 1. Instance + external ID already linked  → resolved before this module runs.
 2. Verified manufacturer + serial, or hardware UUID seen on another linked source
-   → strong key. A single strong match may auto-link only if the instance policy
-   allows it, the category corroborates and nothing contradicts it.
+   → strong key. A strong key alone never decides: a single strong match may
+   auto-link only if the instance policy allows it, the manufacturer is known and
+   the same on both sides, the asset class is known and the same, and no other
+   identifier contradicts it (a different hardware UUID or serial, or other assets
+   sharing several identifiers). Any contradiction → conflict candidate.
 3. Several corroborating keys (MAC, hostname, name, IP in the same site/VRF)
    → candidate for human review, never automatic.
 4. One weak key alone → low-score candidate, never automatic.
 5. Strong keys pointing at different assets → conflict candidate.
+6. Same serial but a different manufacturer → conflict candidate (never a match,
+   but shown to the reviewer instead of being dropped silently).
 """
 
 from collections import defaultdict
@@ -17,7 +22,7 @@ from django.db.models import Q
 
 from apps.assets.models import Asset, AssetCategory, AssetHostname, AssetInterface, AssetIPAddress
 from apps.assets.tree import CategoryTree
-from apps.observations.normalize import normalize_manufacturer
+from apps.observations.normalize import normalize_manufacturer, normalize_serial
 
 from .models import ReconciliationCandidate, SourceLink
 
@@ -27,20 +32,28 @@ WEIGHTS = {
     "hardware_uuid": 80,
     "serial": 70,
     "serial_unverified": 35,
+    "serial_other_make": 0,
     "mac": 25,
     "hostname": 20,
     "name": 10,
     "ip": 10,
 }
 STRONG_KEYS = {"hardware_uuid", "serial"}
+CONFLICTING_KEYS = {"serial_other_make"}
 CATEGORY_BONUS = 10
 # One fact can hit several keys (a hostname matches both hostname rows and the
 # asset name). Scoring and "how many independent identifiers" count families.
 FAMILY = {"name": "hostname", "serial_unverified": "serial"}
 
 
+def _strength(key) -> str:
+    if key in STRONG_KEYS:
+        return "strong"
+    return "conflicting" if key in CONFLICTING_KEYS else "corroborating"
+
+
 def _families(found) -> set:
-    return {FAMILY.get(k["key"], k["key"]) for k in found}
+    return {FAMILY.get(k["key"], k["key"]) for k in found if k["key"] not in CONFLICTING_KEYS}
 
 
 def _score(found) -> int:
@@ -78,7 +91,7 @@ def find_matches(instance, normalized: dict, *, exclude_asset_ids=()) -> MatchRe
                 keys[asset_id].append(
                     {
                         "key": key,
-                        "strength": "strong" if key in STRONG_KEYS else "corroborating",
+                        "strength": _strength(key),
                         "value": value,
                     }
                 )
@@ -93,7 +106,10 @@ def find_matches(instance, normalized: dict, *, exclude_asset_ids=()) -> MatchRe
                 add([asset_id], "serial", f"{normalized['manufacturer']} {serial}")
             elif not asset_make or not normalized.get("manufacturer"):
                 add([asset_id], "serial_unverified", serial)
-            # Same serial, different manufacturer: not the same device.
+            else:
+                # Same serial, different manufacturer: not the same device, but the
+                # reviewer must see it rather than get a silent "new device".
+                add([asset_id], "serial_other_make", f"{serial} ({asset_make})")
 
     if uuid := normalized.get("hardware_uuid"):
         linked = (
@@ -152,6 +168,7 @@ def find_matches(instance, normalized: dict, *, exclude_asset_ids=()) -> MatchRe
         suggested = AssetCategory.objects.filter(code=code, is_active=True).first()
 
     assets = {a.pk: a for a in Asset.objects.filter(pk__in=keys.keys()).select_related("site")}
+    make = normalized.get("manufacturer")
     matches = []
     for asset_id, found in keys.items():
         asset = assets[asset_id]
@@ -161,6 +178,8 @@ def find_matches(instance, normalized: dict, *, exclude_asset_ids=()) -> MatchRe
             category_agrees = _root(tree, asset.category_id) == _root(tree, suggested.pk)
             if category_agrees:
                 score += CATEGORY_BONUS
+        asset_make = normalize_manufacturer(asset.manufacturer)
+        manufacturer_agrees = None if not (make and asset_make) else make == asset_make
         matches.append(
             {
                 "asset_id": str(asset_id),
@@ -169,6 +188,7 @@ def find_matches(instance, normalized: dict, *, exclude_asset_ids=()) -> MatchRe
                 "score": min(score, 99),
                 "keys": sorted(found, key=lambda k: -WEIGHTS[k["key"]]),
                 "category_agrees": category_agrees,
+                "manufacturer_agrees": manufacturer_agrees,
             }
         )
     matches.sort(key=lambda m: -m["score"])
@@ -196,23 +216,66 @@ def find_matches(instance, normalized: dict, *, exclude_asset_ids=()) -> MatchRe
         winner = next(m for m in matches if m["asset_id"] == strong_id)
         result.proposed_asset_id = strong_id
         result.score = winner["score"]
-        result.rule = Rule.STRONG
+        if winner["manufacturer_agrees"] is False:
+            result.conflicts.append(
+                "The source's manufacturer does not match the asset's manufacturer."
+            )
         if winner["category_agrees"] is False:
             result.conflicts.append("The source's device type does not match the asset's category.")
+        winner_asset = next(a for pk, a in assets.items() if str(pk) == strong_id)
+        result.conflicts.extend(_identifier_conflicts(instance, normalized, winner_asset))
         others = [
             m for m in matches if m["asset_id"] != strong_id and len(_families(m["keys"])) >= 2
         ]
         if others:
-            result.rule = Rule.CONFLICT
             result.conflicts.append(
                 "Other assets share several identifiers with this device; check for duplicates."
             )
+        result.rule = Rule.CONFLICT if result.conflicts else Rule.STRONG
+        # A strong key alone is not enough: manufacturer and class must be known and
+        # agree. Unknown values leave the match for a reviewer.
         result.auto_linkable = (
             result.rule == Rule.STRONG
-            and winner["category_agrees"] is not False
-            and any(k["key"] in STRONG_KEYS for k in winner["keys"])
+            and winner["manufacturer_agrees"] is True
+            and winner["category_agrees"] is True
+        )
+        return result
+
+    clashing = [m for m in matches if any(k["key"] in CONFLICTING_KEYS for k in m["keys"])]
+    if clashing:
+        result.rule = Rule.CONFLICT
+        result.proposed_asset_id = clashing[0]["asset_id"]
+        result.score = clashing[0]["score"]
+        result.conflicts.append(
+            "The serial number matches an asset from a different manufacturer; "
+            "check whether this is a new device or a data-entry error."
         )
         return result
 
     result.rule = Rule.CORROBORATED if len(_families(top["keys"])) >= 2 else Rule.WEAK
     return result
+
+
+def _identifier_conflicts(instance, normalized: dict, asset) -> list:
+    """Identifiers the source reports that contradict what is known about the asset."""
+    out = []
+    serial = normalized.get("serial_number")
+    asset_serial = normalize_serial(asset.serial_number)
+    if serial and asset_serial and serial.upper() != asset_serial:
+        out.append(f"The source reports serial {serial} but the asset has serial {asset_serial}.")
+    if uuid := normalized.get("hardware_uuid"):
+        known = {
+            u
+            for u in SourceLink.objects.filter(
+                asset=asset, status__in=[SourceLink.Status.ACTIVE, SourceLink.Status.STALE]
+            )
+            .exclude(instance=instance, external_id=normalized["external_id"])
+            .values_list("last_observation__normalized__hardware_uuid", flat=True)
+            if u
+        }
+        if known and uuid not in known:
+            out.append(
+                "The source reports a hardware UUID that differs from the one other "
+                "sources report for this asset."
+            )
+    return out

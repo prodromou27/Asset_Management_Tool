@@ -17,7 +17,7 @@ class InstanceRefSerializer(serializers.Serializer):
 
 class MatchKeySerializer(serializers.Serializer):
     key = serializers.CharField()
-    strength = serializers.ChoiceField(choices=["strong", "corroborating"])
+    strength = serializers.ChoiceField(choices=["strong", "corroborating", "conflicting"])
     value = serializers.CharField()
 
 
@@ -27,6 +27,8 @@ class MatchSerializer(serializers.Serializer):
     score = serializers.IntegerField()
     keys = MatchKeySerializer(many=True)
     category_agrees = serializers.BooleanField(allow_null=True)
+    # Absent on candidates stored before the rule existed.
+    manufacturer_agrees = serializers.BooleanField(allow_null=True, default=None)
 
 
 class ObservationSummarySerializer(serializers.ModelSerializer):

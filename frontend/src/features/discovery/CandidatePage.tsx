@@ -20,7 +20,15 @@ import { PageHeader } from '../../shared/ui/PageHeader'
 import { ErrorSummary, LoadingState, QueryErrorState } from '../../shared/ui/States'
 import { StatusBadge } from '../../shared/ui/StatusBadge'
 import { BUSINESS_STATUS, categoryOptions, options } from '../assets/labels'
-import { CANDIDATE_STATUS, KEY_LABEL, RULE_LABEL, RULE_TONE, scoreLabel } from './labels'
+import {
+  agreement,
+  CANDIDATE_STATUS,
+  KEY_LABEL,
+  KEY_STRENGTH,
+  RULE_LABEL,
+  RULE_TONE,
+  scoreLabel,
+} from './labels'
 
 type Normalized = {
   manufacturer?: string | null
@@ -228,6 +236,7 @@ function Matches({ candidate }: { candidate: Candidate }) {
                 <th scope="col">Asset</th>
                 <th scope="col">Confidence</th>
                 <th scope="col">Matching identifiers</th>
+                <th scope="col">Manufacturer</th>
                 <th scope="col">Category</th>
               </tr>
             </thead>
@@ -242,22 +251,14 @@ function Matches({ candidate }: { candidate: Candidate }) {
                     <ul className="change-list change-list--plain">
                       {m.keys.map((k) => (
                         <li key={k.key}>
-                          <StatusBadge
-                            tone={k.strength === 'strong' ? 'success' : 'neutral'}
-                            label={k.strength === 'strong' ? 'Strong' : 'Corroborating'}
-                          />{' '}
+                          <StatusBadge {...KEY_STRENGTH[k.strength]} />{' '}
                           {KEY_LABEL[k.key] ?? k.key}: <span className="mono">{k.value}</span>
                         </li>
                       ))}
                     </ul>
                   </td>
-                  <td>
-                    {m.category_agrees === null
-                      ? 'No type reported'
-                      : m.category_agrees
-                        ? 'Agrees'
-                        : 'Differs'}
-                  </td>
+                  <td>{agreement(m.manufacturer_agrees, 'Unknown on one side')}</td>
+                  <td>{agreement(m.category_agrees, 'No type reported')}</td>
                 </tr>
               ))}
             </tbody>

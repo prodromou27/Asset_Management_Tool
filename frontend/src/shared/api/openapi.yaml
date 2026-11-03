@@ -4547,6 +4547,9 @@ components:
         category_agrees:
           type: boolean
           nullable: true
+        manufacturer_agrees:
+          type: boolean
+          nullable: true
       required:
       - asset_id
       - asset_name
@@ -5866,10 +5869,12 @@ components:
       enum:
       - strong
       - corroborating
+      - conflicting
       type: string
       description: |-
         * `strong` - strong
         * `corroborating` - corroborating
+        * `conflicting` - conflicting
     SupportStatusEnum:
       enum:
       - supported
