@@ -1,118 +1,107 @@
-# Current Task: 006 | LibreNMS read-only adapter + fixtures
+# Current Task: 007 | Endpoint Central on-prem adapter
 
 Status: **Provisionally Complete / Fixture-validated only. Live synchronisation NOT activated**
-(2026-11-03, branch DEV). LibreNMS source availability is **Beta**.
+(2026-11-03, branch DEV). Endpoint Central source availability is **Beta**.
 
-**Read:** AGENTS.md, docs/00, 02, 03, 05, 14, 15, 17.
+**Read:** AGENTS.md, docs/00, 05 (§2, shared normalisation, failure behaviour, fixtures), 15, 17.
+Previous task: 006 LibreNMS (Provisionally Complete, CI run 41629185647 green).
 
-## Preconditions verified (Task 004 audit)
+## Scope
 
-Observation storage, identity matching, field authority and reconciliation were complete.
-Gaps that blocked a connector, resolved here:
+- A read-only adapter for ManageEngine Endpoint Central on-premises that uses the Task 004
+  observation and reconciliation pipeline and the Task 006 sync engine, gates and admin
+  screen.
+- docs/05 §2:
+  - verify the API generation by handshake (`/dcapi` current, `/api/1.4` older);
+  - least privilege, no device or patch actions;
+  - data covers endpoint ID, hostname/domain, OS/build, manufacturer/model/serial/UUID,
+    and interface MAC/IP.
+- docs/05 fixtures: normal, empty, missing serial, duplicate hostname, changed IP,
+  pagination, unauthorized, rate limit, incomplete date and schema drift.
 
-1. No place for FDB/LLDP/CDP evidence → new `network` app (`NeighborEvidence`).
-2. `reconciliation.ingest` could not use a connector-owned run, report progress or be told
-   the listing was incomplete → `run=`, `on_progress=`, `complete=` parameters.
-3. No credential storage → secret references (`env:ITAM_INTEGRATION_*`, `file:<name>`).
-4. LibreNMS timestamps carry no zone → per-instance `source_timezone`.
-
-Non-blocking and still open: raw payload retention (DEC-15), candidate free-text search.
-
-## Acceptance (from the task request)
-
-- Read-only: GET only, HTTPS with certificate validation, no redirects, no LibreNMS changes,
-  no scanning, no agents.
-- Tokens never in the DB, API responses, audit or logs.
-- Records pass through Task 004 observation/reconciliation; locks never overwritten; no
-  auto-merge on hostname, IP or MAC; unmatched devices in the reconciliation queue.
-- Initial, scheduled and manual runs; idempotent; checkpoint/progress; retries and rate
-  limits; partial failure recovery; staleness; per-run statistics.
-- Admin configuration and health screen with sync history.
-- No live connection without the Docker-host verification and an approved read-only account.
+Out of scope: installed software (Task 016), monitors and peripherals (need a real
+payload), and any live connection.
 
 ## Outcome
 
-**Migrations:** `integrations.0003` (connection, schedule, approval and health fields on
-IntegrationInstance; progress/warning fields on SyncRun; `queued` status),
-`integrations.0004_librenms_beta` (data: LibreNMS Planned → Beta), `network.0001_initial`
-(NeighborEvidence). All reversible; CI reverses `network` too.
+**Shared connector framework (refactor; LibreNMS behaviour unchanged, its 68 tests pass):**
+- `adapters/http.py` is a generic GET-only client, now used by both connectors.
+- `adapters/registry.py` lists the available connectors.
+- The sync engine and serializers no longer hard-code LibreNMS.
+- Allowed auth headers are validated per source on save; new integrations get the source
+  default.
+- The API exposes `connector` (allowed auth headers, whether there is an evidence pass).
 
-**APIs (4 new paths, 63 total):**
-- `POST /integrations/{id}/test/`: connection test (system, route listing, one device).
-- `POST /integrations/{id}/sync/`: queue a manual sync (202; 409 if one is active).
-- `POST /integrations/{id}/live-access/`: approve or revoke live access (reason required).
-- `GET /assets/{id}/network-evidence/`: FDB and neighbour evidence, scoped to visible assets.
-- `GET/PATCH /integrations/{id}/` now expose and validate the connector configuration and
-  health; `GET /integrations/{id}/runs/` shows progress, warnings and request counts.
+**Endpoint Central adapter (`adapters/endpoint_central/`):**
+- **Detection:** the API generation is detected during the connection test or the first
+  sync and stored as a capability.
+- **Server version:** the build is read from `api/1.4 serverproperties` when available.
+- **Listing:** the computer list is paginated (500 per page). Duplicate IDs, repeated
+  pages, a failed later page or a short total are processed as an incomplete listing, so
+  nothing is marked stale.
+- **Details:** they are cached by successful-scan time and age, and re-read only for new or
+  rescanned computers.
+- **Mapping:** fields are looked up tolerantly so modest schema drift works.
+  - The device type is guessed only from chassis, server OS or VM model.
+  - OEM placeholders are treated as unknown.
+  - Scan time falls back to agent contact time, with a warning.
+- **Errors:** error envelopes are mapped to auth or source errors.
 
-All connector actions require `integrations.manage` and are audited.
+**Migrations:** `integrations.0005_authorization_scheme` (new `authorization` raw-header
+choice) and `integrations.0006_endpoint_central_beta` (data: Planned → Beta). Both are
+reversible.
 
-**Engine:** Celery task `integrations.run_sync` plus a beat dispatcher every 5 minutes.
-Runs have an abandoned-run heartbeat reclaim (30 min) and one active run per integration.
-Device enrichment is cached by LibreNMS `last_discovered` and age. The FDB/links pass runs
-every N hours. Optional routes are detected and degrade to warnings. Auth failures and
-listing failures fail the run without marking anything stale.
+**APIs:** no new paths (63 total). `GET /integrations/{id}/` adds `connector`. PATCH/POST
+validate `auth_scheme` per source.
 
-**UI:** Integration detail page (`/admin/integrations/:id`) with:
-- gate notices;
-- a status strip;
-- health;
-- a live-access panel;
-- capabilities;
-- configuration;
-- sync history with progress polling.
+**UI:** the integration page is generic. Texts, placeholders and the auth-header options
+come from the source/connector. FDB and neighbour settings are shown only for connectors
+with an evidence pass. The capability labels cover the EC API generation and the fact that
+software is not collected.
 
-The Integrations list links to it and shows Beta / "Live access not approved". The asset
-Network tab gains "Observed network evidence" (observed, not a confirmed cable).
+**Also changed:** interface names may contain `( ) # + ,` (Windows adapter names), which
+also applies to manual entry (ASM-31).
 
-**Fixtures:** `fixtures/librenms/api/responses.json` contains sanitized data for Cisco,
-Fortinet, HPE Aruba, Huawei, Check Point, Dell, an unknown vendor, a missing serial, a
-duplicate serial, conflicting serials, an IP-literal hostname and a disabled device, plus
-FDB and links.
+**Fixtures:** `fixtures/endpoint_central/api/responses.json` covers both generations, with
+10 computers for api/1.4 and 3 for dcapi (see its README for the scenarios).
 
 **Verification (workstation; SQLite test-only fallback):**
-- Backend: **383 passed, 6 skipped** (the skips are PostgreSQL-only). This includes 68 new
-  connector tests covering:
-  - vendor mapping;
-  - GET-only requests and both auth headers;
-  - secret stripping;
-  - timezone handling;
-  - idempotent repeat sync (1 request) and re-enrichment;
-  - auth failure, timeouts with backoff, 429 Retry-After and partial enrichment failure;
-  - missing optional routes;
-  - stale devices, duplicate serials and hostname-only cases (no auto-link);
-  - locked fields and cross-site scope;
-  - evidence upsert and retirement;
-  - gates, queueing, scheduler and abandoned runs;
-  - API permissions, audit and validation;
-  - SSRF, redirect and URL refusal;
-  - secret references.
-- Ruff check and format clean; `makemigrations --check` clean; OpenAPI validates with
-  `--fail-on-warn` and matches `openapi.yaml`.
-- Frontend: typecheck, oxlint, **85 tests** (9 new) and the production build all pass.
-- GitHub CI run 41629185647 on `ecd15fb` (PostgreSQL 16 + Redis 7): backend **389 passed,
-  0 skipped** (migrations apply and reverse, including `network`; OpenAPI has no drift);
-  frontend 85 tests, lint, typecheck and build pass; Compose is valid and the images build.
-  The first run (41628756336 on `9db85db`) failed 1 test. It exposed a real
-  PostgreSQL-only bug: on a first sync, evidence port names showed as "port N" because the
-  pre-run observation cache was used. This is fixed in `ecd15fb`, which takes port names
-  from the current run's records.
-- Not run: the Docker dev stack, Playwright, a manual browser review, and **any live
-  LibreNMS connection** (not authorised).
+- Backend: **413 passed, 6 skipped** (the skips are PostgreSQL-only). This includes 30 new
+  Endpoint Central tests:
+  - generation detection and preference;
+  - per-computer mapping;
+  - placeholders, schema drift and scan-time fallback;
+  - GET only, raw Authorization header, no software reads and no stored secrets;
+  - pagination, a failed later page, a short total and stale removal;
+  - detail failure;
+  - 401 and error-envelope auth failures, 429 Retry-After and transport retries;
+  - idempotent repeat sync (list only);
+  - re-read on a newer scan, with an IP change, and refresh after max age;
+  - same hostname never merged;
+  - strong-serial auto-link only when enabled;
+  - locked fields;
+  - connection test, per-source auth header validation, Beta status and the scheduler.
+- Ruff and format are clean; no migration drift; the OpenAPI schema validates with
+  `--fail-on-warn` and was regenerated.
+- Frontend: typecheck, oxlint, **86 tests** (1 new) and the build all pass.
+- GitHub CI run 41638482133 on `747c7bf` (PostgreSQL 16 + Redis 7): backend **419 passed,
+  0 skipped**; frontend, Compose config and image builds all pass.
+- Not run: the Docker stack, Playwright, a browser review, and **any live Endpoint Central
+  connection** (not authorised).
 
-**Activation prerequisites (not done; do not skip):**
-1. Docker-host verification on AlmaLinux 10.2 passes.
-2. DEC-05: a read-only LibreNMS API account is approved, along with its URL, the installed
-   version, the server time zone and a sanitized real sample.
-3. Put the token in the host secret (`ITAM_INTEGRATION_LIBRENMS_TOKEN` or a file in
-   `ITAM_SECRETS_DIR`).
-4. Set `ITAM_ALLOW_LIVE_INTEGRATIONS=true`, record the approval on the integration, and run
-   a connection test (confirm Bearer vs X-Auth-Token).
-5. Compare real field names with the fixtures before enabling the schedule.
+**Activation prerequisites (not done):**
+1. The Docker-host verification passes.
+2. DEC-06 is approved: a read-only API key, the build, the listener URL and port, and
+   sanitized real responses.
+3. Compare the real responses with the fixtures and adjust the mapping key lists if needed.
+4. Put the key in `ITAM_INTEGRATION_ENDPOINT_CENTRAL_KEY`, set
+   `ITAM_ALLOW_LIVE_INTEGRATIONS=true`, record the approval, run a connection test, then
+   enable the schedule.
 
-**Unresolved:** see ASM-21 to ASM-27 in docs/17. The 2k–10k device figure is not
-load-tested (Task 022). FDB VLAN shows the LibreNMS row id. Port names are known only for
-IP-bearing ports. The adapter stays Beta until live-validated.
+**Unresolved:** ASM-28 to ASM-31 in docs/17. The `dcapi` envelope and pagination parameter
+names are unconfirmed. No software, monitor or peripheral data yet. Not load-tested
+(Task 022).
 
-Proposed next task: **007 | Endpoint Central on-prem adapter** (tasks/BACKLOG.md).
-Do not start automatically.
+Proposed next task: **008 | Intune managedDevice adapter** (tasks/BACKLOG.md). It needs
+DEC-07 (tenant, app registration and consent) before any live test. Do not start
+automatically.
