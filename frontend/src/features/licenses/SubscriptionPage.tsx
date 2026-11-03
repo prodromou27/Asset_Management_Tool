@@ -226,9 +226,13 @@ function Allocations({ skuId }: { skuId: string }) {
                   </td>
                   <td>
                     {METHOD[a.method] ?? a.method}
-                    {a.group_ids.length > 0 && (
+                    {a.groups.length > 0 && (
                       <span className="cell-secondary">
-                        {a.group_ids.length === 1 ? '1 group' : `${a.group_ids.length} groups`}
+                        {a.groups.every((g) => g.display_name)
+                          ? a.groups.map((g) => g.display_name).join(', ')
+                          : a.groups.length === 1
+                            ? '1 group'
+                            : `${a.groups.length} groups`}
                       </span>
                     )}
                   </td>

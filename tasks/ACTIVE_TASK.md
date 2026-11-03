@@ -123,10 +123,39 @@ ActiveWithError, disabled account, unlicensed, unsubscribed SKU and missing stat
 **Outstanding issues:**
 - Permission names (including whether `LicenseAssignment.Read.All` suffices) and property
   shapes are from documentation.
-- Group names are not shown (IDs only).
+- Group names are shown only when the optional `GroupMember.Read.All` is granted (fixed
+  2026-11-04, see below); otherwise IDs only.
 - No entitlement or agreement data (Task 016).
 - Personal-data retention for directory users awaits DEC-15.
 - Not load-tested (Task 022).
+
+## Follow-up fixes (2026-11-04)
+
+Open issues from Tasks 008 to 010 that needed no live tenant or policy decision:
+
+1. **Defender rate budget shared** (ASM-37): the per-run counter is replaced by a per-tenant
+   sliding-window budget in the Django cache (Redis). It is shared by every run and worker:
+   90 calls per minute (the client waits) and 1,400 per hour (the listing stops as
+   incomplete). If the cache is down it falls back to a per-process budget.
+2. **Group names on license assignments** (ASM-41): these are read only when the token
+   holds the optional `GroupMember.Read.All` (or `Group.Read.All` / `Directory.Read.All`):
+   one `GET /groups/{id}` per assigning group (GUIDs only, at most 500). A refused or
+   failed read only warns. Names are stored in `licensing.DirectoryGroup`
+   (migration `licensing.0002_directory_group`). The allocation API adds
+   `groups[{id, display_name}]`, and the UI shows the names.
+3. **Integration page wording**: Microsoft 365 health and run history say "licensed users",
+   hide asset-matching and candidate counts, and link to Licenses. "Re-read" is shown only
+   for connectors that re-read details.
+4. **Subscriptions list**: snapshots are prefetched in one query instead of one per SKU.
+
+**Verification:**
+- Backend: 536 passed, 6 skipped (7 new tests: shared, minute and fallback Defender
+  budgets; group names with, without and refused; query count).
+- Frontend: 100 tests, typecheck, lint and build pass.
+
+**Still open:** regional Defender hosts (needs a verified host list), whether excess roles
+should block syncs, phone and tablet categories (product decision), and DEC-15, DEC-16 and
+DEC-17.
 
 Proposed next task: **011 | Reconciliation review and category reclassification**
 (tasks/BACKLOG.md). Do not start automatically.

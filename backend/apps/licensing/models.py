@@ -100,6 +100,27 @@ class DirectoryUser(models.Model):
         return self.user_principal_name or self.object_id
 
 
+class DirectoryGroup(models.Model):
+    """Display name of a group that assigns licenses. Only stored when the app holds an
+    optional group-read permission; otherwise allocations show group object IDs."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    instance = models.ForeignKey(IntegrationInstance, on_delete=models.PROTECT, related_name="+")
+    object_id = models.CharField(max_length=36)
+    display_name = models.CharField(max_length=256)
+    last_seen_at = models.DateTimeField()
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["instance", "object_id"], name="directory_group_instance_object"
+            )
+        ]
+
+    def __str__(self):
+        return self.display_name
+
+
 class LicenseAllocation(models.Model):
     class State(models.TextChoices):
         ACTIVE = "Active", "Active"

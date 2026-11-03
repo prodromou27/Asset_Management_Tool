@@ -591,6 +591,7 @@ class FakeM365:
         self.client_id = data["client_id"]
         self.skus: list[dict] = data["subscribedSkus"]
         self.users: list[dict] = data["users"]
+        self.groups: dict[str, str] = data["groups"]
         self.page_size = 4
         self.roles = list(M365_ROLES)
         self.overrides: dict = {}
@@ -631,7 +632,10 @@ class FakeM365:
 
         assert request.url.host == GRAPH_HOST, f"request to {request.url.host}"
         assert request.method == "GET", f"connector sent {request.method} to Graph"
-        assert request.url.path in ("/v1.0/subscribedSkus", "/v1.0/users"), request.url.path
+        path = request.url.path
+        assert path in ("/v1.0/subscribedSkus", "/v1.0/users") or path.startswith(
+            "/v1.0/groups/"
+        ), path
         self.requests.append(request)
         auth = request.headers.get("Authorization", "")
         if not auth.startswith("Bearer ") or auth[7:] not in self.valid_tokens:
@@ -639,6 +643,14 @@ class FakeM365:
                 401, json={"error": {"code": "InvalidAuthenticationToken", "message": "x"}}
             )
         params = request.url.params
+        if path.startswith("/v1.0/groups/"):
+            assert params["$select"] == "id,displayName"
+            if (response := self._override("groups")) is not None:
+                return response
+            group_id = path.removeprefix("/v1.0/groups/")
+            if group_id not in self.groups:
+                return httpx.Response(404, json={"error": {"code": "Request_ResourceNotFound"}})
+            return httpx.Response(200, json={"id": group_id, "displayName": self.groups[group_id]})
         if request.url.path == "/v1.0/subscribedSkus":
             if (response := self._override("skus")) is not None:
                 return response

@@ -418,6 +418,47 @@ def test_hourly_request_budget_stops_the_listing(defender, defender_api, small_p
     assert any("hourly limit" in s["warning"] for s in run.warning_samples)
 
 
+def test_hourly_budget_is_shared_across_runs(defender, defender_api, small_pages, monkeypatch):
+    monkeypatch.setattr(defender_client, "HOURLY_BUDGET", 4)
+    first = run_sync(defender)  # 3 API calls (token requests are not counted)
+    assert first.status == SyncRun.Status.SUCCEEDED and defender_api.pages() == [1, 2, 3]
+
+    second = run_sync(defender)  # a new client and run: only one call left
+
+    assert defender_api.pages() == [1, 2, 3, 1] and second.records_received == 4
+    assert any("for this tenant" in s["warning"] for s in second.warning_samples)
+    assert second.links_marked_stale == 0  # incomplete listing
+
+    third = run_sync(defender)
+    assert third.status == SyncRun.Status.FAILED
+    assert third.error_message.startswith("SOURCE_RATE_BUDGET")
+
+
+def test_minute_budget_waits_for_the_next_minute(defender, defender_api, small_pages, monkeypatch):
+    monkeypatch.setattr(defender_client, "MINUTE_BUDGET", 2)
+    long_waits = lambda: sum(1 for s in defender_api.sleeps if s > 30)  # noqa: E731
+    # 30 s into a minute; each long wait moves the clock to the next minute.
+    monkeypatch.setattr(defender_client, "now", lambda: 1_000_050.0 + 60 * long_waits())
+
+    run = run_sync(defender)
+
+    assert run.status == SyncRun.Status.SUCCEEDED and run.records_received == 10
+    assert long_waits() == 1 and 30.1 in [round(s, 1) for s in defender_api.sleeps]
+
+
+def test_budget_falls_back_to_the_process_when_the_cache_is_down(
+    defender, defender_api, monkeypatch
+):
+    def broken(*args, **kwargs):
+        raise ConnectionError("redis down")
+
+    monkeypatch.setattr(defender_client.cache, "get", broken)
+
+    run = run_sync(defender)
+
+    assert run.status == SyncRun.Status.SUCCEEDED and run.records_received == 10
+
+
 def test_request_rate_never_exceeds_the_published_limit(defender):
     defender.requests_per_second = 20
     defender.save()

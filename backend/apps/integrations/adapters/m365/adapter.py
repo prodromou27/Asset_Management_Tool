@@ -7,8 +7,11 @@ Reads, GET only:
   licenseAssignmentStates&$top=999``: user license assignments including the
   group-based paths, following ``@odata.nextLink``. Needs ``User.Read.All``.
 
-``licenseDetails`` is not used (docs/05), group display names are not read (that would
-need group permissions), and nothing is written to the tenant. No device records are
+``licenseDetails`` is not used (docs/05) and nothing is written to the tenant. Group
+display names are optional: only when the token also holds ``GroupMember.Read.All``
+(or ``Group.Read.All`` / ``Directory.Read.All``) does the adapter read
+``GET /groups/{id}?$select=id,displayName`` for each assigning group (GUIDs only, at
+most ``MAX_GROUPS``). Without it, group assignments show group IDs. No device records are
 produced: the data goes to ``apps.licensing`` through ``store_license_data``.
 
 A listing is complete only when its last page has no next link; an incomplete user
@@ -16,9 +19,10 @@ listing never ends allocations or flags users missing, and leaves ITAM's assigne
 counts unknown for that run.
 """
 
+import re
 from collections.abc import Callable
 
-from ..base import AuthError, SourceError, UnsafeTarget
+from ..base import AuthError, NotSupported, SourceError, UnsafeTarget
 from ..intune.adapter import excess_roles
 from .client import REQUIRED_PERMISSIONS, M365Client
 
@@ -29,6 +33,14 @@ USER_SELECT = (
 )
 PAGE_SIZE = 999
 MAX_PAGES = 2000
+MAX_GROUPS = 500
+# Any of these lets the app read a group's display name (least privileged first).
+GROUP_NAME_ROLES = ("GroupMember.Read.All", "Group.Read.All", "Directory.Read.All")
+_GUID = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", re.I)
+
+
+def can_read_group_names(roles: list[str] | None) -> bool:
+    return bool(roles) and any(role in roles for role in GROUP_NAME_ROLES)
 
 
 def permission_summary(roles: list[str] | None) -> tuple[dict, str]:
@@ -37,7 +49,7 @@ def permission_summary(roles: list[str] | None) -> tuple[dict, str]:
     caps = {
         "subscribed_skus": True,
         "license_assignments": True,
-        "group_names": False,
+        "group_names": can_read_group_names(roles),
         "permission_read_all": not missing,
         "excess_permissions": bool(excess),
     }
@@ -74,6 +86,7 @@ class M365Adapter:
         self.users: list[dict] = []
         self.skus_complete = False
         self.users_complete = False
+        self.groups: dict[str, str] = {}
 
     def prepare(self) -> None:
         """Nothing to detect."""
@@ -135,6 +148,8 @@ class M365Adapter:
         ]
         run.devices_total = len(licensed)
         run.devices_processed = len(licensed)
+        if can_read_group_names(self.client.tokens.roles):
+            self._group_names(run, licensed)
         _, warning = permission_summary(self.client.tokens.roles)
         if warning:
             self._warn(run, None, warning)
@@ -142,6 +157,33 @@ class M365Adapter:
         progress()
         # No device records: license data is stored by store_license_data.
         return [], self.skus_complete and self.users_complete
+
+    def _group_names(self, run, users: list[dict]) -> None:
+        ids = sorted(
+            {
+                str(state.get("assignedByGroup")).lower()
+                for user in users
+                for state in user.get("licenseAssignmentStates") or []
+                if isinstance(state, dict) and state.get("assignedByGroup")
+            }
+        )
+        valid = [g for g in ids if _GUID.match(g)]
+        if len(valid) > MAX_GROUPS:
+            self._warn(run, None, f"Only the first {MAX_GROUPS} group names were read.")
+        for group_id in valid[:MAX_GROUPS]:
+            try:
+                body = self.client.get(f"/groups/{group_id}", params={"$select": "id,displayName"})
+            except NotSupported:
+                continue  # deleted group: keep the ID
+            except AuthError as exc:
+                self._warn(run, None, f"Group names not read: {exc}")
+                return
+            except SourceError as exc:
+                self._warn(run, None, f"Group names not read completely: {exc}")
+                return
+            name = str(body.get("displayName") or "").strip()
+            if name:
+                self.groups[group_id] = name[:256]
 
     @staticmethod
     def _warn(run, external_id, message: str) -> None:

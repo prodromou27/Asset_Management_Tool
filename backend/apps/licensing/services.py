@@ -14,7 +14,13 @@ from collections import Counter
 from django.db import transaction
 from django.utils import timezone
 
-from .models import DirectoryUser, LicenseAllocation, LicenseSku, SubscriptionSnapshot
+from .models import (
+    DirectoryGroup,
+    DirectoryUser,
+    LicenseAllocation,
+    LicenseSku,
+    SubscriptionSnapshot,
+)
 
 State = LicenseAllocation.State
 # Most favourable state wins when one user holds a SKU through several paths.
@@ -202,6 +208,14 @@ def store_license_data(instance, run, records, complete, adapter) -> None:
             DirectoryUser.objects.filter(instance=instance, missing_since=None).exclude(
                 object_id__in=listed_users
             ).update(missing_since=now)
+
+        # --- Group names (optional permission) -----------------------------------------
+        for object_id, name in getattr(adapter, "groups", {}).items():
+            DirectoryGroup.objects.update_or_create(
+                instance=instance,
+                object_id=object_id,
+                defaults={"display_name": name, "last_seen_at": now},
+            )
 
         # --- Snapshots -------------------------------------------------------------------
         counts: dict[str, Counter] = {}

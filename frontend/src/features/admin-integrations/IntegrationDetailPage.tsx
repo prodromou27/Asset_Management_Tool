@@ -54,7 +54,7 @@ const CAPABILITY_LABEL: Record<string, string> = {
   device_actions: 'Device actions (never used)',
   subscribed_skus: 'Subscribed SKUs and quantities',
   license_assignments: 'User license assignments (direct and group)',
-  group_names: 'Group names (not read)',
+  group_names: 'Group names (optional GroupMember.Read.All)',
 }
 // Shown in the permissions panel instead (a "yes" here is a problem, not a feature).
 const HIDDEN_CAPABILITIES = new Set(['excess_permissions'])
@@ -78,6 +78,10 @@ interface SourceProfile {
   credentialHelp?: string
   schemeLabel?: string
   accountHint?: string
+  /** What a run counts (plural noun); default "devices". */
+  items?: string
+  /** False for sources that produce no device records (no asset links or candidates). */
+  assetLinks?: boolean
 }
 
 const PROFILES: Record<string, SourceProfile> = {
@@ -114,7 +118,9 @@ const PROFILES: Record<string, SourceProfile> = {
     schemeLabel: 'Authentication method',
     schemeHelp: 'Prefer a certificate uploaded to the app registration; use a client secret only if a certificate is not possible.',
     accountHint:
-      'Use a dedicated app registration with only the Organization.Read.All and User.Read.All application permissions.',
+      'Use a dedicated app registration with only the Organization.Read.All and User.Read.All application permissions. Optionally add GroupMember.Read.All to show the names of license-assigning groups.',
+    items: 'licensed users',
+    assetLinks: false,
   },
   defender: {
     url: 'https://api.security.microsoft.com',
@@ -279,7 +285,7 @@ export function IntegrationDetailPage() {
       <div className="detail-layout">
         <div className="stack">
           <Health instance={i} />
-          <RunHistory runs={runs} />
+          <RunHistory instance={i} runs={runs} />
           <ConfigurationForm
             key={i.version}
             instance={i}
@@ -326,6 +332,9 @@ function missingSettings(i: IntegrationInstance): string[] {
 function Health({ instance: i }: { instance: IntegrationInstance }) {
   const run = i.last_run
   const active = run && ACTIVE.includes(run.status)
+  const profile = PROFILES[i.source.code] ?? GENERIC
+  const items = profile.items ?? 'devices'
+  const assetLinks = profile.assetLinks ?? true
   return (
     <section className="panel" aria-labelledby="health-heading">
       <h2 className="section-title" id="health-heading">
@@ -335,7 +344,7 @@ function Health({ instance: i }: { instance: IntegrationInstance }) {
         <div className="run-progress" role="status">
           <p>
             {RUN_PHASE[run.phase] ?? run.phase}
-            {run.devices_total > 0 && ` · ${run.devices_processed} of ${run.devices_total} devices`}
+            {run.devices_total > 0 && ` · ${run.devices_processed} of ${run.devices_total} ${items}`}
           </p>
           <progress
             max={run.devices_total || 1}
@@ -355,26 +364,38 @@ function Health({ instance: i }: { instance: IntegrationInstance }) {
           <dd>{i.next_sync_at ? formatDateTime(i.next_sync_at) : 'Not scheduled'}</dd>
         </div>
         <div className="meta-grid__pair">
-          <dt>Devices discovered</dt>
+          <dt>{items.charAt(0).toUpperCase() + items.slice(1)} in last run</dt>
           <dd>{run ? run.devices_total : '—'}</dd>
         </div>
-        <div className="meta-grid__pair">
-          <dt>Assets matched</dt>
-          <dd>
-            {i.active_links}
-            {i.stale_links > 0 && ` (${i.stale_links} stale)`}
-          </dd>
-        </div>
-        <div className="meta-grid__pair">
-          <dt>New candidates</dt>
-          <dd>
-            {i.open_candidates > 0 ? (
-              <Link to={`/discovery?instance=${i.id}`}>{i.open_candidates} awaiting review</Link>
-            ) : (
-              0
-            )}
-          </dd>
-        </div>
+        {assetLinks ? (
+          <>
+            <div className="meta-grid__pair">
+              <dt>Assets matched</dt>
+              <dd>
+                {i.active_links}
+                {i.stale_links > 0 && ` (${i.stale_links} stale)`}
+              </dd>
+            </div>
+            <div className="meta-grid__pair">
+              <dt>New candidates</dt>
+              <dd>
+                {i.open_candidates > 0 ? (
+                  <Link to={`/discovery?instance=${i.id}`}>{i.open_candidates} awaiting review</Link>
+                ) : (
+                  0
+                )}
+              </dd>
+            </div>
+          </>
+        ) : (
+          <div className="meta-grid__pair">
+            <dt>Results</dt>
+            <dd>
+              <Link to="/licenses">Licenses</Link>
+              <span className="cell-secondary">No device records: nothing is matched to assets.</span>
+            </dd>
+          </div>
+        )}
         <div className="meta-grid__pair">
           <dt>Errors / warnings</dt>
           <dd>{run ? `${run.errors} / ${run.warnings} in last run` : '—'}</dd>
@@ -405,7 +426,10 @@ function Health({ instance: i }: { instance: IntegrationInstance }) {
   )
 }
 
-function RunHistory({ runs }: { runs: UseQueryResult<Paginated<SyncRun>> }) {
+function RunHistory({ instance: i, runs }: { instance: IntegrationInstance; runs: UseQueryResult<Paginated<SyncRun>> }) {
+  const profile = PROFILES[i.source.code] ?? GENERIC
+  const items = profile.items ?? 'devices'
+  const assetLinks = profile.assetLinks ?? true
   return (
     <section className="panel panel--flush" aria-labelledby="history-heading" aria-live="polite">
       <h2 className="section-title section-title--inset" id="history-heading">
@@ -421,9 +445,9 @@ function RunHistory({ runs }: { runs: UseQueryResult<Paginated<SyncRun>> }) {
               <th scope="col">Started</th>
               <th scope="col">Trigger</th>
               <th scope="col">Result</th>
-              <th scope="col">Devices</th>
-              <th scope="col">New candidates</th>
-              <th scope="col">Stale</th>
+              <th scope="col">{items.charAt(0).toUpperCase() + items.slice(1)}</th>
+              {assetLinks && <th scope="col">New candidates</th>}
+              {assetLinks && <th scope="col">Stale</th>}
               <th scope="col">Errors / warnings</th>
               <th scope="col">API requests</th>
             </tr>
@@ -445,10 +469,12 @@ function RunHistory({ runs }: { runs: UseQueryResult<Paginated<SyncRun>> }) {
                 </td>
                 <td>
                   {run.devices_processed} / {run.devices_total}
-                  <span className="cell-secondary">{run.devices_enriched} re-read</span>
+                  {i.connector?.uses_detail_refresh !== false && (
+                    <span className="cell-secondary">{run.devices_enriched} re-read</span>
+                  )}
                 </td>
-                <td>{run.candidates_opened}</td>
-                <td>{run.links_marked_stale}</td>
+                {assetLinks && <td>{run.candidates_opened}</td>}
+                {assetLinks && <td>{run.links_marked_stale}</td>}
                 <td>
                   {run.errors} / {run.warnings}
                   {[...run.error_samples, ...run.warning_samples].length > 0 && (

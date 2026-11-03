@@ -13,6 +13,7 @@ from apps.assets.tests.fixtures import grant
 from apps.integrations import sync
 from apps.integrations.models import IntegrationInstance, SyncRun
 from apps.licensing.models import (
+    DirectoryGroup,
     DirectoryUser,
     LicenseAllocation,
     LicenseSku,
@@ -386,3 +387,66 @@ def test_scheduler_includes_m365(m365, monkeypatch):
     monkeypatch.setattr("apps.integrations.tasks.run_sync_task.delay", lambda run_id: None)
 
     assert sync.dispatch_due() == 1 and SyncRun.objects.get().instance == m365
+
+
+# --- Optional group names ------------------------------------------------------------------
+
+SALES = "9a000000-0000-4000-8000-00000000000a"
+IT = "9a000000-0000-4000-8000-00000000000b"
+SEC = "9a000000-0000-4000-8000-00000000000c"
+
+
+def group_requests(server) -> list[str]:
+    return [r.url.path for r in server.requests if r.url.path.startswith("/v1.0/groups/")]
+
+
+def test_group_names_are_not_read_without_the_optional_permission(m365, m365_api):
+    run_sync(m365)
+
+    assert group_requests(m365_api) == []
+    assert not DirectoryGroup.objects.exists()
+
+
+def test_group_names_are_read_with_the_optional_permission(m365, m365_api, client_for, admin_user):
+    m365_api.roles = [*M365_ROLES, "GroupMember.Read.All"]
+
+    run = run_sync(m365)
+
+    assert run.status == SyncRun.Status.SUCCEEDED
+    assert sorted(group_requests(m365_api)) == [f"/v1.0/groups/{g}" for g in (SALES, IT, SEC)]
+    names = dict(DirectoryGroup.objects.values_list("object_id", "display_name"))
+    assert names == {SALES: "Licensing - Sales", IT: "Licensing - IT staff"}  # SEC: deleted
+    found = client_for(admin_user).get("/api/v1/licenses/allocations/", {"q": "ivy@"}).json()
+    groups = {g["id"]: g["display_name"] for g in found["items"][0]["groups"]}
+    assert groups == {SALES: "Licensing - Sales", IT: "Licensing - IT staff"}
+    cleo = client_for(admin_user).get("/api/v1/licenses/allocations/", {"q": "cleo@"}).json()
+    sec = [g for r in cleo["items"] for g in r["groups"] if g["id"] == SEC]
+    assert sec == [{"id": SEC, "display_name": None}]
+    test = client_for(admin_user).post(f"/api/v1/integrations/{m365.pk}/test/").json()
+    assert test["capabilities"]["group_names"] is True
+    assert test["capabilities"]["excess_permissions"] is False
+
+
+def test_refused_group_reads_only_warn(m365, m365_api):
+    m365_api.roles = [*M365_ROLES, "GroupMember.Read.All"]
+    m365_api.overrides["groups"] = (403, {"error": {"code": "Authorization_RequestDenied"}})
+
+    run = run_sync(m365)
+
+    assert run.status == SyncRun.Status.SUCCEEDED
+    assert len(group_requests(m365_api)) == 1  # stops after the first refusal
+    assert any("Group names not read" in s["warning"] for s in run.warning_samples)
+    assert latest("SPE_E3").assigned_users == 6
+
+
+def test_subscription_list_query_count_does_not_grow_with_skus(
+    m365, m365_api, client_for, admin_user, django_assert_max_num_queries
+):
+    run_sync(m365)
+    client = client_for(admin_user)
+    client.get("/api/v1/licenses/subscriptions/")  # warm the session
+
+    with django_assert_max_num_queries(8):
+        rows = client.get("/api/v1/licenses/subscriptions/").json()
+
+    assert len(rows) == 6  # 5 subscribed + 1 assigned-only SKU

@@ -2564,6 +2564,11 @@ components:
           items:
             type: string
           readOnly: true
+        groups:
+          type: array
+          items:
+            $ref: '#/components/schemas/GroupRef'
+          readOnly: true
         state:
           allOf:
           - $ref: '#/components/schemas/StateEnum'
@@ -2597,6 +2602,7 @@ components:
       - ended_at
       - first_seen_at
       - group_ids
+      - groups
       - id
       - last_seen_at
       - method
@@ -4273,6 +4279,17 @@ components:
         * `boolean` - Yes/No
         * `date` - Date
         * `choice` - Choice
+    GroupRef:
+      type: object
+      properties:
+        id:
+          type: string
+        display_name:
+          type: string
+          nullable: true
+      required:
+      - display_name
+      - id
     Hostname:
       type: object
       properties:

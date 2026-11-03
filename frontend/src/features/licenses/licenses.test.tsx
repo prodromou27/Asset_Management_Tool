@@ -79,6 +79,7 @@ function allocation(overrides: Partial<LicenseAllocation> = {}): LicenseAllocati
     method: 'direct_and_group',
     assigned_directly: true,
     group_ids: ['9a000000-0000-4000-8000-00000000000a'],
+    groups: [{ id: '9a000000-0000-4000-8000-00000000000a', display_name: 'Licensing - Sales' }],
     state: 'Active',
     paths: [],
     first_seen_at: '2026-11-02T08:00:00Z',
@@ -132,7 +133,7 @@ describe('Licenses', () => {
     expect(within(history).getByText('75')).toBeInTheDocument()
     const assigned = await screen.findByRole('region', { name: /Assigned users/ })
     expect(await within(assigned).findByText('Cleo')).toBeInTheDocument()
-    expect(within(assigned).getByRole('cell', { name: /Direct and group/ })).toHaveTextContent('1 group')
+    expect(within(assigned).getByRole('cell', { name: /Direct and group/ })).toHaveTextContent('Licensing - Sales')
 
     fireEvent.change(within(assigned).getByLabelText('Assignment'), { target: { value: 'group' } })
     const allocationCalls = () => calls.filter((c) => c.path === '/licenses/allocations/')
@@ -186,6 +187,10 @@ describe('Licenses', () => {
     expect(within(perms).getByText('Organization.Read.All')).toBeInTheDocument()
     expect(within(perms).getByText('User.Read.All')).toBeInTheDocument()
     const caps = screen.getByRole('region', { name: 'API capabilities' })
-    expect(within(caps).getByText('Group names (not read)').parentElement).toHaveTextContent('Not available')
+    expect(within(caps).getByText('Group names (optional GroupMember.Read.All)').parentElement).toHaveTextContent('Not available')
+    const health = screen.getByRole('region', { name: 'Health' })
+    expect(within(health).getByText('Licensed users in last run')).toBeInTheDocument()
+    expect(within(health).queryByText('Assets matched')).not.toBeInTheDocument()
+    expect(within(health).getByRole('link', { name: 'Licenses' })).toHaveAttribute('href', '/licenses')
   })
 })

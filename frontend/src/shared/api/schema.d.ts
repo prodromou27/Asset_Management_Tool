@@ -259,6 +259,7 @@ export interface components {
       method: components["schemas"]["AllocationMethodEnum"];
       assigned_directly: boolean;
       group_ids: readonly string[];
+      groups: readonly components["schemas"]["GroupRef"][];
       state: components["schemas"]["StateEnum"];
       paths: readonly {
           [key: string]: unknown;
@@ -868,6 +869,10 @@ export interface components {
      * @enum {string}
      */
     FieldTypeEnum: "text" | "long_text" | "integer" | "decimal" | "boolean" | "date" | "choice";
+    GroupRef: {
+      id: string;
+      display_name: string | null;
+    };
     Hostname: {
       /** Format: uuid */
       id: string;

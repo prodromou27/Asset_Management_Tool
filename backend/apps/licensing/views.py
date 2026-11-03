@@ -8,7 +8,7 @@ labelled as inventory: not a billing agreement and not license compliance (docs/
 import uuid
 from datetime import timedelta
 
-from django.db.models import Q
+from django.db.models import Prefetch, Q
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_field
@@ -20,10 +20,11 @@ from apps.accounts import catalog
 from apps.accounts.permissions import HasPermission
 from config.api import ItemsCursorPagination
 
-from .models import LicenseAllocation, LicenseSku, SubscriptionSnapshot
+from .models import DirectoryGroup, LicenseAllocation, LicenseSku, SubscriptionSnapshot
 
 LicensePermission = HasPermission(catalog.LICENSES_VIEW)
 MAX_SNAPSHOTS = 100
+NEWEST_FIRST = Prefetch("snapshots", queryset=SubscriptionSnapshot.objects.order_by("-taken_at"))
 
 
 class LicenseSourceSerializer(serializers.Serializer):
@@ -88,8 +89,9 @@ class SubscriptionSerializer(serializers.ModelSerializer):
 
     @extend_schema_field(SnapshotSerializer(allow_null=True))
     def get_latest(self, obj):
-        snapshot = obj.snapshots.order_by("-taken_at").first()
-        return SnapshotSerializer(snapshot).data if snapshot else None
+        # Uses the prefetched, newest-first snapshots (one query for the whole list).
+        snapshots = list(obj.snapshots.all())
+        return SnapshotSerializer(snapshots[0]).data if snapshots else None
 
     def get_freshness(self, obj) -> str:
         """fresh | stale: stale when the integration has not succeeded within its
@@ -129,6 +131,11 @@ class SkuRefSerializer(serializers.Serializer):
     sku_part_number = serializers.CharField()
 
 
+class GroupRefSerializer(serializers.Serializer):
+    id = serializers.CharField()
+    display_name = serializers.CharField(allow_null=True)
+
+
 class AllocationSerializer(serializers.ModelSerializer):
     user = DirectoryUserRefSerializer(read_only=True)
     sku = SkuRefSerializer(read_only=True)
@@ -136,6 +143,7 @@ class AllocationSerializer(serializers.ModelSerializer):
         choices=["direct", "group", "direct_and_group"], read_only=True
     )
     group_ids = serializers.ListField(child=serializers.CharField(), read_only=True)
+    groups = serializers.SerializerMethodField()
     paths = serializers.ListField(child=serializers.DictField(), read_only=True)
 
     class Meta:
@@ -147,6 +155,7 @@ class AllocationSerializer(serializers.ModelSerializer):
             "method",
             "assigned_directly",
             "group_ids",
+            "groups",
             "state",
             "paths",
             "first_seen_at",
@@ -156,14 +165,24 @@ class AllocationSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = fields
 
+    @extend_schema_field(GroupRefSerializer(many=True))
+    def get_groups(self, obj):
+        """Assigning groups with display names when known (optional permission)."""
+        names = self.context.get("group_names", {})
+        return [
+            {"id": gid, "display_name": names.get((obj.instance_id, gid))} for gid in obj.group_ids
+        ]
+
 
 class SubscriptionListView(APIView):
     permission_classes = [LicensePermission]
 
     @extend_schema(responses=SubscriptionSerializer(many=True))
     def get(self, request):
-        rows = LicenseSku.objects.select_related("instance").order_by(
-            "instance__name", "sku_part_number", "sku_id"
+        rows = (
+            LicenseSku.objects.select_related("instance")
+            .prefetch_related(NEWEST_FIRST)
+            .order_by("instance__name", "sku_part_number", "sku_id")
         )
         return Response(SubscriptionSerializer(rows, many=True).data)
 
@@ -173,7 +192,9 @@ class SubscriptionDetailView(APIView):
 
     @extend_schema(responses=SubscriptionDetailSerializer)
     def get(self, request, pk):
-        sku = get_object_or_404(LicenseSku.objects.select_related("instance"), pk=pk)
+        sku = get_object_or_404(
+            LicenseSku.objects.select_related("instance").prefetch_related(NEWEST_FIRST), pk=pk
+        )
         return Response(SubscriptionDetailSerializer(sku).data)
 
 
@@ -196,6 +217,16 @@ class AllocationListView(generics.ListAPIView):
     )
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context["group_names"] = {
+            (instance_id, object_id): name
+            for instance_id, object_id, name in DirectoryGroup.objects.values_list(
+                "instance_id", "object_id", "display_name"
+            )
+        }
+        return context
 
     def get_queryset(self):
         params = self.request.query_params
