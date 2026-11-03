@@ -157,6 +157,15 @@ export interface paths {
      */
     post: operations["integrations_test_create"];
   };
+  "/api/v1/licenses/allocations/": {
+    get: operations["licenses_allocations_list"];
+  };
+  "/api/v1/licenses/subscriptions/": {
+    get: operations["licenses_subscriptions_list"];
+  };
+  "/api/v1/licenses/subscriptions/{id}/": {
+    get: operations["licenses_subscriptions_retrieve"];
+  };
   "/api/v1/locations/": {
     get: operations["locations_list"];
     post: operations["locations_create"];
@@ -242,6 +251,34 @@ export interface components {
      * @enum {string}
      */
     ActionEnum: "link" | "create";
+    Allocation: {
+      /** Format: uuid */
+      id: string;
+      sku: components["schemas"]["SkuRef"];
+      user: components["schemas"]["DirectoryUserRef"];
+      method: components["schemas"]["AllocationMethodEnum"];
+      assigned_directly: boolean;
+      group_ids: readonly string[];
+      state: components["schemas"]["StateEnum"];
+      paths: readonly {
+          [key: string]: unknown;
+        }[];
+      /** Format: date-time */
+      first_seen_at: string;
+      /** Format: date-time */
+      last_seen_at: string;
+      /** Format: date-time */
+      changed_at: string;
+      /** Format: date-time */
+      ended_at: string | null;
+    };
+    /**
+     * @description * `direct` - direct
+     * * `group` - group
+     * * `direct_and_group` - direct_and_group
+     * @enum {string}
+     */
+    AllocationMethodEnum: "direct" | "group" | "direct_and_group";
     ApproveRequest: {
       action: components["schemas"]["ActionEnum"];
       /** Format: uuid */
@@ -678,6 +715,14 @@ export interface components {
      * @enum {string}
      */
     DependencyStatusStatusEnum: "up" | "down";
+    DirectoryUserRef: {
+      /** Format: uuid */
+      id: string;
+      object_id: string;
+      user_principal_name: string;
+      display_name: string;
+      account_enabled: boolean | null;
+    };
     DisableUserRequest: {
       reason: string;
     };
@@ -978,6 +1023,14 @@ export interface components {
       /** @default */
       mac_address?: string;
     };
+    LicenseSource: {
+      /** Format: uuid */
+      id: string;
+      name: string;
+      /** Format: date-time */
+      last_success_at: string | null;
+      stale_after_hours: number;
+    };
     LiveAccessRequest: {
       approved: boolean;
       reason: string;
@@ -1069,14 +1122,6 @@ export interface components {
       source_asset: string;
       reason: string;
     };
-    /**
-     * @description * `approved_candidate` - Approved match
-     * * `created_from_candidate` - Created from discovery
-     * * `auto_strong_match` - Automatic strong match
-     * * `merge` - Moved by merge
-     * @enum {string}
-     */
-    MethodEnum: "approved_candidate" | "created_from_candidate" | "auto_strong_match" | "merge";
     /**
      * @description * `full` - Full
      * * `incremental` - Incremental
@@ -1177,6 +1222,12 @@ export interface components {
      * @enum {string}
      */
     OutcomeEnum: "success" | "failure" | "denied";
+    PaginatedAllocationList: {
+      items: components["schemas"]["Allocation"][];
+      next_cursor: string | null;
+      previous_cursor: string | null;
+      count: number;
+    };
     PaginatedAssetHistoryList: {
       items: components["schemas"]["AssetHistory"][];
       next_cursor: string | null;
@@ -1512,13 +1563,38 @@ export interface components {
       description?: string;
       is_active?: boolean;
     };
+    SkuRef: {
+      /** Format: uuid */
+      id: string;
+      sku_id: string;
+      sku_part_number: string;
+    };
+    Snapshot: {
+      /** Format: uuid */
+      id: string;
+      /** Format: date-time */
+      taken_at: string;
+      /** Format: date-time */
+      last_confirmed_at: string;
+      capability_status: string;
+      enabled_units: number | null;
+      warning_units: number | null;
+      suspended_units: number | null;
+      locked_out_units: number | null;
+      consumed_units: number | null;
+      /** @description Enabled (purchased, active) minus consumed units, as the tenant reports them. */
+      available_units: number | null;
+      assigned_users: number | null;
+      direct_users: number | null;
+      group_users: number | null;
+    };
     SourceLink: {
       /** Format: uuid */
       id: string;
       instance: components["schemas"]["InstanceRef"];
       external_id: string;
       status: components["schemas"]["SourceLinkStatusEnum"];
-      method: components["schemas"]["MethodEnum"];
+      method: components["schemas"]["SourceLinkMethodEnum"];
       /** Format: date-time */
       first_seen_at: string;
       /** Format: date-time */
@@ -1533,6 +1609,14 @@ export interface components {
       unlinked_by: string | null;
       unlink_reason: string;
     };
+    /**
+     * @description * `approved_candidate` - Approved match
+     * * `created_from_candidate` - Created from discovery
+     * * `auto_strong_match` - Automatic strong match
+     * * `merge` - Moved by merge
+     * @enum {string}
+     */
+    SourceLinkMethodEnum: "approved_candidate" | "created_from_candidate" | "auto_strong_match" | "merge";
     /**
      * @description * `active` - Active
      * * `stale` - Stale
@@ -1550,12 +1634,69 @@ export interface components {
       differs: boolean;
     };
     /**
+     * @description * `Active` - Active
+     * * `ActiveWithError` - Active with error
+     * * `Disabled` - Disabled
+     * * `Error` - Error
+     * * `Unknown` - Unknown
+     * @enum {string}
+     */
+    StateEnum: "Active" | "ActiveWithError" | "Disabled" | "Error" | "Unknown";
+    /**
      * @description * `strong` - strong
      * * `corroborating` - corroborating
      * * `conflicting` - conflicting
      * @enum {string}
      */
     StrengthEnum: "strong" | "corroborating" | "conflicting";
+    Subscription: {
+      /** Format: uuid */
+      id: string;
+      instance: components["schemas"]["LicenseSource"];
+      tenant_id: string;
+      sku_id: string;
+      sku_part_number: string;
+      applies_to: string;
+      capability_status: string;
+      subscribed: boolean;
+      /** Format: date-time */
+      first_seen_at: string;
+      /** Format: date-time */
+      last_seen_at: string;
+      /** Format: date-time */
+      missing_since: string | null;
+      /**
+       * @description fresh | stale: stale when the integration has not succeeded within its
+       * threshold or the SKU was missing from the last complete listing.
+       */
+      freshness: string;
+      latest: components["schemas"]["Snapshot"] | null;
+    };
+    SubscriptionDetail: {
+      /** Format: uuid */
+      id: string;
+      instance: components["schemas"]["LicenseSource"];
+      tenant_id: string;
+      sku_id: string;
+      sku_part_number: string;
+      applies_to: string;
+      capability_status: string;
+      subscribed: boolean;
+      /** Format: date-time */
+      first_seen_at: string;
+      /** Format: date-time */
+      last_seen_at: string;
+      /** Format: date-time */
+      missing_since: string | null;
+      /**
+       * @description fresh | stale: stale when the integration has not succeeded within its
+       * threshold or the SKU was missing from the last complete listing.
+       */
+      freshness: string;
+      latest: components["schemas"]["Snapshot"] | null;
+      service_plans: readonly string[];
+      snapshots: readonly components["schemas"]["Snapshot"][];
+    };
     /**
      * @description * `supported` - Supported
      * * `eol_announced` - EOL announced
@@ -2642,6 +2783,53 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["ConnectionTest"];
+        };
+      };
+    };
+  };
+  licenses_allocations_list: {
+    parameters: {
+      query?: {
+        /** @description The pagination cursor value. */
+        cursor?: string;
+        /** @description Include ended allocations */
+        include_ended?: boolean;
+        method?: "direct" | "direct_and_group" | "group";
+        /** @description Number of results to return per page. */
+        page_size?: number;
+        /** @description User principal name or display name */
+        q?: string;
+        /** @description License SKU (row) ID */
+        sku?: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["PaginatedAllocationList"];
+        };
+      };
+    };
+  };
+  licenses_subscriptions_list: {
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["Subscription"][];
+        };
+      };
+    };
+  };
+  licenses_subscriptions_retrieve: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["SubscriptionDetail"];
         };
       };
     };

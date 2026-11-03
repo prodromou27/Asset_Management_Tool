@@ -569,3 +569,134 @@ def defender(hq, live, defender_api, settings, tmp_path):
     (tmp_path / "defender-app.pem").write_text(certificate_pem(), encoding="utf-8")
     settings.ITAM_SECRETS_DIR = str(tmp_path)
     return make_defender(hq, defender_api)
+
+
+# --- Microsoft 365 / Entra licenses (Graph v1.0) ------------------------------------------
+
+M365_FIXTURE = (
+    Path(__file__).resolve().parents[4] / "fixtures" / "m365" / "graph" / "responses.json"
+)
+M365_ROLES = ["Organization.Read.All", "User.Read.All"]
+
+
+class FakeM365:
+    """Entra token endpoint (Graph audience) + Graph /subscribedSkus and /users.
+
+    Users are served `page_size` per page with @odata.nextLink ($skiptoken). Overrides as
+    in FakeGraph with keys "token", "skus" and "users<N>"."""
+
+    def __init__(self):
+        data = json.loads(M365_FIXTURE.read_text(encoding="utf-8"))
+        self.tenant_id = data["tenant_id"]
+        self.client_id = data["client_id"]
+        self.skus: list[dict] = data["subscribedSkus"]
+        self.users: list[dict] = data["users"]
+        self.page_size = 4
+        self.roles = list(M365_ROLES)
+        self.overrides: dict = {}
+        self.requests: list[httpx.Request] = []
+        self.token_forms: list[dict] = []
+        self.valid_tokens: set[str] = set()
+        self.next_link_base = f"https://{GRAPH_HOST}/v1.0/users"
+        self.expires_in = 3599
+
+    def sku(self, part: str) -> dict:
+        return next(s for s in self.skus if s["skuPartNumber"] == part)
+
+    def user(self, name: str) -> dict:
+        return next(u for u in self.users if u["displayName"] == name)
+
+    def expire_tokens(self) -> None:
+        self.valid_tokens.clear()
+
+    _override = FakeGraph._override
+
+    def handler(self, request: httpx.Request) -> httpx.Response:
+        from urllib.parse import parse_qs
+
+        if request.url.host == LOGIN_HOST:
+            assert request.method == "POST", f"token endpoint got {request.method}"
+            assert request.url.path == f"/{self.tenant_id}/oauth2/v2.0/token"
+            form = {k: v[0] for k, v in parse_qs(request.content.decode()).items()}
+            assert form["scope"] == "https://graph.microsoft.com/.default"
+            self.token_forms.append(form)
+            if (response := self._override("token")) is not None:
+                return response
+            token = fake_jwt(self.roles, len(self.token_forms))
+            self.valid_tokens.add(token)
+            return httpx.Response(
+                200,
+                json={"token_type": "Bearer", "expires_in": self.expires_in, "access_token": token},
+            )
+
+        assert request.url.host == GRAPH_HOST, f"request to {request.url.host}"
+        assert request.method == "GET", f"connector sent {request.method} to Graph"
+        assert request.url.path in ("/v1.0/subscribedSkus", "/v1.0/users"), request.url.path
+        self.requests.append(request)
+        auth = request.headers.get("Authorization", "")
+        if not auth.startswith("Bearer ") or auth[7:] not in self.valid_tokens:
+            return httpx.Response(
+                401, json={"error": {"code": "InvalidAuthenticationToken", "message": "x"}}
+            )
+        params = request.url.params
+        if request.url.path == "/v1.0/subscribedSkus":
+            if (response := self._override("skus")) is not None:
+                return response
+            return httpx.Response(200, json={"value": copy.deepcopy(self.skus)})
+        page = int(params.get("$skiptoken", 1))
+        if (response := self._override(f"users{page}")) is not None:
+            return response
+        if params.get("$top") == "1":
+            return httpx.Response(200, json={"value": [{"id": self.users[0]["id"]}]})
+        select = params["$select"].split(",")
+        assert "mail" not in select and "mobilePhone" not in select
+        start = (page - 1) * self.page_size
+        rows = [{k: v for k, v in u.items() if k in select} for u in self.users]
+        body = {"value": copy.deepcopy(rows[start : start + self.page_size])}
+        if start + self.page_size < len(rows):
+            body["@odata.nextLink"] = (
+                f"{self.next_link_base}?$select={params['$select']}&$top=999&$skiptoken={page + 1}"
+            )
+        return httpx.Response(200, json=body)
+
+    def user_pages(self) -> list[int]:
+        return [
+            int(r.url.params.get("$skiptoken", 1))
+            for r in self.requests
+            if r.url.path == "/v1.0/users"
+        ]
+
+
+@pytest.fixture
+def m365_api(monkeypatch):
+    server = FakeM365()
+    sleeps: list[float] = []
+    server.sleeps = sleeps
+    monkeypatch.setattr(
+        sync, "TRANSPORT_FACTORY", lambda instance: httpx.MockTransport(server.handler)
+    )
+    monkeypatch.setattr(sync, "SLEEP", sleeps.append)
+    return server
+
+
+def make_m365(site, server: FakeM365, **extra):
+    values = {
+        "name": "Microsoft 365",
+        "source": DiscoverySource.objects.get(code="m365"),
+        "default_site": site,
+        "base_url": "https://graph.microsoft.com",
+        "tenant_id": server.tenant_id,
+        "client_id": server.client_id,
+        "credential_ref": "env:ITAM_INTEGRATION_M365_SECRET",
+        "auth_scheme": "client_secret",
+        "live_access_approved": True,
+        "max_retries": 2,
+    }
+    values.update(extra)
+    return IntegrationInstance.objects.create(**values)
+
+
+@pytest.fixture
+def m365(hq, live, m365_api, monkeypatch):
+    monkeypatch.setenv("ITAM_INTEGRATION_M365_SECRET", INTUNE_SECRET)
+    return make_m365(hq, m365_api)

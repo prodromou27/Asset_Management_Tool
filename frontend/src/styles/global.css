@@ -1333,3 +1333,9 @@ code,
   margin: 0;
   padding: var(--space-3) var(--space-4);
 }
+
+/* Quantities in tables: right-aligned, tabular figures. */
+.data-table .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}

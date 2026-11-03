@@ -1604,6 +1604,93 @@ paths:
               schema:
                 $ref: '#/components/schemas/ConnectionTest'
           description: ''
+  /api/v1/licenses/allocations/:
+    get:
+      operationId: licenses_allocations_list
+      parameters:
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - in: query
+        name: include_ended
+        schema:
+          type: boolean
+        description: Include ended allocations
+      - in: query
+        name: method
+        schema:
+          type: string
+          enum:
+          - direct
+          - direct_and_group
+          - group
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: q
+        schema:
+          type: string
+        description: User principal name or display name
+      - in: query
+        name: sku
+        schema:
+          type: string
+        description: License SKU (row) ID
+      tags:
+      - licenses
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAllocationList'
+          description: ''
+  /api/v1/licenses/subscriptions/:
+    get:
+      operationId: licenses_subscriptions_list
+      tags:
+      - licenses
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Subscription'
+          description: ''
+  /api/v1/licenses/subscriptions/{id}/:
+    get:
+      operationId: licenses_subscriptions_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - licenses
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionDetail'
+          description: ''
   /api/v1/locations/:
     get:
       operationId: locations_list
@@ -2450,6 +2537,83 @@ components:
       description: |-
         * `link` - link
         * `create` - create
+    Allocation:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        sku:
+          allOf:
+          - $ref: '#/components/schemas/SkuRef'
+          readOnly: true
+        user:
+          allOf:
+          - $ref: '#/components/schemas/DirectoryUserRef'
+          readOnly: true
+        method:
+          allOf:
+          - $ref: '#/components/schemas/AllocationMethodEnum'
+          readOnly: true
+        assigned_directly:
+          type: boolean
+          readOnly: true
+        group_ids:
+          type: array
+          items:
+            type: string
+          readOnly: true
+        state:
+          allOf:
+          - $ref: '#/components/schemas/StateEnum'
+          readOnly: true
+        paths:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+          readOnly: true
+        first_seen_at:
+          type: string
+          format: date-time
+          readOnly: true
+        last_seen_at:
+          type: string
+          format: date-time
+          readOnly: true
+        changed_at:
+          type: string
+          format: date-time
+          readOnly: true
+        ended_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+      required:
+      - assigned_directly
+      - changed_at
+      - ended_at
+      - first_seen_at
+      - group_ids
+      - id
+      - last_seen_at
+      - method
+      - paths
+      - sku
+      - state
+      - user
+    AllocationMethodEnum:
+      enum:
+      - direct
+      - group
+      - direct_and_group
+      type: string
+      description: |-
+        * `direct` - direct
+        * `group` - group
+        * `direct_and_group` - direct_and_group
     ApproveRequest:
       type: object
       properties:
@@ -3708,6 +3872,27 @@ components:
       description: |-
         * `up` - up
         * `down` - down
+    DirectoryUserRef:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        object_id:
+          type: string
+        user_principal_name:
+          type: string
+        display_name:
+          type: string
+        account_enabled:
+          type: boolean
+          nullable: true
+      required:
+      - account_enabled
+      - display_name
+      - id
+      - object_id
+      - user_principal_name
     DisableUserRequest:
       type: object
       properties:
@@ -4569,6 +4754,25 @@ components:
           maxLength: 32
       required:
       - name
+    LicenseSource:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        last_success_at:
+          type: string
+          format: date-time
+          nullable: true
+        stale_after_hours:
+          type: integer
+      required:
+      - id
+      - last_success_at
+      - name
+      - stale_after_hours
     LiveAccessRequest:
       type: object
       properties:
@@ -4810,18 +5014,6 @@ components:
       required:
       - reason
       - source_asset
-    MethodEnum:
-      enum:
-      - approved_candidate
-      - created_from_candidate
-      - auto_strong_match
-      - merge
-      type: string
-      description: |-
-        * `approved_candidate` - Approved match
-        * `created_from_candidate` - Created from discovery
-        * `auto_strong_match` - Automatic strong match
-        * `merge` - Moved by merge
     ModeEnum:
       enum:
       - full
@@ -5052,6 +5244,26 @@ components:
         * `success` - Success
         * `failure` - Failure
         * `denied` - Denied
+    PaginatedAllocationList:
+      type: object
+      required:
+      - items
+      - next_cursor
+      - previous_cursor
+      - count
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Allocation'
+        next_cursor:
+          type: string
+          nullable: true
+        previous_cursor:
+          type: string
+          nullable: true
+        count:
+          type: integer
     PaginatedAssetHistoryList:
       type: object
       required:
@@ -5968,6 +6180,90 @@ components:
       required:
       - code
       - name
+    SkuRef:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        sku_id:
+          type: string
+        sku_part_number:
+          type: string
+      required:
+      - id
+      - sku_id
+      - sku_part_number
+    Snapshot:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        taken_at:
+          type: string
+          format: date-time
+          readOnly: true
+        last_confirmed_at:
+          type: string
+          format: date-time
+          readOnly: true
+        capability_status:
+          type: string
+          readOnly: true
+        enabled_units:
+          type: integer
+          readOnly: true
+          nullable: true
+        warning_units:
+          type: integer
+          readOnly: true
+          nullable: true
+        suspended_units:
+          type: integer
+          readOnly: true
+          nullable: true
+        locked_out_units:
+          type: integer
+          readOnly: true
+          nullable: true
+        consumed_units:
+          type: integer
+          readOnly: true
+          nullable: true
+        available_units:
+          type: integer
+          nullable: true
+          description: Enabled (purchased, active) minus consumed units, as the tenant
+            reports them.
+          readOnly: true
+        assigned_users:
+          type: integer
+          readOnly: true
+          nullable: true
+        direct_users:
+          type: integer
+          readOnly: true
+          nullable: true
+        group_users:
+          type: integer
+          readOnly: true
+          nullable: true
+      required:
+      - assigned_users
+      - available_units
+      - capability_status
+      - consumed_units
+      - direct_users
+      - enabled_units
+      - group_users
+      - id
+      - last_confirmed_at
+      - locked_out_units
+      - suspended_units
+      - taken_at
+      - warning_units
     SourceLink:
       type: object
       properties:
@@ -5988,7 +6284,7 @@ components:
           readOnly: true
         method:
           allOf:
-          - $ref: '#/components/schemas/MethodEnum'
+          - $ref: '#/components/schemas/SourceLinkMethodEnum'
           readOnly: true
         first_seen_at:
           type: string
@@ -6037,6 +6333,18 @@ components:
       - unlink_reason
       - unlinked_at
       - unlinked_by
+    SourceLinkMethodEnum:
+      enum:
+      - approved_candidate
+      - created_from_candidate
+      - auto_strong_match
+      - merge
+      type: string
+      description: |-
+        * `approved_candidate` - Approved match
+        * `created_from_candidate` - Created from discovery
+        * `auto_strong_match` - Automatic strong match
+        * `merge` - Moved by merge
     SourceLinkStatusEnum:
       enum:
       - active
@@ -6071,6 +6379,20 @@ components:
       - link_status
       - observed_at
       - value
+    StateEnum:
+      enum:
+      - Active
+      - ActiveWithError
+      - Disabled
+      - Error
+      - Unknown
+      type: string
+      description: |-
+        * `Active` - Active
+        * `ActiveWithError` - Active with error
+        * `Disabled` - Disabled
+        * `Error` - Error
+        * `Unknown` - Unknown
     StrengthEnum:
       enum:
       - strong
@@ -6081,6 +6403,152 @@ components:
         * `strong` - strong
         * `corroborating` - corroborating
         * `conflicting` - conflicting
+    Subscription:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        instance:
+          allOf:
+          - $ref: '#/components/schemas/LicenseSource'
+          readOnly: true
+        tenant_id:
+          type: string
+          readOnly: true
+        sku_id:
+          type: string
+          readOnly: true
+        sku_part_number:
+          type: string
+          readOnly: true
+        applies_to:
+          type: string
+          readOnly: true
+        capability_status:
+          type: string
+          readOnly: true
+        subscribed:
+          type: boolean
+          readOnly: true
+        first_seen_at:
+          type: string
+          format: date-time
+          readOnly: true
+        last_seen_at:
+          type: string
+          format: date-time
+          readOnly: true
+        missing_since:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        freshness:
+          type: string
+          description: |-
+            fresh | stale: stale when the integration has not succeeded within its
+            threshold or the SKU was missing from the last complete listing.
+          readOnly: true
+        latest:
+          allOf:
+          - $ref: '#/components/schemas/Snapshot'
+          nullable: true
+          readOnly: true
+      required:
+      - applies_to
+      - capability_status
+      - first_seen_at
+      - freshness
+      - id
+      - instance
+      - last_seen_at
+      - latest
+      - missing_since
+      - sku_id
+      - sku_part_number
+      - subscribed
+      - tenant_id
+    SubscriptionDetail:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        instance:
+          allOf:
+          - $ref: '#/components/schemas/LicenseSource'
+          readOnly: true
+        tenant_id:
+          type: string
+          readOnly: true
+        sku_id:
+          type: string
+          readOnly: true
+        sku_part_number:
+          type: string
+          readOnly: true
+        applies_to:
+          type: string
+          readOnly: true
+        capability_status:
+          type: string
+          readOnly: true
+        subscribed:
+          type: boolean
+          readOnly: true
+        first_seen_at:
+          type: string
+          format: date-time
+          readOnly: true
+        last_seen_at:
+          type: string
+          format: date-time
+          readOnly: true
+        missing_since:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        freshness:
+          type: string
+          description: |-
+            fresh | stale: stale when the integration has not succeeded within its
+            threshold or the SKU was missing from the last complete listing.
+          readOnly: true
+        latest:
+          allOf:
+          - $ref: '#/components/schemas/Snapshot'
+          nullable: true
+          readOnly: true
+        service_plans:
+          type: array
+          items:
+            type: string
+          readOnly: true
+        snapshots:
+          type: array
+          items:
+            $ref: '#/components/schemas/Snapshot'
+          readOnly: true
+      required:
+      - applies_to
+      - capability_status
+      - first_seen_at
+      - freshness
+      - id
+      - instance
+      - last_seen_at
+      - latest
+      - missing_since
+      - service_plans
+      - sku_id
+      - sku_part_number
+      - snapshots
+      - subscribed
+      - tenant_id
     SupportStatusEnum:
       enum:
       - supported

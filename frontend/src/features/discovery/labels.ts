@@ -94,6 +94,7 @@ export const RUN_PHASE: Record<string, string> = {
   reconciliation: 'Reconciling with assets',
   evidence: 'Reading FDB and neighbour evidence',
   security: 'Storing security observations',
+  licenses: 'Reading subscriptions and license assignments',
   done: 'Finished',
   failed: 'Stopped',
 }

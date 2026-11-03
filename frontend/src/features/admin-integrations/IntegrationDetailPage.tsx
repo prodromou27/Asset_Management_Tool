@@ -52,6 +52,9 @@ const CAPABILITY_LABEL: Record<string, string> = {
   machines: 'Machines API (Defender for Endpoint)',
   advanced_hunting: 'Advanced Hunting (not used)',
   device_actions: 'Device actions (never used)',
+  subscribed_skus: 'Subscribed SKUs and quantities',
+  license_assignments: 'User license assignments (direct and group)',
+  group_names: 'Group names (not read)',
 }
 // Shown in the permissions panel instead (a "yes" here is a problem, not a feature).
 const HIDDEN_CAPABILITIES = new Set(['excess_permissions'])
@@ -100,6 +103,18 @@ const PROFILES: Record<string, SourceProfile> = {
     schemeLabel: 'Authentication method',
     schemeHelp: 'Prefer a certificate uploaded to the app registration; use a client secret only if a certificate is not possible.',
     accountHint: 'Use a dedicated app registration with read-only application permissions.',
+  },
+  m365: {
+    url: 'https://graph.microsoft.com',
+    token: 'file:m365-app.pem',
+    api: 'The connector only sends GET requests to Microsoft Graph v1.0 subscribedSkus and users.',
+    credentialLabel: 'Credential reference',
+    credentialHelp:
+      'Certificate: file:<name> holding the private key and certificate (PEM). Secret: env:ITAM_INTEGRATION_<NAME>. The credential itself is never entered or shown here.',
+    schemeLabel: 'Authentication method',
+    schemeHelp: 'Prefer a certificate uploaded to the app registration; use a client secret only if a certificate is not possible.',
+    accountHint:
+      'Use a dedicated app registration with only the Organization.Read.All and User.Read.All application permissions.',
   },
   defender: {
     url: 'https://api.security.microsoft.com',

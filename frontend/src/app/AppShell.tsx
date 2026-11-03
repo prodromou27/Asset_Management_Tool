@@ -14,6 +14,7 @@ interface NavItem {
 const PRIMARY: NavItem[] = [
   { to: '/assets', label: 'Assets', permission: PERMISSIONS.assetsView },
   { to: '/discovery', label: 'Discovery', permission: PERMISSIONS.discoveryView },
+  { to: '/licenses', label: 'Licenses', permission: PERMISSIONS.licensesView },
   { to: '/', label: 'System health' },
 ]
 

@@ -42,6 +42,7 @@ urlpatterns = [
     path("api/v1/source-links/", include(link_urlpatterns)),
     path("api/v1/merges/", include(merge_urlpatterns)),
     path("api/v1/asset-categories/", include(category_urlpatterns)),
+    path("api/v1/licenses/", include("apps.licensing.urls")),
     path("api/v1/saved-views/", saved_views.SavedViewListCreateView.as_view(), name="saved-views"),
     path(
         "api/v1/saved-views/<uuid:pk>/",

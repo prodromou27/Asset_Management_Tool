@@ -27,6 +27,8 @@ x-backend-env: &backend-env
   # env:ITAM_INTEGRATION_INTUNE_CLIENT_SECRET. Prefer a certificate PEM mounted as a
   # Compose secret under /run/secrets and referenced as file:<name> (see README).
   ITAM_INTEGRATION_INTUNE_CLIENT_SECRET: ${ITAM_INTEGRATION_INTUNE_CLIENT_SECRET:-}
+  # Microsoft 365 licenses (Task 010): fallback client secret; prefer a certificate file.
+  ITAM_INTEGRATION_M365_CLIENT_SECRET: ${ITAM_INTEGRATION_M365_CLIENT_SECRET:-}
 
 x-backend-depends: &backend-depends
   postgres:

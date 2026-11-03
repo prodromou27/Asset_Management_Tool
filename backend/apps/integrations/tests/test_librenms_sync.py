@@ -382,13 +382,17 @@ def test_queue_refusals(lnms, changes, code):
 
 
 def test_sources_without_adapter_cannot_sync(hq, live):
+    from apps.integrations.models import DiscoverySource
     from apps.reconciliation.tests.conftest import make_instance
 
-    m365 = make_instance(
-        "M365", "m365", hq, live_access_approved=True, base_url="https://graph.example"
+    DiscoverySource.objects.create(
+        code="vcenter", name="vCenter", kind="endpoint", availability="planned"
+    )
+    planned = make_instance(
+        "vCenter", "vcenter", hq, live_access_approved=True, base_url="https://vc.example"
     )
     with pytest.raises(sync.SyncRefused) as exc:
-        sync.queue_sync(m365, mode="full", triggered_by="test")
+        sync.queue_sync(planned, mode="full", triggered_by="test")
     assert exc.value.code == "NO_ADAPTER"
 
 

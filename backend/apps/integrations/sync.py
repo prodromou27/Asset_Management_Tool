@@ -256,7 +256,7 @@ def execute(run_id) -> SyncRun:
             if connector.store_facts is not None:
                 run.phase = "security"
                 progress()
-                connector.store_facts(instance, run, records, complete)
+                connector.store_facts(instance, run, records, complete, adapter)
             if connector.supports_evidence and _evidence_due(instance):
                 run.phase = "evidence"
                 progress()

@@ -300,7 +300,7 @@ def test_integration_admin_and_planned_sources(client_for, admin_user, hq_manage
     # LibreNMS has a fixture-tested adapter (Task 006) but is not live-validated: beta.
     assert sources["librenms"] == "beta" and sources["fixture"] == "available"
     assert sources["intune"] == "beta" and sources["defender"] == "beta"
-    assert sources["m365"] == "planned"
+    assert sources["m365"] == "beta"
 
     bad = client.post(
         "/api/v1/integrations/",

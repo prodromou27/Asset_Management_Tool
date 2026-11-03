@@ -1,0 +1,393 @@
+{
+  "_comment": "Sanitized, invented Microsoft Graph v1.0 subscribedSkus and users. See README.md.",
+  "tenant_id": "6d1f0c2e-5a7b-4c3d-9e8f-0a1b2c3d4e5f",
+  "client_id": "8d3e0f2a-4b5c-4d6e-9f70-3b4c5d6e7f80",
+  "subscribedSkus": [
+    {
+      "skuId": "5a1b0000-0000-4000-8000-0000000000e3",
+      "skuPartNumber": "SPE_E3",
+      "appliesTo": "User",
+      "capabilityStatus": "Enabled",
+      "consumedUnits": 6,
+      "accountName": "contoso-example",
+      "subscriptionIds": [
+        "sub-0001"
+      ],
+      "prepaidUnits": {
+        "enabled": 50,
+        "suspended": 0,
+        "warning": 0,
+        "lockedOut": 0
+      },
+      "servicePlans": [
+        {
+          "servicePlanId": "7b000000-0000-4000-8000-000000000001",
+          "servicePlanName": "EXCHANGE_S_ENTERPRISE",
+          "provisioningStatus": "Success",
+          "appliesTo": "User"
+        },
+        {
+          "servicePlanId": "7b000000-0000-4000-8000-000000000002",
+          "servicePlanName": "TEAMS1",
+          "provisioningStatus": "Success",
+          "appliesTo": "User"
+        },
+        {
+          "servicePlanId": "7b000000-0000-4000-8000-000000000003",
+          "servicePlanName": "INTUNE_A",
+          "provisioningStatus": "Success",
+          "appliesTo": "User"
+        }
+      ]
+    },
+    {
+      "skuId": "5a1b0000-0000-4000-8000-0000000000e5",
+      "skuPartNumber": "EMSPREMIUM",
+      "appliesTo": "User",
+      "capabilityStatus": "Enabled",
+      "consumedUnits": 2,
+      "prepaidUnits": {
+        "enabled": 20,
+        "suspended": 0,
+        "warning": 0,
+        "lockedOut": 0
+      },
+      "servicePlans": [
+        {
+          "servicePlanId": "7b000000-0000-4000-8000-000000000001",
+          "servicePlanName": "AAD_PREMIUM_P2",
+          "provisioningStatus": "Success",
+          "appliesTo": "User"
+        },
+        {
+          "servicePlanId": "7b000000-0000-4000-8000-000000000002",
+          "servicePlanName": "MFA_PREMIUM",
+          "provisioningStatus": "Success",
+          "appliesTo": "User"
+        }
+      ]
+    },
+    {
+      "skuId": "5a1b0000-0000-4000-8000-0000000000b1",
+      "skuPartNumber": "POWER_BI_PRO",
+      "appliesTo": "User",
+      "capabilityStatus": "Warning",
+      "consumedUnits": 3,
+      "prepaidUnits": {
+        "enabled": 10,
+        "suspended": 0,
+        "warning": 10,
+        "lockedOut": 0
+      },
+      "servicePlans": [
+        {
+          "servicePlanId": "7b000000-0000-4000-8000-000000000001",
+          "servicePlanName": "BI_AZURE_P2",
+          "provisioningStatus": "Success",
+          "appliesTo": "User"
+        }
+      ]
+    },
+    {
+      "skuId": "5a1b0000-0000-4000-8000-0000000000f1",
+      "skuPartNumber": "FLOW_FREE",
+      "appliesTo": "User",
+      "capabilityStatus": "Enabled",
+      "consumedUnits": 1,
+      "prepaidUnits": {
+        "enabled": 10000,
+        "suspended": 0,
+        "warning": 0,
+        "lockedOut": 0
+      },
+      "servicePlans": [
+        {
+          "servicePlanId": "7b000000-0000-4000-8000-000000000001",
+          "servicePlanName": "FLOW_P2_VIRAL",
+          "provisioningStatus": "Success",
+          "appliesTo": "User"
+        }
+      ]
+    },
+    {
+      "skuId": "5a1b0000-0000-4000-8000-0000000000d1",
+      "skuPartNumber": "VISIOCLIENT",
+      "appliesTo": "User",
+      "capabilityStatus": "Suspended",
+      "consumedUnits": 0,
+      "prepaidUnits": {
+        "enabled": 0,
+        "suspended": 5,
+        "warning": 0,
+        "lockedOut": 0
+      },
+      "servicePlans": [
+        {
+          "servicePlanId": "7b000000-0000-4000-8000-000000000001",
+          "servicePlanName": "VISIO_CLIENT_SUBSCRIPTION",
+          "provisioningStatus": "Success",
+          "appliesTo": "User"
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "id": "c0000000-0000-4000-8000-000000000001",
+      "userPrincipalName": "ada@contoso.example",
+      "displayName": "Ada",
+      "accountEnabled": true,
+      "assignedLicenses": [
+        {
+          "skuId": "5a1b0000-0000-4000-8000-0000000000e3",
+          "disabledPlans": []
+        },
+        {
+          "skuId": "5a1b0000-0000-4000-8000-0000000000e5",
+          "disabledPlans": []
+        }
+      ],
+      "licenseAssignmentStates": [
+        {
+          "skuId": "5a1b0000-0000-4000-8000-0000000000e3",
+          "assignedByGroup": null,
+          "state": "Active",
+          "error": "None",
+          "disabledPlans": [],
+          "lastUpdatedDateTime": "2026-10-01T09:00:00Z"
+        },
+        {
+          "skuId": "5a1b0000-0000-4000-8000-0000000000e5",
+          "assignedByGroup": null,
+          "state": "Active",
+          "error": "None",
+          "disabledPlans": [],
+          "lastUpdatedDateTime": "2026-10-01T09:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "c0000000-0000-4000-8000-000000000002",
+      "userPrincipalName": "ben@contoso.example",
+      "displayName": "Ben",
+      "accountEnabled": true,
+      "assignedLicenses": [
+        {
+          "skuId": "5a1b0000-0000-4000-8000-0000000000e3",
+          "disabledPlans": []
+        },
+        {
+          "skuId": "5a1b0000-0000-4000-8000-0000000000f1",
+          "disabledPlans": []
+        }
+      ],
+      "licenseAssignmentStates": [
+        {
+          "skuId": "5a1b0000-0000-4000-8000-0000000000e3",
+          "assignedByGroup": "9a000000-0000-4000-8000-00000000000a",
+          "state": "Active",
+          "error": "None",
+          "disabledPlans": [],
+          "lastUpdatedDateTime": "2026-10-01T09:00:00Z"
+        },
+        {
+          "skuId": "5a1b0000-0000-4000-8000-0000000000f1",
+          "assignedByGroup": null,
+          "state": "Active",
+          "error": "None",
+          "disabledPlans": [],
+          "lastUpdatedDateTime": "2026-10-01T09:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "c0000000-0000-4000-8000-000000000003",
+      "userPrincipalName": "cleo@contoso.example",
+      "displayName": "Cleo",
+      "accountEnabled": true,
+      "assignedLicenses": [
+        {
+          "skuId": "5a1b0000-0000-4000-8000-0000000000e3",
+          "disabledPlans": []
+        },
+        {
+          "skuId": "5a1b0000-0000-4000-8000-0000000000e5",
+          "disabledPlans": []
+        }
+      ],
+      "licenseAssignmentStates": [
+        {
+          "skuId": "5a1b0000-0000-4000-8000-0000000000e3",
+          "assignedByGroup": null,
+          "state": "Active",
+          "error": "None",
+          "disabledPlans": [],
+          "lastUpdatedDateTime": "2026-10-01T09:00:00Z"
+        },
+        {
+          "skuId": "5a1b0000-0000-4000-8000-0000000000e3",
+          "assignedByGroup": "9a000000-0000-4000-8000-00000000000a",
+          "state": "Active",
+          "error": "None",
+          "disabledPlans": [],
+          "lastUpdatedDateTime": "2026-10-01T09:00:00Z"
+        },
+        {
+          "skuId": "5a1b0000-0000-4000-8000-0000000000e5",
+          "assignedByGroup": "9a000000-0000-4000-8000-00000000000c",
+          "state": "Active",
+          "error": "None",
+          "disabledPlans": [],
+          "lastUpdatedDateTime": "2026-10-01T09:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "c0000000-0000-4000-8000-000000000004",
+      "userPrincipalName": "dev@contoso.example",
+      "displayName": "Dev",
+      "accountEnabled": true,
+      "assignedLicenses": [
+        {
+          "skuId": "5a1b0000-0000-4000-8000-0000000000b1",
+          "disabledPlans": []
+        }
+      ],
+      "licenseAssignmentStates": [
+        {
+          "skuId": "5a1b0000-0000-4000-8000-0000000000e3",
+          "assignedByGroup": "9a000000-0000-4000-8000-00000000000a",
+          "state": "Error",
+          "error": "CountViolation",
+          "disabledPlans": [],
+          "lastUpdatedDateTime": "2026-10-01T09:00:00Z"
+        },
+        {
+          "skuId": "5a1b0000-0000-4000-8000-0000000000b1",
+          "assignedByGroup": null,
+          "state": "Active",
+          "error": "None",
+          "disabledPlans": [],
+          "lastUpdatedDateTime": "2026-10-01T09:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "c0000000-0000-4000-8000-000000000005",
+      "userPrincipalName": "eve@contoso.example",
+      "displayName": "Eve",
+      "accountEnabled": false,
+      "assignedLicenses": [
+        {
+          "skuId": "5a1b0000-0000-4000-8000-0000000000e3",
+          "disabledPlans": []
+        }
+      ],
+      "licenseAssignmentStates": [
+        {
+          "skuId": "5a1b0000-0000-4000-8000-0000000000e3",
+          "assignedByGroup": null,
+          "state": "Active",
+          "error": "None",
+          "disabledPlans": [],
+          "lastUpdatedDateTime": "2026-10-01T09:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "c0000000-0000-4000-8000-000000000006",
+      "userPrincipalName": "finn@contoso.example",
+      "displayName": "Finn",
+      "accountEnabled": true,
+      "assignedLicenses": [],
+      "licenseAssignmentStates": []
+    },
+    {
+      "id": "c0000000-0000-4000-8000-000000000007",
+      "userPrincipalName": "gia@contoso.example",
+      "displayName": "Gia",
+      "accountEnabled": true,
+      "assignedLicenses": [
+        {
+          "skuId": "5a1b0000-0000-4000-8000-0000000000aa",
+          "disabledPlans": []
+        }
+      ],
+      "licenseAssignmentStates": [
+        {
+          "skuId": "5a1b0000-0000-4000-8000-0000000000aa",
+          "assignedByGroup": null,
+          "state": "Active",
+          "error": "None",
+          "disabledPlans": [],
+          "lastUpdatedDateTime": "2026-10-01T09:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "c0000000-0000-4000-8000-000000000008",
+      "userPrincipalName": "hal@contoso.example",
+      "displayName": "Hal",
+      "accountEnabled": true,
+      "assignedLicenses": [
+        {
+          "skuId": "5a1b0000-0000-4000-8000-0000000000e3",
+          "disabledPlans": []
+        }
+      ],
+      "licenseAssignmentStates": null
+    },
+    {
+      "id": "c0000000-0000-4000-8000-000000000009",
+      "userPrincipalName": "ivy@contoso.example",
+      "displayName": "Ivy",
+      "accountEnabled": true,
+      "assignedLicenses": [
+        {
+          "skuId": "5a1b0000-0000-4000-8000-0000000000e3",
+          "disabledPlans": []
+        }
+      ],
+      "licenseAssignmentStates": [
+        {
+          "skuId": "5a1b0000-0000-4000-8000-0000000000e3",
+          "assignedByGroup": "9a000000-0000-4000-8000-00000000000a",
+          "state": "Active",
+          "error": "None",
+          "disabledPlans": [],
+          "lastUpdatedDateTime": "2026-10-01T09:00:00Z"
+        },
+        {
+          "skuId": "5a1b0000-0000-4000-8000-0000000000e3",
+          "assignedByGroup": "9a000000-0000-4000-8000-00000000000b",
+          "state": "Active",
+          "error": "None",
+          "disabledPlans": [],
+          "lastUpdatedDateTime": "2026-10-01T09:00:00Z"
+        }
+      ]
+    },
+    {
+      "id": "c0000000-0000-4000-8000-000000000010",
+      "userPrincipalName": "jo@contoso.example",
+      "displayName": "Jo",
+      "accountEnabled": true,
+      "assignedLicenses": [
+        {
+          "skuId": "5a1b0000-0000-4000-8000-0000000000b1",
+          "disabledPlans": []
+        }
+      ],
+      "licenseAssignmentStates": [
+        {
+          "skuId": "5a1b0000-0000-4000-8000-0000000000b1",
+          "assignedByGroup": null,
+          "state": "ActiveWithError",
+          "error": "MutuallyExclusiveViolation",
+          "disabledPlans": [],
+          "lastUpdatedDateTime": "2026-10-01T09:00:00Z"
+        }
+      ]
+    }
+  ]
+}

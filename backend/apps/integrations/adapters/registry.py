@@ -32,8 +32,9 @@ class Connector:
     uses_detail_refresh: bool = True
     # Defaults applied when an integration of this source is created.
     defaults: dict = field(default_factory=dict)
-    # Optional: store source facts kept apart from asset fields (e.g. security state),
-    # called after reconciliation as store_facts(instance, run, records, complete).
+    # Optional: store source facts kept apart from asset fields (security state, license
+    # data), called after reconciliation as store_facts(instance, run, records, complete,
+    # adapter).
     store_facts: Callable | None = None
 
 
@@ -160,11 +161,40 @@ def _defender() -> Connector:
     )
 
 
+def _m365() -> Connector:
+    from apps.licensing.services import store_license_data
+
+    from .entra import GRAPH_SCOPE
+    from .intune.client import GRAPH_BASE
+    from .m365 import adapter
+    from .m365.client import REQUIRED_PERMISSIONS, M365Client
+
+    return Connector(
+        code="m365",
+        client_class=M365Client,
+        auth_schemes=("client_certificate", "client_secret"),
+        default_auth_scheme="client_certificate",
+        supports_evidence=False,
+        test_connection=adapter.test_connection,
+        make_adapter=adapter.M365Adapter,
+        client_factory=_microsoft_client_factory(M365Client, GRAPH_SCOPE, "ITAM-M365-Connector/1"),
+        fixed_base_url=GRAPH_BASE,
+        required_settings=("tenant_id", "client_id"),
+        permissions=REQUIRED_PERMISSIONS,
+        uses_source_timezone=False,
+        uses_detail_refresh=False,
+        store_facts=store_license_data,
+        # docs/05: M365 license quantities daily.
+        defaults={"sync_interval_minutes": 1440, "stale_after_hours": 48},
+    )
+
+
 _FACTORIES = {
     "librenms": _librenms,
     "endpoint_central": _endpoint_central,
     "intune": _intune,
     "defender": _defender,
+    "m365": _m365,
 }
 _CACHE: dict[str, Connector] = {}
 

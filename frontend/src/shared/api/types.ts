@@ -34,6 +34,10 @@ export type SyncRunSummary = Schemas['SyncRunSummary']
 export type ConnectionTest = Schemas['ConnectionTest']
 export type NeighborEvidence = Schemas['NeighborEvidence']
 export type EndpointSecurityState = Schemas['EndpointSecurityState']
+export type LicenseSubscription = Schemas['Subscription']
+export type LicenseSubscriptionDetail = Schemas['SubscriptionDetail']
+export type LicenseSnapshot = Schemas['Snapshot']
+export type LicenseAllocation = Schemas['Allocation']
 export type FieldConflict = Schemas['FieldConflict']
 export type AssetEvidence = Schemas['AssetEvidence']
 export type FieldEvidence = Schemas['FieldEvidence']
@@ -70,4 +74,5 @@ export const PERMISSIONS = {
   discoveryView: 'discovery.view',
   reconciliationDecide: 'reconciliation.decide',
   integrationsManage: 'integrations.manage',
+  licensesView: 'licenses.view',
 } as const

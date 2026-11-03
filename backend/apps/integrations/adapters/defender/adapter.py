@@ -190,7 +190,7 @@ TRACKED = (
 )
 
 
-def store_security_states(instance, run, records: list[dict], complete: bool) -> None:
+def store_security_states(instance, run, records: list[dict], complete: bool, adapter=None) -> None:
     from apps.observations.models import Observation
     from apps.security.models import EndpointSecurityState
 

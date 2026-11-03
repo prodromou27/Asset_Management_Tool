@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     "apps.reconciliation",
     "apps.network",
     "apps.security",
+    "apps.licensing",
 ]
 
 AUTH_USER_MODEL = "accounts.User"

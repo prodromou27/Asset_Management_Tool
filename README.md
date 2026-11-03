@@ -135,6 +135,12 @@ scripts/compose.sh dev exec api python manage.py load_observations \
 - Matching: the Entra device ID links a Defender machine to the asset of an Intune device from the **same tenant** when a hostname or MAC corroborates it and nothing conflicts (ADR-014); otherwise it is a review candidate. Hostname or IP alone never links.
 - Security facts (onboarding, sensor health, exposure, risk, tags, first/last seen, original values) are stored apart from asset fields and shown on the asset's **Security** tab (requires `discovery.view` and site access). "Last report received" is not an online status, and a machine missing from Defender's list is flagged, never treated as deleted. Sanitized fixtures: `fixtures/defender/api/README.md`.
 
+### Microsoft 365 / Entra license connector (Task 010, Beta — live access off)
+
+- Reads only Graph v1.0 `GET /subscribedSkus` and `GET /users` (selected fields: ID, UPN, display name, enabled, assigned licenses and license assignment states). App registration (DEC-17): application permissions `Organization.Read.All` and `User.Read.All` with admin consent; certificate preferred (`file:<name>`), client secret fallback (`env:ITAM_INTEGRATION_M365_CLIENT_SECRET`).
+- **Licenses** screen (permission `licenses.view`: System Admin, ITAM Manager, Auditor): each SKU with purchased (enabled), consumed (as the tenant reports it), assigned users (ITAM's distinct count; a user with the SKU directly and through groups counts once) and available units, with a quantity history and the list of assigned users (direct, group, both; state).
+- This is tenant inventory, not a billing agreement or license compliance. Only a complete user listing ends assignments or produces counts; nothing is deleted. Sanitized fixtures: `fixtures/m365/graph/README.md`.
+
 After changing an API serializer, regenerate the contract: `cd backend && uv run python manage.py spectacular --file ../frontend/src/shared/api/openapi.yaml`, then `cd frontend && pnpm run gen:api`. CI fails on drift.
 
 Dev ports are bound to 127.0.0.1 only. Stop with `scripts/compose.sh dev down` (add `-v` only to discard the local PostgreSQL volume).

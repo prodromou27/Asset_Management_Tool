@@ -120,6 +120,7 @@ export function IntegrationsPage() {
 const FIXED_ENDPOINT: Record<string, string> = {
   intune: 'https://graph.microsoft.com',
   defender: 'https://api.security.microsoft.com',
+  m365: 'https://graph.microsoft.com',
 }
 // Per-source default for "stale after"; Intune devices are often offline for days.
 const STALE_DEFAULT: Record<string, number> = { intune: 168, defender: 168 }

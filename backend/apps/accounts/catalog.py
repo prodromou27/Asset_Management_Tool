@@ -22,6 +22,7 @@ ASSETS_MERGE = "assets.merge"
 DISCOVERY_VIEW = "discovery.view"
 RECONCILIATION_DECIDE = "reconciliation.decide"
 INTEGRATIONS_MANAGE = "integrations.manage"
+LICENSES_VIEW = "licenses.view"
 
 PERMISSIONS: dict[str, str] = {
     USERS_VIEW: "View user accounts, role assignments and access review data",
@@ -44,6 +45,7 @@ PERMISSIONS: dict[str, str] = {
     DISCOVERY_VIEW: "View discovery sources, observations, candidates and source evidence",
     RECONCILIATION_DECIDE: "Approve, reject or hold reconciliation candidates; unlink sources",
     INTEGRATIONS_MANAGE: "Configure integration instances and field authority",
+    LICENSES_VIEW: "View license subscriptions, quantities and user license assignments",
 }
 
 SYSTEM_ADMIN = "system_admin"
@@ -70,6 +72,7 @@ ROLES: list[tuple[str, str, str, list[str]]] = [
             ASSETS_MERGE,
             DISCOVERY_VIEW,
             RECONCILIATION_DECIDE,
+            LICENSES_VIEW,
         ],
     ),
     (
@@ -101,6 +104,7 @@ ROLES: list[tuple[str, str, str, list[str]]] = [
             SECURITY_SETTINGS_VIEW,
             ASSETS_VIEW,
             DISCOVERY_VIEW,
+            LICENSES_VIEW,
         ],
     ),
     (

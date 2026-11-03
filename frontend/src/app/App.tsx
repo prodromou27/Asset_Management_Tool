@@ -6,6 +6,8 @@ import { CategoriesPage } from '../features/admin-categories/CategoriesPage'
 import { IntegrationDetailPage } from '../features/admin-integrations/IntegrationDetailPage'
 import { IntegrationsPage } from '../features/admin-integrations/IntegrationsPage'
 import { CandidatePage } from '../features/discovery/CandidatePage'
+import { LicensesPage } from '../features/licenses/LicensesPage'
+import { SubscriptionPage } from '../features/licenses/SubscriptionPage'
 import { DiscoveryPage } from '../features/discovery/DiscoveryPage'
 import { SitesPage } from '../features/admin-sites/SitesPage'
 import { AssetDetailPage } from '../features/assets/AssetDetailPage'
@@ -99,6 +101,22 @@ export function AppRoutes() {
         element={
           <Protected permission={PERMISSIONS.discoveryView} what="discovery">
             <CandidatePage />
+          </Protected>
+        }
+      />
+      <Route
+        path="/licenses"
+        element={
+          <Protected permission={PERMISSIONS.licensesView} what="licenses">
+            <LicensesPage />
+          </Protected>
+        }
+      />
+      <Route
+        path="/licenses/subscriptions/:id"
+        element={
+          <Protected permission={PERMISSIONS.licensesView} what="licenses">
+            <SubscriptionPage />
           </Protected>
         }
       />
