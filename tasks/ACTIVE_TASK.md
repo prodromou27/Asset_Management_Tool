@@ -1,4 +1,70 @@
-# Current Task: 003 | Core Asset Management
+# Current Task: 004 | Discovery Observations and Asset Identity
+
+Status: **Provisionally Complete / Pending Docker host verification** (2026-11-03, branch DEV).
+
+**Read:** AGENTS.md, docs/00, 03, 05, 14, 15 (backlog list), plus 04, 07, 08 for API/UI.
+
+## Outcome
+
+Commits on DEV: `6fe6bf3` (backend), `f162ab0` (frontend, fixtures, docs).
+
+**Migrations:** `accounts.0004_discovery_permissions` (5 permissions + role grants),
+`integrations.0001` (DiscoverySource, IntegrationInstance, SyncRun, FieldAuthorityPolicy),
+`integrations.0002_seed_sources_and_policy` (vendor sources Planned, fixture Available,
+default precedence), `observations.0001` (Observation), `observations.0002` (append-only
+trigger), `assets.0004` (AssetIPAddress site/VRF, new history types, fixture source),
+`assets.0005` (FieldProvenance, FieldLock), `reconciliation.0001` (SourceLink,
+ReconciliationCandidate, FieldConflict, AssetMerge). All reversible (verified).
+
+**Behaviour:** immutable checksummed observations with normalisation (vendor aliases,
+placeholder serials → unknown, MAC/IP/hostname/OS/firmware, IP site/VRF context);
+idempotent ingestion with per-record savepoints and sync history; instance-scoped links;
+matching (strong: verified manufacturer+serial, hardware UUID; corroborating: MAC,
+hostname, IP same site/VRF; never auto-merge on weak keys; conflicts → review);
+candidate decisions link/create/hold/reject; unlink reopens review; reversible merges;
+field provenance, manual locks (automatic on manual edits), conflicts, source precedence;
+stale marking (full error-free runs + hourly Celery task), never deletion; field-level
+permissions closing ASM-09. No vendor API calls, no scanning, no HTTP ingestion endpoint.
+
+**APIs (21 new paths, 57 total):** `/discovery/sources/`, `/discovery/candidates/` (+ `{id}/`),
+`/reconciliation/{id}/approve|reject|hold/`, `/discovery/observations/` (+ `{id}/`),
+`/discovery/conflicts/` (+ `{id}/resolve/`), `/discovery/field-authority/`,
+`/integrations/` (+ `{id}/`, `{id}/runs/`), `/assets/{id}/evidence/`, `/assets/{id}/observations/`,
+`/assets/{id}/field-locks/` (+ `unlock/`), `/assets/{id}/merge/`, `/source-links/{id}/unlink/`,
+`/merges/{id}/revert/`. Command: `manage.py load_observations`.
+
+**UI:** Discovery (queue, field conflicts, sources/freshness/sync history), candidate
+detail and decision, asset Source evidence tab, Administration → Integrations with field
+authority editor.
+
+**Verification:**
+- GitHub CI run 41592967221 (PostgreSQL 16 + Redis 7): backend **304 passed, 0 skipped**;
+  migrations apply/reverse/re-apply; OpenAPI valid and in sync; `check --deploy` clean;
+  frontend types in sync, lint, typecheck, **68 tests**, build; Compose valid, images build.
+- Workstation (SQLite test-only): backend 299 passed, 5 skipped (PostgreSQL-only).
+- Acceptance covered by tests: docs/15 A01, A02, A03, A04, A08, A23 (no-IP UPS fixture).
+- Not run: Docker dev stack, Playwright, manual browser review of the new screens.
+
+**Unresolved / assumptions** (docs/17 ASM-13..18): no real adapters (Tasks 006–010 map
+vendor payloads to the source record); raw observation retention unbounded until DEC-15;
+lower-authority disagreements are evidence, not conflicts; merges move only links and
+discovered identifiers; candidate list has no free-text search; topology/FDB evidence not
+modelled yet (docs/05 A24).
+
+## Pending verification (Docker host) — Tasks 001–004
+
+Task 003 list below, plus: create a fixture integration, `load_observations` the sanitized
+fixture twice (second run unchanged), decide candidates in the UI, edit a discovered field
+as Asset Operator (expect 403) and as Infrastructure Engineer (expect lock), re-load a
+changed fixture and resolve the conflict, confirm worker/beat run the freshness task.
+
+Proposed next task: **005 | Asset list/detail UI, search, filters, provenance drawer**
+(tasks/BACKLOG.md). Much of 005 now exists; consider re-scoping it to saved views,
+column chooser and query-performance work at 10k assets. Do not start automatically.
+
+---
+
+## Task 003 | Core Asset Management (previous)
 
 Status: **Provisionally Complete / Pending Docker host verification** (2026-11-02, branch DEV).
 
