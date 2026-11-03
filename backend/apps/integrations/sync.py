@@ -16,7 +16,6 @@ from django.utils import timezone
 
 from apps.audit import services as audit
 from apps.network.models import NeighborEvidence
-from apps.observations.models import Observation
 from apps.reconciliation import services as reconciliation
 
 from . import secrets
@@ -278,23 +277,9 @@ def _evidence_due(instance) -> bool:
     )
 
 
-def _port_names(instance, adapter) -> dict[str, str]:
-    """port_id → name from ports cached in the latest observations (IP-bearing subset)."""
-    names = {}
-    cache = getattr(adapter, "_cache", None)
-    payloads = (
-        cache.values()
-        if cache is not None
-        else Observation.objects.filter(instance=instance)
-        .values_list("payload", flat=True)
-        .iterator()
-    )
-    for payload in payloads:
-        for port in ((payload or {}).get("raw") or {}).get("ports", []):
-            name = port.get("ifName") or port.get("ifDescr")
-            if port.get("port_id") is not None and name:
-                names[str(port["port_id"])] = name
-    return names
+def _port_names(adapter) -> dict[str, str]:
+    """port_id → name for the IP-bearing ports read (or reused) in this run."""
+    return dict(getattr(adapter, "port_names", {}))
 
 
 def _store_evidence(instance, run, adapter) -> None:
@@ -310,7 +295,7 @@ def _store_evidence(instance, run, adapter) -> None:
     from apps.assets.network import normalize_mac
 
     now = timezone.now()
-    ports = _port_names(instance, adapter)
+    ports = _port_names(adapter)
     rows = {}
     for row in fdb:
         try:

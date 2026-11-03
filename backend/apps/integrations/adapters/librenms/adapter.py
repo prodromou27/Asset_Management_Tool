@@ -144,6 +144,7 @@ class LibreNMSAdapter:
         fetched_at = now.isoformat()
         records: list[dict] = []
         self._load_cache()
+        self.port_names: dict[str, str] = {}
         for index, device in enumerate(devices, start=1):
             device_id = str(device.get("device_id") or "").strip()
             if not device_id:
@@ -176,6 +177,10 @@ class LibreNMSAdapter:
                 if "disabled" in message or "differ" in message:
                     self._warn(run, device_id, message)
             records.append(record)
+            for port in record["raw"]["ports"]:
+                name = port.get("ifName") or port.get("ifDescr")
+                if port.get("port_id") is not None and name:
+                    self.port_names[str(port["port_id"])] = str(name)
             run.devices_processed = index
             run.checkpoint = device_id
             if index % PROGRESS_EVERY == 0:
