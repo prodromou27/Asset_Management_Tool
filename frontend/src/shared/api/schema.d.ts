@@ -50,6 +50,9 @@ export interface paths {
   "/api/v1/assets/{id}/merge/": {
     post: operations["assets_merge_create"];
   };
+  "/api/v1/assets/{id}/network-evidence/": {
+    get: operations["assets_network_evidence_list"];
+  };
   "/api/v1/assets/{id}/observations/": {
     get: operations["assets_observations_list"];
   };
@@ -130,8 +133,22 @@ export interface paths {
     get: operations["integrations_retrieve"];
     patch: operations["integrations_partial_update"];
   };
+  "/api/v1/integrations/{id}/live-access/": {
+    /** @description Record (or revoke) the administrator approval required before any live call. */
+    post: operations["integrations_live_access_create"];
+  };
   "/api/v1/integrations/{id}/runs/": {
     get: operations["integrations_runs_list"];
+  };
+  "/api/v1/integrations/{id}/sync/": {
+    post: operations["integrations_sync_create"];
+  };
+  "/api/v1/integrations/{id}/test/": {
+    /**
+     * @description One read-only GET round-trip (system info, route listing, one device). Live
+     * access gates apply; the token is never returned or logged.
+     */
+    post: operations["integrations_test_create"];
   };
   "/api/v1/locations/": {
     get: operations["locations_list"];
@@ -440,11 +457,18 @@ export interface components {
      */
     AuthProviderStatusEnum: "available" | "planned";
     /**
+     * @description * `bearer` - Authorization: Bearer
+     * * `x_auth_token` - X-Auth-Token header
+     * @enum {string}
+     */
+    AuthSchemeEnum: "bearer" | "x_auth_token";
+    /**
      * @description * `planned` - Planned
+     * * `beta` - Beta (fixture-tested)
      * * `available` - Available
      * @enum {string}
      */
-    AvailabilityEnum: "planned" | "available";
+    AvailabilityEnum: "planned" | "beta" | "available";
     /** @enum {unknown} */
     BlankEnum: "";
     /**
@@ -563,6 +587,14 @@ export interface components {
      * @enum {string}
      */
     ColumnsEnum: "name" | "category" | "manufacturer_model" | "serial" | "primary_ip" | "site" | "owner" | "business_status" | "observation_status" | "support_status" | "last_seen" | "sources" | "modified";
+    ConnectionTest: {
+      ok: boolean;
+      message: string;
+      version: string;
+      capabilities: {
+        [key: string]: boolean;
+      };
+    };
     CustomFieldCreateRequest: {
       key: string;
       label: string;
@@ -792,6 +824,38 @@ export interface components {
       open_candidates: number;
       /** @description never | fresh | stale, from the last successful run against the threshold. */
       freshness: string;
+      credential_ref: string;
+      /** @description not_set | invalid | missing | configured. The secret itself is never returned. */
+      credential_status: string;
+      auth_scheme: components["schemas"]["AuthSchemeEnum"];
+      ca_bundle_ref: string;
+      timeout_seconds: number;
+      max_retries: number;
+      requests_per_second: number;
+      sync_interval_minutes: number;
+      evidence_interval_hours: number;
+      enrichment_max_age_hours: number;
+      source_timezone: string;
+      /** Format: date-time */
+      last_evidence_at: string | null;
+      has_adapter: boolean;
+      live_integrations_enabled: boolean;
+      live_access_approved: boolean;
+      live_access_approved_by: string | null;
+      /** Format: date-time */
+      live_access_approved_at: string | null;
+      live_access_reason: string;
+      /** Format: date-time */
+      last_test_at: string | null;
+      last_test_ok: boolean | null;
+      last_test_message: string;
+      source_software_version: string;
+      capabilities: {
+        [key: string]: boolean;
+      };
+      consecutive_failures: number;
+      next_sync_at: string | null;
+      last_run: components["schemas"]["SyncRunSummary"] | null;
       /** Format: date-time */
       created_at: string;
       /** Format: date-time */
@@ -817,6 +881,16 @@ export interface components {
       auto_link_strong_matches?: boolean;
       is_enabled?: boolean;
       status?: components["schemas"]["IntegrationInstanceWriteStatusEnum"];
+      credential_ref?: string;
+      auth_scheme?: components["schemas"]["AuthSchemeEnum"];
+      ca_bundle_ref?: string;
+      timeout_seconds?: number;
+      max_retries?: number;
+      requests_per_second?: number;
+      sync_interval_minutes?: number;
+      evidence_interval_hours?: number;
+      enrichment_max_age_hours?: number;
+      source_timezone?: string;
     };
     /**
      * @description * `configured` - configured
@@ -838,6 +912,10 @@ export interface components {
       name: string;
       /** @default */
       mac_address?: string;
+    };
+    LiveAccessRequest: {
+      approved: boolean;
+      reason: string;
     };
     Liveness: {
       status: components["schemas"]["LivenessStatusEnum"];
@@ -939,6 +1017,38 @@ export interface components {
      * @enum {string}
      */
     ModeEnum: "full" | "incremental";
+    NeighborEvidence: {
+      /** Format: uuid */
+      id: string;
+      instance: string;
+      kind: components["schemas"]["NeighborEvidenceKindEnum"];
+      /** @description local: seen on this asset's ports. remote: this asset seen on another device. */
+      direction: string;
+      local_external_id: string;
+      local_port: string;
+      local_asset: components["schemas"]["Ref"] | null;
+      remote_mac: string;
+      remote_external_id: string;
+      remote_hostname: string;
+      remote_port: string;
+      remote_platform: string;
+      remote_asset: components["schemas"]["Ref"] | null;
+      vlan: string;
+      is_active: boolean;
+      /** Format: date-time */
+      first_seen_at: string;
+      /** Format: date-time */
+      last_seen_at: string;
+      is_physical_link_confirmed: boolean;
+    };
+    /**
+     * @description * `fdb` - MAC seen on port (FDB)
+     * * `lldp` - LLDP neighbour
+     * * `cdp` - CDP neighbour
+     * * `other` - Other neighbour protocol
+     * @enum {string}
+     */
+    NeighborEvidenceKindEnum: "fdb" | "lldp" | "cdp" | "other";
     ObservationDetail: {
       /** Format: uuid */
       id: string;
@@ -1126,6 +1236,16 @@ export interface components {
       auto_link_strong_matches?: boolean;
       is_enabled?: boolean;
       status?: components["schemas"]["IntegrationInstanceWriteStatusEnum"];
+      credential_ref?: string;
+      auth_scheme?: components["schemas"]["AuthSchemeEnum"];
+      ca_bundle_ref?: string;
+      timeout_seconds?: number;
+      max_retries?: number;
+      requests_per_second?: number;
+      sync_interval_minutes?: number;
+      evidence_interval_hours?: number;
+      enrichment_max_age_hours?: number;
+      source_timezone?: string;
     };
     PatchedLocationWriteRequest: {
       /** Format: uuid */
@@ -1372,6 +1492,10 @@ export interface components {
      * @enum {string}
      */
     SupportStatusEnum: "supported" | "eol_announced" | "expiring" | "security_maintenance_ended" | "eos" | "unknown" | "not_announced";
+    SyncRequestRequest: {
+      /** @default full */
+      mode?: components["schemas"]["ModeEnum"];
+    };
     SyncRun: {
       /** Format: uuid */
       id: string;
@@ -1395,16 +1519,48 @@ export interface components {
       error_samples: readonly {
           [key: string]: unknown;
         }[];
+      warnings: number;
+      warning_samples: readonly {
+          [key: string]: unknown;
+        }[];
       error_message: string;
+      phase: string;
+      devices_total: number;
+      devices_processed: number;
+      devices_enriched: number;
+      evidence_rows: number;
+      api_requests: number;
+      /** Format: date-time */
+      heartbeat_at: string | null;
     };
     /**
-     * @description * `running` - Running
+     * @description * `queued` - Queued
+     * * `running` - Running
      * * `succeeded` - Succeeded
      * * `partial` - Partial
      * * `failed` - Failed
      * @enum {string}
      */
-    SyncRunStatusEnum: "running" | "succeeded" | "partial" | "failed";
+    SyncRunStatusEnum: "queued" | "running" | "succeeded" | "partial" | "failed";
+    SyncRunSummary: {
+      /** Format: uuid */
+      id: string;
+      mode: components["schemas"]["ModeEnum"];
+      status: components["schemas"]["SyncRunStatusEnum"];
+      phase: string;
+      /** Format: date-time */
+      started_at: string;
+      /** Format: date-time */
+      finished_at: string | null;
+      records_received: number;
+      devices_total: number;
+      devices_processed: number;
+      links_refreshed: number;
+      candidates_opened: number;
+      errors: number;
+      warnings: number;
+      error_message: string;
+    };
     User: {
       /** Format: uuid */
       id: string;
@@ -1851,6 +2007,20 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["AssetMerge"];
+        };
+      };
+    };
+  };
+  assets_network_evidence_list: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["NeighborEvidence"][];
         };
       };
     };
@@ -2302,6 +2472,28 @@ export interface operations {
       };
     };
   };
+  /** @description Record (or revoke) the administrator approval required before any live call. */
+  integrations_live_access_create: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LiveAccessRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["LiveAccessRequest"];
+        "multipart/form-data": components["schemas"]["LiveAccessRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["IntegrationInstance"];
+        };
+      };
+    };
+  };
   integrations_runs_list: {
     parameters: {
       query?: {
@@ -2318,6 +2510,45 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["PaginatedSyncRunList"];
+        };
+      };
+    };
+  };
+  integrations_sync_create: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["SyncRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["SyncRequestRequest"];
+        "multipart/form-data": components["schemas"]["SyncRequestRequest"];
+      };
+    };
+    responses: {
+      202: {
+        content: {
+          "application/json": components["schemas"]["SyncRun"];
+        };
+      };
+    };
+  };
+  /**
+   * @description One read-only GET round-trip (system info, route listing, one device). Live
+   * access gates apply; the token is never returned or logged.
+   */
+  integrations_test_create: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["ConnectionTest"];
         };
       };
     };

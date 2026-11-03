@@ -1,12 +1,17 @@
+from datetime import timedelta
 from urllib.parse import urlparse
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
+from django.conf import settings
 from django.utils import timezone
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from apps.assets.models import TECHNICAL_FIELDS
 from apps.assets.serializers import SiteRefSerializer
 from apps.organizations.models import Site
 
+from . import secrets, sync
 from .models import DiscoverySource, FieldAuthorityPolicy, IntegrationInstance, SyncRun
 
 
@@ -19,6 +24,28 @@ class DiscoverySourceSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
+class SyncRunSummarySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SyncRun
+        fields = [
+            "id",
+            "mode",
+            "status",
+            "phase",
+            "started_at",
+            "finished_at",
+            "records_received",
+            "devices_total",
+            "devices_processed",
+            "links_refreshed",
+            "candidates_opened",
+            "errors",
+            "warnings",
+            "error_message",
+        ]
+        read_only_fields = fields
+
+
 class IntegrationInstanceSerializer(serializers.ModelSerializer):
     source = DiscoverySourceSerializer(read_only=True)
     default_site = SiteRefSerializer(read_only=True)
@@ -26,6 +53,15 @@ class IntegrationInstanceSerializer(serializers.ModelSerializer):
     stale_links = serializers.IntegerField(read_only=True)
     open_candidates = serializers.IntegerField(read_only=True)
     freshness = serializers.SerializerMethodField()
+    credential_status = serializers.SerializerMethodField()
+    has_adapter = serializers.SerializerMethodField()
+    live_integrations_enabled = serializers.SerializerMethodField()
+    live_access_approved_by = serializers.SlugRelatedField(
+        read_only=True, allow_null=True, slug_field="username"
+    )
+    capabilities = serializers.DictField(child=serializers.BooleanField(), read_only=True)
+    next_sync_at = serializers.SerializerMethodField()
+    last_run = serializers.SerializerMethodField()
 
     class Meta:
         model = IntegrationInstance
@@ -47,11 +83,59 @@ class IntegrationInstanceSerializer(serializers.ModelSerializer):
             "stale_links",
             "open_candidates",
             "freshness",
+            "credential_ref",
+            "credential_status",
+            "auth_scheme",
+            "ca_bundle_ref",
+            "timeout_seconds",
+            "max_retries",
+            "requests_per_second",
+            "sync_interval_minutes",
+            "evidence_interval_hours",
+            "enrichment_max_age_hours",
+            "source_timezone",
+            "last_evidence_at",
+            "has_adapter",
+            "live_integrations_enabled",
+            "live_access_approved",
+            "live_access_approved_by",
+            "live_access_approved_at",
+            "live_access_reason",
+            "last_test_at",
+            "last_test_ok",
+            "last_test_message",
+            "source_software_version",
+            "capabilities",
+            "consecutive_failures",
+            "next_sync_at",
+            "last_run",
             "created_at",
             "modified_at",
             "version",
         ]
         read_only_fields = fields
+
+    def get_credential_status(self, obj) -> str:
+        """not_set | invalid | missing | configured. The secret itself is never returned."""
+        return secrets.status(obj.credential_ref)
+
+    def get_has_adapter(self, obj) -> bool:
+        return sync.has_adapter(obj)
+
+    def get_live_integrations_enabled(self, obj) -> bool:
+        return bool(getattr(settings, "ITAM_ALLOW_LIVE_INTEGRATIONS", False))
+
+    def get_next_sync_at(self, obj) -> str | None:
+        if not (sync.has_adapter(obj) and obj.is_enabled and obj.live_access_approved):
+            return None
+        if obj.last_attempt_at is None:
+            return timezone.now().isoformat()
+        return (obj.last_attempt_at + timedelta(minutes=obj.sync_interval_minutes)).isoformat()
+
+    @extend_schema_field(SyncRunSummarySerializer(allow_null=True))
+    def get_last_run(self, obj):
+        run = obj.runs.order_by("-started_at").first()
+        return SyncRunSummarySerializer(run).data if run else None
 
     def get_freshness(self, obj) -> str:
         """never | fresh | stale, from the last successful run against the threshold."""
@@ -75,6 +159,39 @@ class IntegrationInstanceWriteSerializer(serializers.Serializer):
         choices=[IntegrationInstance.Status.CONFIGURED, IntegrationInstance.Status.DISCONNECTED],
         required=False,
     )
+    credential_ref = serializers.CharField(max_length=200, allow_blank=True, required=False)
+    auth_scheme = serializers.ChoiceField(
+        choices=IntegrationInstance.AuthScheme.choices, required=False
+    )
+    ca_bundle_ref = serializers.CharField(max_length=200, allow_blank=True, required=False)
+    timeout_seconds = serializers.IntegerField(min_value=5, max_value=120, required=False)
+    max_retries = serializers.IntegerField(min_value=0, max_value=6, required=False)
+    requests_per_second = serializers.IntegerField(min_value=1, max_value=20, required=False)
+    sync_interval_minutes = serializers.IntegerField(min_value=15, max_value=10080, required=False)
+    evidence_interval_hours = serializers.IntegerField(min_value=1, max_value=168, required=False)
+    enrichment_max_age_hours = serializers.IntegerField(min_value=1, max_value=720, required=False)
+    source_timezone = serializers.CharField(max_length=64, required=False)
+
+    def validate_credential_ref(self, value):
+        try:
+            return secrets.validate_ref(value)
+        except secrets.SecretError as exc:
+            raise serializers.ValidationError(str(exc)) from exc
+
+    def validate_ca_bundle_ref(self, value):
+        value = value.strip()
+        if value and not value.startswith("file:"):
+            raise serializers.ValidationError("A CA bundle must be a file: reference.")
+        return self.validate_credential_ref(value)
+
+    def validate_source_timezone(self, value):
+        try:
+            ZoneInfo(value)
+        except (ZoneInfoNotFoundError, ValueError) as exc:
+            raise serializers.ValidationError(
+                "Use an IANA time zone such as UTC or Europe/Nicosia."
+            ) from exc
+        return value
 
     def validate_name(self, value):
         value = value.strip()
@@ -102,6 +219,7 @@ class IntegrationInstanceWriteSerializer(serializers.Serializer):
 
 class SyncRunSerializer(serializers.ModelSerializer):
     error_samples = serializers.ListField(child=serializers.DictField(), read_only=True)
+    warning_samples = serializers.ListField(child=serializers.DictField(), read_only=True)
 
     class Meta:
         model = SyncRun
@@ -123,7 +241,16 @@ class SyncRunSerializer(serializers.ModelSerializer):
             "conflicts_opened",
             "errors",
             "error_samples",
+            "warnings",
+            "warning_samples",
             "error_message",
+            "phase",
+            "devices_total",
+            "devices_processed",
+            "devices_enriched",
+            "evidence_rows",
+            "api_requests",
+            "heartbeat_at",
         ]
         read_only_fields = fields
 
@@ -150,3 +277,19 @@ class FieldAuthorityPolicySerializer(serializers.ModelSerializer):
         if errors:
             raise serializers.ValidationError(errors)
         return value
+
+
+class SyncRequestSerializer(serializers.Serializer):
+    mode = serializers.ChoiceField(choices=SyncRun.Mode.choices, default=SyncRun.Mode.FULL)
+
+
+class LiveAccessSerializer(serializers.Serializer):
+    approved = serializers.BooleanField()
+    reason = serializers.CharField(min_length=5, max_length=500)
+
+
+class ConnectionTestSerializer(serializers.Serializer):
+    ok = serializers.BooleanField()
+    message = serializers.CharField()
+    version = serializers.CharField(allow_blank=True)
+    capabilities = serializers.DictField(child=serializers.BooleanField())

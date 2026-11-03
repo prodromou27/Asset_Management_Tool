@@ -7,17 +7,21 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.accounts import catalog
-from apps.accounts.permissions import ReadAnyWritePermission
+from apps.accounts.permissions import HasPermission, ReadAnyWritePermission
 from apps.audit import services as audit
 from apps.organizations.services import check_version
-from config.api import ItemsCursorPagination
+from config.api import ApiError, ItemsCursorPagination
 
+from . import sync
 from .models import DiscoverySource, FieldAuthorityPolicy, IntegrationInstance, SyncRun
 from .serializers import (
+    ConnectionTestSerializer,
     DiscoverySourceSerializer,
     FieldAuthorityPolicySerializer,
     IntegrationInstanceSerializer,
     IntegrationInstanceWriteSerializer,
+    LiveAccessSerializer,
+    SyncRequestSerializer,
     SyncRunSerializer,
 )
 
@@ -30,6 +34,16 @@ SNAPSHOT_FIELDS = (
     "status",
     "is_enabled",
     "base_url",
+    "credential_ref",
+    "auth_scheme",
+    "ca_bundle_ref",
+    "timeout_seconds",
+    "max_retries",
+    "requests_per_second",
+    "sync_interval_minutes",
+    "evidence_interval_hours",
+    "enrichment_max_age_hours",
+    "source_timezone",
     "default_vrf",
     "stale_after_hours",
     "auto_link_strong_matches",
@@ -204,3 +218,76 @@ class FieldAuthorityView(APIView):
             headers={"ETag": f'"{policy.version}"'},
             status=status.HTTP_200_OK,
         )
+
+
+# --- Connector actions -------------------------------------------------------------------
+
+
+def _refused(exc: sync.SyncRefused) -> ApiError:
+    http = (
+        status.HTTP_409_CONFLICT
+        if exc.code == "SYNC_IN_PROGRESS"
+        else status.HTTP_422_UNPROCESSABLE_ENTITY
+    )
+    return ApiError(exc.code, str(exc), http)
+
+
+class TestConnectionView(APIView):
+    """One read-only GET round-trip (system info, route listing, one device). Live
+    access gates apply; the token is never returned or logged."""
+
+    permission_classes = [HasPermission(catalog.INTEGRATIONS_MANAGE)]
+
+    @extend_schema(request=None, responses=ConnectionTestSerializer)
+    def post(self, request, pk):
+        instance = get_object_or_404(IntegrationInstance, pk=pk)
+        return Response(ConnectionTestSerializer(sync.test_connection(request, instance)).data)
+
+
+class SyncNowView(APIView):
+    permission_classes = [HasPermission(catalog.INTEGRATIONS_MANAGE)]
+
+    @extend_schema(request=SyncRequestSerializer, responses={202: SyncRunSerializer})
+    def post(self, request, pk):
+        instance = get_object_or_404(IntegrationInstance, pk=pk)
+        data = SyncRequestSerializer(data=request.data)
+        data.is_valid(raise_exception=True)
+        try:
+            run = sync.queue_sync(
+                instance,
+                mode=data.validated_data["mode"],
+                triggered_by=f"user:{request.user.username}",
+            )
+        except sync.SyncRefused as exc:
+            raise _refused(exc) from exc
+        audit.record(
+            action="integrations.sync_requested",
+            actor=request.user,
+            request=request,
+            object_type="integration",
+            object_id=instance.pk,
+            object_label=instance.name,
+            after={"run": str(run.pk), "mode": run.mode},
+        )
+        run.refresh_from_db()
+        return Response(SyncRunSerializer(run).data, status=status.HTTP_202_ACCEPTED)
+
+
+class LiveAccessView(APIView):
+    """Record (or revoke) the administrator approval required before any live call."""
+
+    permission_classes = [HasPermission(catalog.INTEGRATIONS_MANAGE)]
+
+    @extend_schema(request=LiveAccessSerializer, responses=IntegrationInstanceSerializer)
+    def post(self, request, pk):
+        instance = get_object_or_404(IntegrationInstance, pk=pk)
+        data = LiveAccessSerializer(data=request.data)
+        data.is_valid(raise_exception=True)
+        if data.validated_data["approved"] and not sync.has_adapter(instance):
+            raise ApiError(
+                "NO_ADAPTER", "This source has no adapter.", status.HTTP_422_UNPROCESSABLE_ENTITY
+            )
+        sync.set_live_access(
+            request, instance, data.validated_data["approved"], data.validated_data["reason"]
+        )
+        return Response(IntegrationInstanceSerializer(_instances().get(pk=pk)).data)

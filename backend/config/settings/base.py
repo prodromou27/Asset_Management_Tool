@@ -22,6 +22,8 @@ env = environ.Env(
     CORS_ALLOWED_ORIGINS=(list, []),
     CSRF_TRUSTED_ORIGINS=(list, []),
     ITAM_TRUSTED_PROXY_COUNT=(int, 0),
+    ITAM_SECRETS_DIR=(str, "/run/secrets"),
+    ITAM_ALLOW_LIVE_INTEGRATIONS=(bool, False),
 )
 
 env_file = BASE_DIR / ".env"
@@ -49,6 +51,7 @@ INSTALLED_APPS = [
     "apps.integrations",
     "apps.observations",
     "apps.reconciliation",
+    "apps.network",
 ]
 
 AUTH_USER_MODEL = "accounts.User"
@@ -170,6 +173,7 @@ SPECTACULAR_SETTINGS = {
         "EvidenceSourceEnum": "apps.assets.models.Source",
         "LocationKindEnum": "apps.organizations.models.Location.Kind",
         "AuthProviderKindEnum": ["local", "oidc"],
+        "SyncRunStatusEnum": "apps.integrations.models.SyncRun.Status",
     },
 }
 
@@ -185,6 +189,10 @@ CELERY_BEAT_SCHEDULE = {
         "task": "reconciliation.refresh_source_freshness",
         "schedule": 3600.0,
     },
+    "dispatch-due-syncs": {
+        "task": "integrations.dispatch_due_syncs",
+        "schedule": 300.0,
+    },
 }
 
 LOGGING = {
@@ -192,6 +200,14 @@ LOGGING = {
     "disable_existing_loggers": False,
     "handlers": {"console": {"class": "logging.StreamHandler"}},
     "root": {"handlers": ["console"], "level": env("ITAM_LOG_LEVEL")},
+    # httpx logs every request URL at INFO; connector summaries are logged by the app.
+    "loggers": {"httpx": {"level": "WARNING"}, "httpcore": {"level": "WARNING"}},
 }
 
 DISPLAY_TIMEZONE = env("ITAM_TIMEZONE")
+
+# Integration credentials are injected as files or ITAM_INTEGRATION_* variables.
+ITAM_SECRETS_DIR = env("ITAM_SECRETS_DIR")
+# Deployment-level kill switch: no connector contacts a live source unless true,
+# in addition to the per-instance approval recorded by an administrator.
+ITAM_ALLOW_LIVE_INTEGRATIONS = env("ITAM_ALLOW_LIVE_INTEGRATIONS")

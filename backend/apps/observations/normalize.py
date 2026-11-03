@@ -284,9 +284,11 @@ def normalize_record(record, *, site_id: str, default_vrf: str = "") -> dict:
 
 
 def checksum(record: dict) -> str:
-    """Stable SHA-256 of the raw record, excluding the observation time, so an
-    unchanged device report is recognised as unchanged."""
-    content = {k: v for k, v in record.items() if k != "observed_at"}
+    """Stable SHA-256 of the raw record, excluding the observation time and any
+    top-level key starting with "_" (volatile source metadata such as uptime or poll
+    durations, kept in the payload for provenance), so an unchanged device report is
+    recognised as unchanged."""
+    content = {k: v for k, v in record.items() if k != "observed_at" and not k.startswith("_")}
     return hashlib.sha256(
         json.dumps(content, sort_keys=True, separators=(",", ":"), default=str).encode()
     ).hexdigest()

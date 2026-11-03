@@ -1306,3 +1306,30 @@ code,
   padding: var(--space-4) var(--space-6);
   font-size: 13px;
 }
+
+.plain-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.run-progress {
+  margin-bottom: var(--space-4);
+}
+
+.run-progress p {
+  margin: 0 0 var(--space-2);
+}
+
+.run-progress progress {
+  width: 100%;
+  height: 8px;
+  accent-color: var(--color-brand);
+}
+
+.section-help {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+}

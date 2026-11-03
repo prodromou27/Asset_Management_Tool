@@ -10,6 +10,7 @@ import {
   assetOperatorMe,
   makeAsset,
   makeField,
+  makeIntegration,
   makeMe,
   mockApi,
   page,
@@ -78,28 +79,7 @@ function makeCandidate(overrides: Partial<Candidate> = {}): Candidate {
   }
 }
 
-const integration: IntegrationInstance = {
-  id: INSTANCE.id,
-  source: { code: 'fixture', name: 'Sanitized fixture import', kind: 'import', availability: 'available', description: '', instance_count: 1 },
-  name: 'NMS HQ',
-  status: 'available',
-  is_enabled: true,
-  base_url: '',
-  default_site: { id: SITE_HQ.id, code: 'HQ', name: 'Headquarters' },
-  default_vrf: '',
-  stale_after_hours: 48,
-  auto_link_strong_matches: false,
-  last_attempt_at: '2026-11-02T08:01:00Z',
-  last_success_at: '2026-11-02T08:01:00Z',
-  last_error: '',
-  active_links: 3,
-  stale_links: 1,
-  open_candidates: 2,
-  freshness: 'stale',
-  created_at: '2026-11-01T09:00:00Z',
-  modified_at: '2026-11-01T09:00:00Z',
-  version: 1,
-}
+const integration: IntegrationInstance = makeIntegration({ default_site: { id: SITE_HQ.id, code: 'HQ', name: 'Headquarters' } })
 
 describe('Discovery queue', () => {
   it('lists candidates with match type, confidence and hidden-site note', async () => {

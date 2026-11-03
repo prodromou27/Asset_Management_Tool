@@ -1,4 +1,4 @@
-import type { Candidate, IntegrationInstance } from '../../shared/api/types'
+import type { Candidate, IntegrationInstance, SyncRun } from '../../shared/api/types'
 import type { StatusTone } from '../../shared/ui/StatusBadge'
 
 export const RULE_LABEL: Record<Candidate['rule'], string> = {
@@ -64,4 +64,43 @@ export function scoreLabel(score: number): string {
   if (score >= 50) return `${score} · medium`
   if (score > 0) return `${score} · low`
   return '0 · none'
+}
+
+export const RUN_STATUS: Record<SyncRun['status'], { label: string; tone: StatusTone }> = {
+  queued: { label: 'Queued', tone: 'neutral' },
+  running: { label: 'Running', tone: 'neutral' },
+  succeeded: { label: 'Succeeded', tone: 'success' },
+  partial: { label: 'Partial', tone: 'warning' },
+  failed: { label: 'Failed', tone: 'danger' },
+}
+
+export const RUN_PHASE: Record<string, string> = {
+  '': 'Waiting for a worker',
+  devices: 'Reading the device list',
+  enrichment: 'Reading device details',
+  reconciliation: 'Reconciling with assets',
+  evidence: 'Reading FDB and neighbour evidence',
+  done: 'Finished',
+  failed: 'Stopped',
+}
+
+export const CREDENTIAL_STATUS: Record<string, { label: string; tone: StatusTone }> =
+  {
+    not_set: { label: 'Not set', tone: 'neutral' },
+    invalid: { label: 'Invalid reference', tone: 'danger' },
+    missing: { label: 'Secret not found', tone: 'danger' },
+    configured: { label: 'Secret available', tone: 'success' },
+  }
+
+export const EVIDENCE_KIND: Record<string, string> = {
+  fdb: 'MAC table (FDB)',
+  lldp: 'LLDP neighbour',
+  cdp: 'CDP neighbour',
+  other: 'Neighbour',
+}
+
+export const AVAILABILITY_LABEL: Record<string, string> = {
+  available: 'Available',
+  beta: 'Beta (fixture-tested)',
+  planned: 'Planned',
 }

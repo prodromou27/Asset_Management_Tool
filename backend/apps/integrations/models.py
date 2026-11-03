@@ -20,6 +20,9 @@ class DiscoverySource(models.Model):
 
     class Availability(models.TextChoices):
         PLANNED = "planned", "Planned"
+        # Adapter implemented and contract-tested on sanitized fixtures, not yet
+        # validated against a live installation (docs/15 A21).
+        BETA = "beta", "Beta (fixture-tested)"
         AVAILABLE = "available", "Available"
 
     code = models.CharField(max_length=40, primary_key=True)
@@ -44,6 +47,10 @@ class IntegrationInstance(models.Model):
         DEGRADED = "degraded", "Degraded"
         DISCONNECTED = "disconnected", "Disconnected"
 
+    class AuthScheme(models.TextChoices):
+        BEARER = "bearer", "Authorization: Bearer"
+        X_AUTH_TOKEN = "x_auth_token", "X-Auth-Token header"
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     source = models.ForeignKey(DiscoverySource, on_delete=models.PROTECT, related_name="instances")
     name = models.CharField(max_length=100, unique=True)
@@ -62,6 +69,53 @@ class IntegrationInstance(models.Model):
     last_attempt_at = models.DateTimeField(null=True, blank=True)
     last_success_at = models.DateTimeField(null=True, blank=True)
     last_error = models.CharField(max_length=500, blank=True)
+
+    # --- Connection (adapter-backed sources) ---------------------------------
+    # Reference to a secret, never the secret: "env:NAME" or "file:name" under
+    # ITAM_SECRETS_DIR. Resolved only inside the worker/API process at call time.
+    credential_ref = models.CharField(max_length=200, blank=True)
+    auth_scheme = models.CharField(
+        max_length=20, choices=AuthScheme.choices, default=AuthScheme.BEARER
+    )
+    ca_bundle_ref = models.CharField(max_length=200, blank=True)
+    timeout_seconds = models.PositiveSmallIntegerField(
+        default=30, validators=[MinValueValidator(5), MaxValueValidator(120)]
+    )
+    max_retries = models.PositiveSmallIntegerField(
+        default=3, validators=[MinValueValidator(0), MaxValueValidator(6)]
+    )
+    requests_per_second = models.PositiveSmallIntegerField(
+        default=5, validators=[MinValueValidator(1), MaxValueValidator(20)]
+    )
+    sync_interval_minutes = models.PositiveIntegerField(
+        default=360, validators=[MinValueValidator(15), MaxValueValidator(10080)]
+    )
+    evidence_interval_hours = models.PositiveIntegerField(
+        default=24, validators=[MinValueValidator(1), MaxValueValidator(168)]
+    )
+    enrichment_max_age_hours = models.PositiveIntegerField(
+        default=24, validators=[MinValueValidator(1), MaxValueValidator(720)]
+    )
+    source_timezone = models.CharField(max_length=64, default="UTC")
+    last_evidence_at = models.DateTimeField(null=True, blank=True)
+
+    # --- Live access gate ------------------------------------------------------
+    # No request reaches the source until an admin records approval (who, why)
+    # AND the deployment allows live integrations (ITAM_ALLOW_LIVE_INTEGRATIONS).
+    live_access_approved = models.BooleanField(default=False)
+    live_access_approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
+    live_access_approved_at = models.DateTimeField(null=True, blank=True)
+    live_access_reason = models.CharField(max_length=500, blank=True)
+
+    last_test_at = models.DateTimeField(null=True, blank=True)
+    last_test_ok = models.BooleanField(null=True, blank=True)
+    last_test_message = models.CharField(max_length=500, blank=True)
+    source_software_version = models.CharField(max_length=100, blank=True)
+    capabilities = models.JSONField(default=dict, blank=True)
+    consecutive_failures = models.PositiveIntegerField(default=0)
+
     created_at = models.DateTimeField(auto_now_add=True)
     modified_at = models.DateTimeField(auto_now=True)
     version = models.PositiveIntegerField(default=1)
@@ -84,6 +138,7 @@ class SyncRun(models.Model):
         INCREMENTAL = "incremental", "Incremental"
 
     class Status(models.TextChoices):
+        QUEUED = "queued", "Queued"
         RUNNING = "running", "Running"
         SUCCEEDED = "succeeded", "Succeeded"
         PARTIAL = "partial", "Partial"
@@ -107,8 +162,18 @@ class SyncRun(models.Model):
     conflicts_opened = models.PositiveIntegerField(default=0)
     errors = models.PositiveIntegerField(default=0)
     error_samples = models.JSONField(default=list, blank=True)
+    warnings = models.PositiveIntegerField(default=0)
+    warning_samples = models.JSONField(default=list, blank=True)
     checkpoint = models.CharField(max_length=200, blank=True)
     error_message = models.CharField(max_length=500, blank=True)
+    # Progress for long adapter runs (docs/02 job semantics).
+    phase = models.CharField(max_length=40, blank=True)
+    devices_total = models.PositiveIntegerField(default=0)
+    devices_processed = models.PositiveIntegerField(default=0)
+    devices_enriched = models.PositiveIntegerField(default=0)
+    evidence_rows = models.PositiveIntegerField(default=0)
+    api_requests = models.PositiveIntegerField(default=0)
+    heartbeat_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["-started_at"]

@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { assetKeys, fetchSites } from '../../shared/api/assets'
 import { isApiError } from '../../shared/api/client'
 import {
@@ -19,7 +20,7 @@ import { CheckboxGroup, SelectField, TextField } from '../../shared/ui/Field'
 import { PageHeader } from '../../shared/ui/PageHeader'
 import { EmptyState, LoadingState, QueryErrorState } from '../../shared/ui/States'
 import { StatusBadge } from '../../shared/ui/StatusBadge'
-import { FIELD_LABEL, FRESHNESS, INSTANCE_STATUS } from '../discovery/labels'
+import { AVAILABILITY_LABEL, FIELD_LABEL, FRESHNESS, INSTANCE_STATUS } from '../discovery/labels'
 
 export function IntegrationsPage() {
   const integrations = useQuery({ queryKey: discoveryKeys.integrations, queryFn: fetchIntegrations })
@@ -30,7 +31,7 @@ export function IntegrationsPage() {
     <div className="page page--wide">
       <PageHeader
         title="Integrations"
-        meta="Read-only source connections. Sources marked Planned have no working adapter yet and cannot synchronise."
+        meta="Read-only source connections. Planned sources have no adapter yet; Beta adapters are fixture-tested and need live validation."
         actions={
           <Button variant="primary" onClick={() => setEditing('new')}>
             Add integration
@@ -60,16 +61,22 @@ export function IntegrationsPage() {
               {integrations.data.map((i) => (
                 <tr key={i.id}>
                   <td>
-                    {i.name}
+                    <Link to={`/admin/integrations/${i.id}`}>{i.name}</Link>
                     {!i.is_enabled && <span className="cell-secondary">Disabled</span>}
                   </td>
                   <td>
                     {i.source.name}
-                    {i.source.availability === 'planned' && (
+                    {i.source.availability !== 'available' && (
                       <>
                         {' '}
-                        <StatusBadge tone="neutral" label="Planned" />
+                        <StatusBadge
+                          tone={i.source.availability === 'beta' ? 'warning' : 'neutral'}
+                          label={AVAILABILITY_LABEL[i.source.availability]}
+                        />
                       </>
+                    )}
+                    {i.has_adapter && !i.live_access_approved && (
+                      <span className="cell-secondary">Live access not approved</span>
                     )}
                   </td>
                   <td>
@@ -185,7 +192,10 @@ function IntegrationDialog({
           name="int_source"
           options={[
             { value: '', label: 'Choose a source' },
-            ...sources.map((s) => ({ value: s.code, label: `${s.name}${s.availability === 'planned' ? ' (planned)' : ''}` })),
+            ...sources.map((s) => ({
+              value: s.code,
+              label: `${s.name}${s.availability === 'available' ? '' : ` (${s.availability})`}`,
+            })),
           ]}
           value={source}
           onChange={(e) => setSource(e.target.value)}
@@ -215,7 +225,7 @@ function IntegrationDialog({
         value={baseUrl}
         onChange={(e) => setBaseUrl(e.target.value)}
         error={errors.base_url}
-        help="HTTPS only, no credentials in the URL. Tokens are stored as secrets, never here."
+        help="HTTPS only, no credentials in the URL. Tokens are referenced as server secrets on the integration page, never entered here."
       />
       <CheckboxGroup
         legend="Options"

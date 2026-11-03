@@ -3,6 +3,7 @@ import { useState, type ReactNode } from 'react'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { AuditLogPage } from '../features/admin-audit/AuditLogPage'
 import { CategoriesPage } from '../features/admin-categories/CategoriesPage'
+import { IntegrationDetailPage } from '../features/admin-integrations/IntegrationDetailPage'
 import { IntegrationsPage } from '../features/admin-integrations/IntegrationsPage'
 import { CandidatePage } from '../features/discovery/CandidatePage'
 import { DiscoveryPage } from '../features/discovery/DiscoveryPage'
@@ -106,6 +107,14 @@ export function AppRoutes() {
         element={
           <Protected permission={PERMISSIONS.integrationsManage} what="integration administration">
             <IntegrationsPage />
+          </Protected>
+        }
+      />
+      <Route
+        path="/admin/integrations/:id"
+        element={
+          <Protected permission={PERMISSIONS.integrationsManage} what="integration administration">
+            <IntegrationDetailPage />
           </Protected>
         }
       />

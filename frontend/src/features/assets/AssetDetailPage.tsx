@@ -25,6 +25,7 @@ import { StatusBadge } from '../../shared/ui/StatusBadge'
 import { Tabs } from '../../shared/ui/Tabs'
 import { EvidencePanel } from '../discovery/EvidencePanel'
 import { FieldEvidenceDrawer } from '../discovery/FieldEvidenceDrawer'
+import { NetworkEvidencePanel } from '../discovery/NetworkEvidencePanel'
 import { CustomFieldInputs } from './CustomFieldInputs'
 import { toApiValues, type CustomValues } from './customValues'
 import {
@@ -153,7 +154,11 @@ export function AssetDetailPage() {
         }}
         tabs={[
           { id: 'overview', label: 'Overview', content: <Overview asset={data} /> },
-          { id: 'network', label: 'Network', content: <Network asset={data} /> },
+          {
+            id: 'network',
+            label: 'Network',
+            content: <Network asset={data} evidence={can(PERMISSIONS.discoveryView)} />,
+          },
           ...(can(PERMISSIONS.discoveryView)
             ? [{ id: 'evidence', label: 'Source evidence', content: <EvidencePanel asset={data} /> }]
             : []),
@@ -332,7 +337,7 @@ function Overview({ asset }: { asset: AssetDetail }) {
 
 // --- Network -----------------------------------------------------------------------
 
-function Network({ asset }: { asset: AssetDetail }) {
+function Network({ asset, evidence }: { asset: AssetDetail; evidence: boolean }) {
   const sourceCell = (row: { source: string; source_ref: string; observed_at: string | null }) => (
     <>
       {SOURCE_LABEL[row.source] ?? row.source}
@@ -437,6 +442,7 @@ function Network({ asset }: { asset: AssetDetail }) {
           </table>
         )}
       </section>
+      {evidence && <NetworkEvidencePanel assetId={asset.id} />}
     </div>
   )
 }

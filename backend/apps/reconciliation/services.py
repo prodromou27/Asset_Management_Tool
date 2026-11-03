@@ -47,17 +47,35 @@ MAX_ERROR_SAMPLES = 20
 # --- Ingestion ----------------------------------------------------------------------
 
 
-def ingest(instance: IntegrationInstance, records, *, mode: str, triggered_by: str) -> SyncRun:
-    """Process one batch of source records. Each record is isolated in a savepoint so
-    one bad record never aborts the run (partial results keep everything else)."""
+def ingest(
+    instance: IntegrationInstance,
+    records,
+    *,
+    mode: str,
+    triggered_by: str,
+    run: SyncRun | None = None,
+    complete: bool = True,
+    on_progress=None,
+) -> SyncRun:
+    """Process source records. Each record is isolated in a savepoint so one bad
+    record never aborts the run (partial results keep everything else).
+
+    `run`: an adapter-owned run (phase/progress already tracked); created if absent.
+    `complete`: False when the source listing itself was incomplete (pagination or
+    fetch failure); then nothing is marked stale even for a full run.
+    `on_progress(run)`: called every 100 records so long runs report progress.
+    """
     if mode not in SyncRun.Mode.values:
         raise ValueError(f"Unknown mode {mode!r}")
-    run = SyncRun.objects.create(instance=instance, mode=mode, triggered_by=triggered_by[:150])
+    if run is None:
+        run = SyncRun.objects.create(instance=instance, mode=mode, triggered_by=triggered_by[:150])
     seen: set[str] = set()
     touched_assets: set = set()
 
     for record in records:
         run.records_received += 1
+        if on_progress is not None and run.records_received % 100 == 0:
+            on_progress(run)
         try:
             with transaction.atomic():
                 external_id, asset_id = _ingest_one(instance, run, record)
@@ -81,7 +99,7 @@ def ingest(instance: IntegrationInstance, records, *, mode: str, triggered_by: s
         run.status = SyncRun.Status.FAILED
 
     # Only a complete, error-free full inventory may declare unseen devices missing.
-    if mode == SyncRun.Mode.FULL and run.status == SyncRun.Status.SUCCEEDED:
+    if mode == SyncRun.Mode.FULL and run.status == SyncRun.Status.SUCCEEDED and complete:
         missing = SourceLink.objects.filter(
             instance=instance, status=SourceLink.Status.ACTIVE
         ).exclude(external_id__in=seen)
@@ -101,14 +119,24 @@ def ingest(instance: IntegrationInstance, records, *, mode: str, triggered_by: s
         instance.last_error = (
             run.error_samples[0]["error"] if run.error_samples else "Sync failed"
         )[:500]
-    if instance.source.availability == DiscoverySource.Availability.AVAILABLE:
+    if instance.source.availability != DiscoverySource.Availability.PLANNED:
         instance.status = (
             IntegrationInstance.Status.DEGRADED
             if run.status == SyncRun.Status.FAILED
             else IntegrationInstance.Status.AVAILABLE
         )
+    instance.consecutive_failures = (
+        instance.consecutive_failures + 1 if run.status == SyncRun.Status.FAILED else 0
+    )
     instance.save(
-        update_fields=["last_attempt_at", "last_success_at", "last_error", "status", "modified_at"]
+        update_fields=[
+            "last_attempt_at",
+            "last_success_at",
+            "last_error",
+            "status",
+            "consecutive_failures",
+            "modified_at",
+        ]
     )
     return run
 

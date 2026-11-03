@@ -87,7 +87,7 @@ Sign in at http://localhost:5173 with that account. Create a second named admin 
 
 - **Discovery** (`/discovery`): reconciliation queue (new devices and uncertain matches with confidence and matching identifiers), field conflicts, and sources with freshness and sync history. Candidate pages show normalised values, warnings, the raw payload, matches and a decision panel (link, create, hold, reject; reason required).
 - **Source evidence** tab on each asset: current value, who/what set it and when, lock state, every source's reported value (flagged when it differs), linked sources (unlink) and merges (merge/revert).
-- **Administration → Integrations**: integration instances (vendor sources are Planned until their adapters exist), default site/VRF, stale threshold, optional automatic linking of strong matches, and per-field source precedence.
+- **Administration → Integrations**: integration instances (vendor sources are Planned until their adapters exist; LibreNMS is Beta since Task 006), default site/VRF, stale threshold, optional automatic linking of strong matches, and per-field source precedence.
 - No vendor APIs are called and nothing scans the network. Sanitised records can be loaded for pilots and testing:
 
 ```bash
@@ -102,6 +102,14 @@ scripts/compose.sh dev exec api python manage.py load_observations \
 - **Columns**: choose visible columns (Name is always shown). Includes Last seen (relative time, exact time on hover and for screen readers), Sources and Observation.
 - **Evidence drawer**: on an asset's Overview, "Evidence" next to each technical field shows its value, source, time, lock and every linked source's report.
 - New filters: Observation status and Source (integration).
+
+### LibreNMS connector (Task 006, Beta — live access off)
+
+- **Administration → Integrations → (integration)**: configuration (HTTPS base URL, API token *reference*, auth header, private CA bundle reference, timeout, retries, rate limit, sync/evidence intervals, enrichment age, LibreNMS time zone, enabled), live-access approval with a reason, **Test connection**, **Sync now**, health (last success, next run, devices discovered, assets matched, new candidates, errors/warnings, failures, version, capabilities) and sync history with progress.
+- Asset **Network** tab: "Observed network evidence" (MAC table and LLDP/CDP neighbours). Observed, not a confirmed cable.
+- The connector only sends GET requests to `/api/v0`, never changes LibreNMS, never scans networks and never auto-merges devices. Unmatched devices go to the Discovery queue.
+- **Live access is disabled.** It requires both `ITAM_ALLOW_LIVE_INTEGRATIONS=true` on the host *and* an approval recorded on the integration. Do not enable either until the Docker-host verification has passed and a read-only LibreNMS API account is approved (DEC-05). Then put the token in `.env` as `ITAM_INTEGRATION_LIBRENMS_TOKEN` (or a file in `ITAM_SECRETS_DIR`) and reference it as `env:ITAM_INTEGRATION_LIBRENMS_TOKEN`; the token is never entered in, stored by, or shown in the application.
+- Scheduled syncs run from Celery beat (`integrations.dispatch_due_syncs`, every 5 minutes, honouring each integration's interval). Sanitized fixtures and scenarios: `fixtures/librenms/README.md`.
 
 After changing an API serializer, regenerate the contract: `cd backend && uv run python manage.py spectacular --file ../frontend/src/shared/api/openapi.yaml`, then `cd frontend && pnpm run gen:api`. CI fails on drift.
 

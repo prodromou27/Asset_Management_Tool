@@ -297,7 +297,9 @@ def test_integration_admin_and_planned_sources(client_for, admin_user, hq_manage
     sources = {
         s["code"]: s["availability"] for s in client.get("/api/v1/discovery/sources/").json()
     }
-    assert sources["librenms"] == "planned" and sources["fixture"] == "available"
+    # LibreNMS has a fixture-tested adapter (Task 006) but is not live-validated: beta.
+    assert sources["librenms"] == "beta" and sources["fixture"] == "available"
+    assert sources["intune"] == "planned"
 
     bad = client.post(
         "/api/v1/integrations/",

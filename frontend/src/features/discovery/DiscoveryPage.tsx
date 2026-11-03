@@ -12,14 +12,14 @@ import {
   type CandidateFilters,
 } from '../../shared/api/discovery'
 import { isApiError } from '../../shared/api/client'
-import { PERMISSIONS, type FieldConflict, type SyncRun } from '../../shared/api/types'
+import { PERMISSIONS, type FieldConflict } from '../../shared/api/types'
 import { formatDateTime } from '../../shared/format'
 import { Button } from '../../shared/ui/Button'
 import { Dialog } from '../../shared/ui/Dialog'
 import { SelectField, TextAreaField } from '../../shared/ui/Field'
 import { PageHeader } from '../../shared/ui/PageHeader'
 import { EmptyState, LoadingState, QueryErrorState } from '../../shared/ui/States'
-import { StatusBadge, type StatusTone } from '../../shared/ui/StatusBadge'
+import { StatusBadge } from '../../shared/ui/StatusBadge'
 import { Tabs } from '../../shared/ui/Tabs'
 import {
   CANDIDATE_STATUS,
@@ -28,6 +28,7 @@ import {
   INSTANCE_STATUS,
   RULE_LABEL,
   RULE_TONE,
+  RUN_STATUS,
   scoreLabel,
 } from './labels'
 
@@ -352,13 +353,6 @@ export function ResolveDialog({
 }
 
 // --- Sources ---------------------------------------------------------------------------
-
-const RUN_STATUS: Record<SyncRun['status'], { label: string; tone: StatusTone }> = {
-  succeeded: { label: 'Succeeded', tone: 'success' },
-  partial: { label: 'Partial', tone: 'warning' },
-  failed: { label: 'Failed', tone: 'danger' },
-  running: { label: 'Running', tone: 'neutral' },
-}
 
 function Sources() {
   const [selected, setSelected] = useState<string | null>(null)

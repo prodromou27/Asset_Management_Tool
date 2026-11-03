@@ -690,6 +690,29 @@ paths:
               schema:
                 $ref: '#/components/schemas/AssetMerge'
           description: ''
+  /api/v1/assets/{id}/network-evidence/:
+    get:
+      operationId: assets_network_evidence_list
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - assets
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NeighborEvidence'
+          description: ''
   /api/v1/assets/{id}/observations/:
     get:
       operationId: assets_observations_list
@@ -1431,6 +1454,41 @@ paths:
               schema:
                 $ref: '#/components/schemas/IntegrationInstance'
           description: ''
+  /api/v1/integrations/{id}/live-access/:
+    post:
+      operationId: integrations_live_access_create
+      description: Record (or revoke) the administrator approval required before any
+        live call.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - integrations
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LiveAccessRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LiveAccessRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LiveAccessRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationInstance'
+          description: ''
   /api/v1/integrations/{id}/runs/:
     get:
       operationId: integrations_runs_list
@@ -1463,6 +1521,62 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PaginatedSyncRunList'
+          description: ''
+  /api/v1/integrations/{id}/sync/:
+    post:
+      operationId: integrations_sync_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - integrations
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SyncRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SyncRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SyncRequestRequest'
+      security:
+      - sessionAuth: []
+      responses:
+        '202':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SyncRun'
+          description: ''
+  /api/v1/integrations/{id}/test/:
+    post:
+      operationId: integrations_test_create
+      description: |-
+        One read-only GET round-trip (system info, route listing, one device). Live
+        access gates apply; the token is never returned or logged.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - integrations
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConnectionTest'
           description: ''
   /api/v1/locations/:
     get:
@@ -3010,13 +3124,23 @@ components:
       description: |-
         * `available` - available
         * `planned` - planned
+    AuthSchemeEnum:
+      enum:
+      - bearer
+      - x_auth_token
+      type: string
+      description: |-
+        * `bearer` - Authorization: Bearer
+        * `x_auth_token` - X-Auth-Token header
     AvailabilityEnum:
       enum:
       - planned
+      - beta
       - available
       type: string
       description: |-
         * `planned` - Planned
+        * `beta` - Beta (fixture-tested)
         * `available` - Available
     BlankEnum:
       enum:
@@ -3311,6 +3435,24 @@ components:
         * `last_seen` - last_seen
         * `sources` - sources
         * `modified` - modified
+    ConnectionTest:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        message:
+          type: string
+        version:
+          type: string
+        capabilities:
+          type: object
+          additionalProperties:
+            type: boolean
+      required:
+      - capabilities
+      - message
+      - ok
+      - version
     CustomFieldCreateRequest:
       type: object
       properties:
@@ -3935,6 +4077,100 @@ components:
           description: never | fresh | stale, from the last successful run against
             the threshold.
           readOnly: true
+        credential_ref:
+          type: string
+          readOnly: true
+        credential_status:
+          type: string
+          description: not_set | invalid | missing | configured. The secret itself
+            is never returned.
+          readOnly: true
+        auth_scheme:
+          allOf:
+          - $ref: '#/components/schemas/AuthSchemeEnum'
+          readOnly: true
+        ca_bundle_ref:
+          type: string
+          readOnly: true
+        timeout_seconds:
+          type: integer
+          readOnly: true
+        max_retries:
+          type: integer
+          readOnly: true
+        requests_per_second:
+          type: integer
+          readOnly: true
+        sync_interval_minutes:
+          type: integer
+          readOnly: true
+        evidence_interval_hours:
+          type: integer
+          readOnly: true
+        enrichment_max_age_hours:
+          type: integer
+          readOnly: true
+        source_timezone:
+          type: string
+          readOnly: true
+        last_evidence_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        has_adapter:
+          type: boolean
+          readOnly: true
+        live_integrations_enabled:
+          type: boolean
+          readOnly: true
+        live_access_approved:
+          type: boolean
+          readOnly: true
+        live_access_approved_by:
+          type: string
+          readOnly: true
+          nullable: true
+        live_access_approved_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        live_access_reason:
+          type: string
+          readOnly: true
+        last_test_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        last_test_ok:
+          type: boolean
+          readOnly: true
+          nullable: true
+        last_test_message:
+          type: string
+          readOnly: true
+        source_software_version:
+          type: string
+          readOnly: true
+        capabilities:
+          type: object
+          additionalProperties:
+            type: boolean
+          readOnly: true
+        consecutive_failures:
+          type: integer
+          readOnly: true
+        next_sync_at:
+          type: string
+          nullable: true
+          readOnly: true
+        last_run:
+          allOf:
+          - $ref: '#/components/schemas/SyncRunSummary'
+          nullable: true
+          readOnly: true
         created_at:
           type: string
           format: date-time
@@ -3948,24 +4184,50 @@ components:
           readOnly: true
       required:
       - active_links
+      - auth_scheme
       - auto_link_strong_matches
       - base_url
+      - ca_bundle_ref
+      - capabilities
+      - consecutive_failures
       - created_at
+      - credential_ref
+      - credential_status
       - default_site
       - default_vrf
+      - enrichment_max_age_hours
+      - evidence_interval_hours
       - freshness
+      - has_adapter
       - id
       - is_enabled
       - last_attempt_at
       - last_error
+      - last_evidence_at
+      - last_run
       - last_success_at
+      - last_test_at
+      - last_test_message
+      - last_test_ok
+      - live_access_approved
+      - live_access_approved_at
+      - live_access_approved_by
+      - live_access_reason
+      - live_integrations_enabled
+      - max_retries
       - modified_at
       - name
+      - next_sync_at
       - open_candidates
+      - requests_per_second
       - source
+      - source_software_version
+      - source_timezone
       - stale_after_hours
       - stale_links
       - status
+      - sync_interval_minutes
+      - timeout_seconds
       - version
     IntegrationInstanceStatusEnum:
       enum:
@@ -4008,6 +4270,42 @@ components:
           type: boolean
         status:
           $ref: '#/components/schemas/IntegrationInstanceWriteStatusEnum'
+        credential_ref:
+          type: string
+          maxLength: 200
+        auth_scheme:
+          $ref: '#/components/schemas/AuthSchemeEnum'
+        ca_bundle_ref:
+          type: string
+          maxLength: 200
+        timeout_seconds:
+          type: integer
+          maximum: 120
+          minimum: 5
+        max_retries:
+          type: integer
+          maximum: 6
+          minimum: 0
+        requests_per_second:
+          type: integer
+          maximum: 20
+          minimum: 1
+        sync_interval_minutes:
+          type: integer
+          maximum: 10080
+          minimum: 15
+        evidence_interval_hours:
+          type: integer
+          maximum: 168
+          minimum: 1
+        enrichment_max_age_hours:
+          type: integer
+          maximum: 720
+          minimum: 1
+        source_timezone:
+          type: string
+          minLength: 1
+          maxLength: 64
       required:
       - default_site
       - name
@@ -4065,6 +4363,18 @@ components:
           maxLength: 32
       required:
       - name
+    LiveAccessRequest:
+      type: object
+      properties:
+        approved:
+          type: boolean
+        reason:
+          type: string
+          minLength: 5
+          maxLength: 500
+      required:
+      - approved
+      - reason
     Liveness:
       type: object
       properties:
@@ -4311,6 +4621,104 @@ components:
       description: |-
         * `full` - Full
         * `incremental` - Incremental
+    NeighborEvidence:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        instance:
+          type: string
+          readOnly: true
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/NeighborEvidenceKindEnum'
+          readOnly: true
+        direction:
+          type: string
+          description: 'local: seen on this asset''s ports. remote: this asset seen
+            on another device.'
+          readOnly: true
+        local_external_id:
+          type: string
+          readOnly: true
+        local_port:
+          type: string
+          readOnly: true
+        local_asset:
+          allOf:
+          - $ref: '#/components/schemas/Ref'
+          nullable: true
+          readOnly: true
+        remote_mac:
+          type: string
+          readOnly: true
+        remote_external_id:
+          type: string
+          readOnly: true
+        remote_hostname:
+          type: string
+          readOnly: true
+        remote_port:
+          type: string
+          readOnly: true
+        remote_platform:
+          type: string
+          readOnly: true
+        remote_asset:
+          allOf:
+          - $ref: '#/components/schemas/Ref'
+          nullable: true
+          readOnly: true
+        vlan:
+          type: string
+          readOnly: true
+        is_active:
+          type: boolean
+          readOnly: true
+        first_seen_at:
+          type: string
+          format: date-time
+          readOnly: true
+        last_seen_at:
+          type: string
+          format: date-time
+          readOnly: true
+        is_physical_link_confirmed:
+          type: boolean
+          readOnly: true
+      required:
+      - direction
+      - first_seen_at
+      - id
+      - instance
+      - is_active
+      - is_physical_link_confirmed
+      - kind
+      - last_seen_at
+      - local_asset
+      - local_external_id
+      - local_port
+      - remote_asset
+      - remote_external_id
+      - remote_hostname
+      - remote_mac
+      - remote_platform
+      - remote_port
+      - vlan
+    NeighborEvidenceKindEnum:
+      enum:
+      - fdb
+      - lldp
+      - cdp
+      - other
+      type: string
+      description: |-
+        * `fdb` - MAC seen on port (FDB)
+        * `lldp` - LLDP neighbour
+        * `cdp` - CDP neighbour
+        * `other` - Other neighbour protocol
     ObservationDetail:
       type: object
       properties:
@@ -4797,6 +5205,42 @@ components:
           type: boolean
         status:
           $ref: '#/components/schemas/IntegrationInstanceWriteStatusEnum'
+        credential_ref:
+          type: string
+          maxLength: 200
+        auth_scheme:
+          $ref: '#/components/schemas/AuthSchemeEnum'
+        ca_bundle_ref:
+          type: string
+          maxLength: 200
+        timeout_seconds:
+          type: integer
+          maximum: 120
+          minimum: 5
+        max_retries:
+          type: integer
+          maximum: 6
+          minimum: 0
+        requests_per_second:
+          type: integer
+          maximum: 20
+          minimum: 1
+        sync_interval_minutes:
+          type: integer
+          maximum: 10080
+          minimum: 15
+        evidence_interval_hours:
+          type: integer
+          maximum: 168
+          minimum: 1
+        enrichment_max_age_hours:
+          type: integer
+          maximum: 720
+          minimum: 1
+        source_timezone:
+          type: string
+          minLength: 1
+          maxLength: 64
     PatchedLocationWriteRequest:
       type: object
       properties:
@@ -5424,6 +5868,13 @@ components:
         * `eos` - End of support
         * `unknown` - Unknown
         * `not_announced` - Not announced
+    SyncRequestRequest:
+      type: object
+      properties:
+        mode:
+          allOf:
+          - $ref: '#/components/schemas/ModeEnum'
+          default: full
     SyncRun:
       type: object
       properties:
@@ -5487,40 +5938,149 @@ components:
             type: object
             additionalProperties: {}
           readOnly: true
+        warnings:
+          type: integer
+          readOnly: true
+        warning_samples:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+          readOnly: true
         error_message:
           type: string
           readOnly: true
+        phase:
+          type: string
+          readOnly: true
+        devices_total:
+          type: integer
+          readOnly: true
+        devices_processed:
+          type: integer
+          readOnly: true
+        devices_enriched:
+          type: integer
+          readOnly: true
+        evidence_rows:
+          type: integer
+          readOnly: true
+        api_requests:
+          type: integer
+          readOnly: true
+        heartbeat_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
       required:
+      - api_requests
       - assets_updated
       - candidates_opened
       - candidates_updated
       - conflicts_opened
+      - devices_enriched
+      - devices_processed
+      - devices_total
       - error_message
       - error_samples
       - errors
+      - evidence_rows
       - finished_at
+      - heartbeat_at
       - id
       - links_marked_stale
       - links_refreshed
       - mode
       - observations_created
       - observations_unchanged
+      - phase
       - records_received
       - started_at
       - status
       - triggered_by
+      - warning_samples
+      - warnings
     SyncRunStatusEnum:
       enum:
+      - queued
       - running
       - succeeded
       - partial
       - failed
       type: string
       description: |-
+        * `queued` - Queued
         * `running` - Running
         * `succeeded` - Succeeded
         * `partial` - Partial
         * `failed` - Failed
+    SyncRunSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        mode:
+          allOf:
+          - $ref: '#/components/schemas/ModeEnum'
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/SyncRunStatusEnum'
+          readOnly: true
+        phase:
+          type: string
+          readOnly: true
+        started_at:
+          type: string
+          format: date-time
+          readOnly: true
+        finished_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        records_received:
+          type: integer
+          readOnly: true
+        devices_total:
+          type: integer
+          readOnly: true
+        devices_processed:
+          type: integer
+          readOnly: true
+        links_refreshed:
+          type: integer
+          readOnly: true
+        candidates_opened:
+          type: integer
+          readOnly: true
+        errors:
+          type: integer
+          readOnly: true
+        warnings:
+          type: integer
+          readOnly: true
+        error_message:
+          type: string
+          readOnly: true
+      required:
+      - candidates_opened
+      - devices_processed
+      - devices_total
+      - error_message
+      - errors
+      - finished_at
+      - id
+      - links_refreshed
+      - mode
+      - phase
+      - records_received
+      - started_at
+      - status
+      - warnings
     User:
       type: object
       properties:

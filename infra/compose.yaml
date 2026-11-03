@@ -15,6 +15,12 @@ x-backend-env: &backend-env
   POSTGRES_HOST: postgres
   POSTGRES_PORT: "5432"
   REDIS_URL: redis://redis:6379/0
+  # Connectors never contact a live source unless this is true AND an administrator
+  # recorded approval on the integration (Task 006). Keep false until the Docker-host
+  # verification has passed and a read-only source account is approved.
+  ITAM_ALLOW_LIVE_INTEGRATIONS: ${ITAM_ALLOW_LIVE_INTEGRATIONS:-false}
+  # Referenced from the UI as env:ITAM_INTEGRATION_LIBRENMS_TOKEN; never stored in the DB.
+  ITAM_INTEGRATION_LIBRENMS_TOKEN: ${ITAM_INTEGRATION_LIBRENMS_TOKEN:-}
 
 x-backend-depends: &backend-depends
   postgres:

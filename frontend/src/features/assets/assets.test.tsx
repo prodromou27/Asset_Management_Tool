@@ -122,6 +122,7 @@ describe('Asset detail', () => {
     'GET /auth/me/': { body: me },
     [`GET /assets/${ASSET_ID}/`]: { body: asset },
     [`GET /asset-categories/${CAT_SWITCH.id}/fields/`]: { body: [makeField()] },
+    [`GET /assets/${ASSET_ID}/network-evidence/`]: { body: [] },
     [`GET /assets/${ASSET_ID}/history/`]: {
       body: page([
         {

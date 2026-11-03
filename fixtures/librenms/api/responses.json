@@ -1,0 +1,79 @@
+{
+  "_comment": "Sanitized LibreNMS API v0 responses keyed by path (without /api/v0). Fictitious data: RFC 5737 IPs, 02: MACs, .example domains, made-up serials. SNMP credential fields are deliberately present with fake values to prove they are stripped.",
+  "": {
+    "list_devices": "https://librenms.corp.example/api/v0/devices",
+    "get_device": "https://librenms.corp.example/api/v0/devices/:hostname",
+    "get_device_ip_addresses": "https://librenms.corp.example/api/v0/devices/:hostname/ip",
+    "get_port_graphs": "https://librenms.corp.example/api/v0/devices/:hostname/ports",
+    "get_inventory_for_device": "https://librenms.corp.example/api/v0/inventory/:hostname/all",
+    "list_fdb": "https://librenms.corp.example/api/v0/resources/fdb",
+    "list_links": "https://librenms.corp.example/api/v0/resources/links",
+    "system": "https://librenms.corp.example/api/v0/system"
+  },
+  "/system": {
+    "status": "ok",
+    "system": [
+      {"local_ver": "24.10.0", "local_branch": "master", "db_schema": "2024_10_01", "php_ver": "8.3.12", "database_ver": "MariaDB 10.11", "rrdtool_ver": "1.8.0", "netsnmp_ver": "NET-SNMP 5.9.4"}
+    ]
+  },
+  "/devices": {
+    "status": "ok",
+    "count": 10,
+    "devices": [
+      {"device_id": 101, "hostname": "sw-core-01.corp.example", "sysName": "SW-CORE-01", "ip": "192.0.2.11", "community": "fake-community-not-real", "authpass": "fake-authpass", "sysObjectID": ".1.3.6.1.4.1.9.1.2494", "sysDescr": "Cisco IOS Software [Cupertino], Catalyst L3 Switch Software", "version": "17.9.4", "hardware": "C9300-48T", "features": "IPBASE", "os": "iosxe", "type": "network", "serial": "FOC0000A101", "status": 1, "disabled": 0, "ignore": 0, "uptime": 8123412, "last_polled": "2026-11-02 08:00:00", "last_discovered": "2026-11-02 02:00:00", "location": "HQ / Server room"},
+      {"device_id": 102, "hostname": "fw-edge-01.corp.example", "sysName": "FW-EDGE-01", "ip": "192.0.2.1", "community": "fake-community-not-real", "sysObjectID": ".1.3.6.1.4.1.12356.101.1.1004", "sysDescr": "FortiGate-100F", "version": "v7.4.3", "hardware": "FGT_100F", "os": "fortigate", "type": "firewall", "serial": "FGT0000000000102", "status": 1, "disabled": 0, "ignore": 0, "uptime": 912345, "last_polled": "2026-11-02 08:00:00", "last_discovered": "2026-11-02 02:00:00"},
+      {"device_id": 103, "hostname": "sw-access-03.corp.example", "sysName": "sw-access-03", "ip": "192.0.2.13", "sysObjectID": ".1.3.6.1.4.1.47196.4.1.1.1.304", "sysDescr": "Aruba JL659A 6300M 48SR5 CL6 PoE 4SFP56 Swch", "version": "FL.10.13.1000", "hardware": "JL659A", "os": "arubaos-cx", "type": "network", "serial": "SG0000A103", "status": 1, "disabled": 0, "ignore": 0, "uptime": 44123, "last_polled": "2026-11-02 08:00:00", "last_discovered": "2026-11-02 02:00:00"},
+      {"device_id": 104, "hostname": "sw-agg-04.corp.example", "sysName": "SW-AGG-04", "ip": "192.0.2.14", "sysObjectID": ".1.3.6.1.4.1.2011.2.23.519", "sysDescr": "Huawei Versatile Routing Platform Software VRP (R) software, Version 5.170 (S5735 V200R022C00SPC500)", "version": "V200R022C00SPC500", "hardware": "S5735-L48T4X-A1", "os": "vrp", "type": "network", "serial": "2102000104", "status": 1, "disabled": 0, "ignore": 0, "uptime": 123, "last_polled": "2026-11-02 08:00:00", "last_discovered": "2026-11-02 02:00:00"},
+      {"device_id": 105, "hostname": "cp-gw-05.corp.example", "sysName": "cp-gw-05", "ip": "192.0.2.5", "sysObjectID": ".1.3.6.1.4.1.2620.1.6.123.1.65", "sysDescr": "Linux cp-gw-05 3.10.0 Gaia", "version": "R81.20", "hardware": "Check Point 6600", "os": "gaia", "type": "firewall", "serial": "", "status": 1, "disabled": 0, "ignore": 0, "uptime": 99, "last_polled": "2026-11-02 08:00:00", "last_discovered": "2026-11-02 02:00:00"},
+      {"device_id": 106, "hostname": "sw-dc-06.corp.example", "sysName": "sw-dc-06", "ip": "192.0.2.16", "sysObjectID": ".1.3.6.1.4.1.674.11000.5000.100.2.1.13", "sysDescr": "Dell SmartFabric OS10 Enterprise", "version": "10.5.5.4", "hardware": "S5248F-ON", "os": "dell-os10", "type": "network", "serial": "", "status": 1, "disabled": 0, "ignore": 0, "uptime": 77, "last_polled": "2026-11-02 08:00:00", "last_discovered": "2026-11-02 02:00:00"},
+      {"device_id": 107, "hostname": "192.0.2.107", "sysName": "", "ip": "192.0.2.107", "sysObjectID": ".1.3.6.1.4.1.99999.1", "sysDescr": "Embedded device", "version": "", "hardware": "", "os": "generic", "type": "", "serial": "To be filled by O.E.M.", "status": 0, "disabled": 0, "ignore": 0, "uptime": 0, "last_polled": "2026-11-02 08:00:00", "last_discovered": "2026-11-02 02:00:00"},
+      {"device_id": 108, "hostname": "sw-core-01-old.corp.example", "sysName": "SW-CORE-01", "ip": "192.0.2.111", "sysObjectID": ".1.3.6.1.4.1.9.1.2494", "sysDescr": "Cisco IOS Software [Cupertino], Catalyst L3 Switch Software", "version": "17.6.5", "hardware": "C9300-48T", "os": "iosxe", "type": "network", "serial": "FOC0000A101", "status": 0, "disabled": 0, "ignore": 0, "uptime": 0, "last_polled": "2026-10-20 08:00:00", "last_discovered": "2026-10-20 02:00:00"},
+      {"device_id": 109, "hostname": "rtr-br-09.corp.example", "sysName": "rtr-br-09", "ip": "198.51.100.9", "sysObjectID": ".1.3.6.1.4.1.9.1.2213", "sysDescr": "Cisco IOS XE Software, ISR4331", "version": "17.9.4a", "hardware": "ISR4331/K9", "os": "iosxe", "type": "network", "serial": "FDO0000A109", "status": 1, "disabled": 0, "ignore": 0, "uptime": 5555, "last_polled": "2026-11-02 08:00:00", "last_discovered": "2026-11-02 02:00:00"},
+      {"device_id": 110, "hostname": "ups-hq-10.corp.example", "sysName": "ups-hq-10", "ip": "192.0.2.110", "sysObjectID": ".1.3.6.1.4.1.318.1.3.27", "sysDescr": "APC Web/SNMP Management Card", "version": "6.9.6", "hardware": "Smart-UPS 3000", "os": "apc", "type": "power", "serial": "AS0000000110", "status": 1, "disabled": 1, "ignore": 0, "uptime": 1, "last_polled": "2026-11-02 08:00:00", "last_discovered": "2026-11-02 02:00:00"}
+    ]
+  },
+  "/devices/101/ip": {"status": "ok", "addresses": [{"ipv4_address_id": 1, "ipv4_address": "192.0.2.11", "ipv4_prefixlen": 24, "port_id": 1001, "context_name": ""}, {"ipv4_address_id": 2, "ipv4_address": "203.0.113.11", "ipv4_prefixlen": 30, "port_id": 1002, "context_name": "MGMT"}]},
+  "/devices/101/ports": {"status": "ok", "ports": [{"port_id": 1001, "ifName": "Vlan10", "ifDescr": "Vlan10", "ifPhysAddress": "02005e000101", "ifType": "propVirtual"}, {"port_id": 1002, "ifName": "Gi0/0", "ifDescr": "GigabitEthernet0/0", "ifPhysAddress": "02:00:5e:00:01:99", "ifType": "ethernetCsmacd"}, {"port_id": 1003, "ifName": "Gi1/0/1", "ifDescr": "GigabitEthernet1/0/1", "ifPhysAddress": "02005e000102", "ifType": "ethernetCsmacd"}]},
+  "/inventory/101/all": {"status": "ok", "inventory": [{"entPhysical_id": 1, "entPhysicalIndex": 1000, "entPhysicalClass": "chassis", "entPhysicalDescr": "C9300-48T", "entPhysicalModelName": "C9300-48T", "entPhysicalSerialNum": "FOC0000A101", "entPhysicalMfgName": "Cisco Systems, Inc.", "entPhysicalFirmwareRev": "17.9.4", "entPhysicalSoftwareRev": "17.9.4"}, {"entPhysical_id": 2, "entPhysicalIndex": 2000, "entPhysicalClass": "chassis", "entPhysicalDescr": "C9300-48T member 2", "entPhysicalModelName": "C9300-48T", "entPhysicalSerialNum": "FOC0000B101", "entPhysicalMfgName": "Cisco Systems, Inc."}, {"entPhysical_id": 3, "entPhysicalIndex": 1010, "entPhysicalClass": "powerSupply", "entPhysicalDescr": "PSU", "entPhysicalSerialNum": "LIT0000A101"}]},
+  "/devices/102/ip": {"status": "ok", "addresses": [{"ipv4_address": "192.0.2.1", "ipv4_prefixlen": 24, "port_id": 2001, "context_name": ""}, {"ipv4_address": "198.51.100.2", "ipv4_prefixlen": 29, "port_id": 2002, "context_name": ""}]},
+  "/devices/102/ports": {"status": "ok", "ports": [{"port_id": 2001, "ifName": "internal", "ifPhysAddress": "02005e000201", "ifType": "ethernetCsmacd"}, {"port_id": 2002, "ifName": "wan1", "ifPhysAddress": "02005e000202", "ifType": "ethernetCsmacd"}]},
+  "/inventory/102/all": {"status": "error", "message": "No inventory found"},
+  "/devices/103/ip": {"status": "ok", "addresses": [{"ipv4_address": "192.0.2.13", "ipv4_prefixlen": 24, "port_id": 3001, "context_name": ""}]},
+  "/devices/103/ports": {"status": "ok", "ports": [{"port_id": 3001, "ifName": "vlan10", "ifPhysAddress": "02:00:5e:00:03:01", "ifType": "l3ipvlan"}]},
+  "/inventory/103/all": {"status": "ok", "inventory": [{"entPhysicalIndex": 1, "entPhysicalClass": "chassis", "entPhysicalModelName": "JL659A", "entPhysicalSerialNum": "SG0000A103", "entPhysicalMfgName": "Aruba", "entPhysicalFirmwareRev": "FL.01.11.0003"}]},
+  "/devices/104/ip": {"status": "ok", "addresses": [{"ipv4_address": "192.0.2.14", "ipv4_prefixlen": 24, "port_id": 4001, "context_name": ""}]},
+  "/devices/104/ports": {"status": "ok", "ports": [{"port_id": 4001, "ifName": "Vlanif10", "ifPhysAddress": "02005e000401", "ifType": "l3ipvlan"}]},
+  "/inventory/104/all": {"status": "ok", "inventory": []},
+  "/devices/105/ip": {"status": "ok", "addresses": [{"ipv4_address": "192.0.2.5", "ipv4_prefixlen": 24, "port_id": 5001, "context_name": ""}]},
+  "/devices/105/ports": {"status": "ok", "ports": [{"port_id": 5001, "ifName": "Mgmt", "ifPhysAddress": "02005e000501", "ifType": "ethernetCsmacd"}]},
+  "/inventory/105/all": {"status": "ok", "inventory": [{"entPhysicalIndex": 1, "entPhysicalClass": "chassis", "entPhysicalModelName": "", "entPhysicalSerialNum": "", "entPhysicalMfgName": ""}]},
+  "/devices/106/ip": {"status": "ok", "addresses": [{"ipv6_address": "2001:0db8:0000:0000:0000:0000:0000:0106", "ipv6_compressed": "2001:db8::106", "ipv6_prefixlen": 64, "port_id": 6001, "context_name": "default"}]},
+  "/devices/106/ports": {"status": "ok", "ports": [{"port_id": 6001, "ifName": "mgmt1/1/1", "ifPhysAddress": "02005e000601", "ifType": "ethernetCsmacd"}]},
+  "/inventory/106/all": {"status": "ok", "inventory": [{"entPhysicalIndex": 1, "entPhysicalClass": "chassis", "entPhysicalModelName": "S5248F-ON", "entPhysicalSerialNum": "CN0000000106", "entPhysicalMfgName": "Dell EMC", "entPhysicalFirmwareRev": "3.40.4.1-14"}]},
+  "/devices/107/ip": {"status": "error", "message": "No IP addresses found"},
+  "/inventory/107/all": {"status": "ok", "inventory": []},
+  "/devices/108/ip": {"status": "ok", "addresses": [{"ipv4_address": "192.0.2.111", "ipv4_prefixlen": 24, "port_id": 8001, "context_name": ""}]},
+  "/devices/108/ports": {"status": "ok", "ports": [{"port_id": 8001, "ifName": "Vlan10", "ifPhysAddress": "02005e000801", "ifType": "propVirtual"}]},
+  "/inventory/108/all": {"status": "ok", "inventory": []},
+  "/devices/109/ip": {"status": "ok", "addresses": [{"ipv4_address": "198.51.100.9", "ipv4_prefixlen": 30, "port_id": 9001, "context_name": ""}]},
+  "/devices/109/ports": {"status": "ok", "ports": [{"port_id": 9001, "ifName": "Gi0/0/0", "ifPhysAddress": "02005e000901", "ifType": "ethernetCsmacd"}]},
+  "/inventory/109/all": {"status": "ok", "inventory": [{"entPhysicalIndex": 1, "entPhysicalClass": "chassis", "entPhysicalModelName": "ISR4331/K9", "entPhysicalSerialNum": "FDO0000Z999", "entPhysicalMfgName": "Cisco Systems, Inc."}]},
+  "/devices/110/ip": {"status": "ok", "addresses": [{"ipv4_address": "192.0.2.110", "ipv4_prefixlen": 24, "port_id": 10001, "context_name": ""}]},
+  "/devices/110/ports": {"status": "ok", "ports": [{"port_id": 10001, "ifName": "eth0", "ifPhysAddress": "02005e001001", "ifType": "ethernetCsmacd"}]},
+  "/inventory/110/all": {"status": "ok", "inventory": []},
+  "/resources/fdb": {
+    "status": "ok",
+    "ports_fdb": [
+      {"ports_fdb_id": 1, "port_id": 1003, "mac_address": "02005e000501", "vlan_id": 10, "device_id": 101},
+      {"ports_fdb_id": 2, "port_id": 1003, "mac_address": "02005eaaaaaa", "vlan_id": 10, "device_id": 101},
+      {"ports_fdb_id": 3, "port_id": 3001, "mac_address": "02005e000101", "vlan_id": 10, "device_id": 103}
+    ]
+  },
+  "/resources/links": {
+    "status": "ok",
+    "links": [
+      {"id": 1, "local_port_id": 1003, "local_device_id": 101, "remote_port_id": 3001, "active": 1, "protocol": "lldp", "remote_hostname": "sw-access-03", "remote_device_id": 103, "remote_port": "1/1/49", "remote_platform": "Aruba JL659A", "remote_version": "FL.10.13"},
+      {"id": 2, "local_port_id": 1003, "local_device_id": 101, "remote_port_id": 0, "active": 1, "protocol": "cdp", "remote_hostname": "unknown-phone", "remote_device_id": 0, "remote_port": "Port 1", "remote_platform": "IP Phone"}
+    ]
+  }
+}

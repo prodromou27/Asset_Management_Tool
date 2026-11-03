@@ -1,6 +1,7 @@
 from django.urls import path
 
 from apps.integrations import views as integration_views
+from apps.network import views as network_views
 
 from . import views
 
@@ -33,6 +34,15 @@ integration_urlpatterns = [
         "<uuid:pk>/", integration_views.IntegrationDetailView.as_view(), name="integration-detail"
     ),
     path("<uuid:pk>/runs/", integration_views.SyncRunListView.as_view(), name="integration-runs"),
+    path(
+        "<uuid:pk>/test/", integration_views.TestConnectionView.as_view(), name="integration-test"
+    ),
+    path("<uuid:pk>/sync/", integration_views.SyncNowView.as_view(), name="integration-sync"),
+    path(
+        "<uuid:pk>/live-access/",
+        integration_views.LiveAccessView.as_view(),
+        name="integration-live-access",
+    ),
 ]
 
 asset_evidence_urlpatterns = [
@@ -47,6 +57,11 @@ asset_evidence_urlpatterns = [
         "<uuid:pk>/field-locks/unlock/", views.FieldUnlockView.as_view(), name="asset-field-unlock"
     ),
     path("<uuid:pk>/merge/", views.MergeView.as_view(), name="asset-merge"),
+    path(
+        "<uuid:pk>/network-evidence/",
+        network_views.AssetNetworkEvidenceView.as_view(),
+        name="asset-network-evidence",
+    ),
 ]
 
 link_urlpatterns = [
