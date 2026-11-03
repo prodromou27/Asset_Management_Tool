@@ -772,6 +772,32 @@ paths:
               schema:
                 $ref: '#/components/schemas/AssetDetail'
           description: ''
+  /api/v1/assets/{id}/security/:
+    get:
+      operationId: assets_security_list
+      description: |-
+        Security observations of an asset's linked sources (Defender for Endpoint).
+        Requires discovery.view and site access to the asset.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - assets
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EndpointSecurityState'
+          description: ''
   /api/v1/audit/events/:
     get:
       operationId: audit_events_list
@@ -3735,6 +3761,128 @@ components:
         * `security` - Security
         * `directory` - Directory and licensing
         * `import` - Import
+    EndpointSecurityState:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        instance:
+          allOf:
+          - $ref: '#/components/schemas/SecuritySourceRef'
+          readOnly: true
+        external_id:
+          type: string
+          readOnly: true
+        link_status:
+          type: string
+          readOnly: true
+        tenant_id:
+          type: string
+          readOnly: true
+        entra_device_id:
+          type: string
+          readOnly: true
+        computer_dns_name:
+          type: string
+          readOnly: true
+        os_platform:
+          type: string
+          readOnly: true
+        os_version:
+          type: string
+          readOnly: true
+        onboarding_status:
+          type: string
+          readOnly: true
+        health_status:
+          type: string
+          readOnly: true
+        exposure_level:
+          type: string
+          readOnly: true
+        risk_score:
+          type: string
+          readOnly: true
+        device_tags:
+          type: array
+          items:
+            type: string
+          readOnly: true
+        machine_group:
+          type: string
+          readOnly: true
+        first_seen_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        last_seen_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        last_synced_at:
+          type: string
+          format: date-time
+          readOnly: true
+        source_last_success_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        missing_since:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        changed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        freshness:
+          type: string
+          description: |-
+            fresh | stale. Stale when the source has not synchronised successfully within
+            its threshold, the machine was missing from the last complete listing, the link is
+            stale, or the device has not reported to the source within the threshold.
+          readOnly: true
+        observation_id:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        original:
+          type: object
+          additionalProperties: {}
+          readOnly: true
+      required:
+      - changed_at
+      - computer_dns_name
+      - device_tags
+      - entra_device_id
+      - exposure_level
+      - external_id
+      - first_seen_at
+      - freshness
+      - health_status
+      - id
+      - instance
+      - last_seen_at
+      - last_synced_at
+      - link_status
+      - machine_group
+      - missing_since
+      - observation_id
+      - onboarding_status
+      - original
+      - os_platform
+      - os_version
+      - risk_score
+      - source_last_success_at
+      - tenant_id
     EvidenceSourceEnum:
       enum:
       - manual
@@ -5710,6 +5858,20 @@ components:
       - session_absolute_timeout_hours
       - session_idle_timeout_minutes
       - version
+    SecuritySourceRef:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        source:
+          type: string
+      required:
+      - id
+      - name
+      - source
     Site:
       type: object
       properties:

@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     "apps.observations",
     "apps.reconciliation",
     "apps.network",
+    "apps.security",
 ]
 
 AUTH_USER_MODEL = "accounts.User"

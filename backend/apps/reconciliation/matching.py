@@ -13,6 +13,12 @@
 5. Strong keys pointing at different assets → conflict candidate.
 6. Same serial but a different manufacturer → conflict candidate (never a match,
    but shown to the reviewer instead of being dropped silently).
+7. Microsoft Entra device ID (ADR-014): strong only between instances of the same
+   tenant (verified), and only when it points at one asset (unambiguous). Microsoft
+   sources such as Defender report no manufacturer or chassis, so instead of the
+   manufacturer + class rule it may auto-link when nothing contradicts it (no known
+   manufacturer or class disagreement, no conflicting identifier) AND at least one
+   independent identifier (hostname, MAC or serial) corroborates it.
 """
 
 from collections import defaultdict
@@ -30,6 +36,7 @@ Rule = ReconciliationCandidate.Rule
 
 WEIGHTS = {
     "hardware_uuid": 80,
+    "entra_device_id": 75,
     "serial": 70,
     "serial_unverified": 35,
     "serial_other_make": 0,
@@ -38,7 +45,10 @@ WEIGHTS = {
     "name": 10,
     "ip": 10,
 }
-STRONG_KEYS = {"hardware_uuid", "serial"}
+STRONG_KEYS = {"hardware_uuid", "serial", "entra_device_id"}
+# Families that may corroborate an Entra device ID match (IP is never enough).
+CORROBORATING_FAMILIES = {"hostname", "mac", "serial"}
+LIVE_LINKS = (SourceLink.Status.ACTIVE, SourceLink.Status.STALE)
 CONFLICTING_KEYS = {"serial_other_make"}
 CATEGORY_BONUS = 10
 # One fact can hit several keys (a hostname matches both hostname rows and the
@@ -122,6 +132,23 @@ def find_matches(instance, normalized: dict, *, exclude_asset_ids=()) -> MatchRe
             .values_list("asset_id", flat=True)
         )
         add(linked, "hardware_uuid", uuid)
+
+    entra = normalized.get("entra_device_id")
+    tenant = (getattr(instance, "tenant_id", "") or "").strip().lower()
+    if entra and tenant:
+        # Entra device IDs are only unique within a tenant: compare them only with
+        # sources configured for the same tenant.
+        linked = (
+            SourceLink.objects.filter(
+                asset__in=live,
+                status__in=LIVE_LINKS,
+                instance__tenant_id__iexact=tenant,
+                last_observation__normalized__entra_device_id=entra,
+            )
+            .exclude(instance=instance, external_id=normalized["external_id"])
+            .values_list("asset_id", flat=True)
+        )
+        add(linked, "entra_device_id", entra)
 
     if macs := normalized.get("mac_addresses"):
         for mac in macs:
@@ -207,7 +234,8 @@ def find_matches(instance, normalized: dict, *, exclude_asset_ids=()) -> MatchRe
         result.rule = Rule.CONFLICT
         result.proposed_asset_id = None
         result.conflicts.append(
-            "Strong identifiers (serial or hardware UUID) point to different assets."
+            "Strong identifiers (serial, hardware UUID or Entra device ID) point to "
+            "different assets."
         )
         return result
 
@@ -234,11 +262,13 @@ def find_matches(instance, normalized: dict, *, exclude_asset_ids=()) -> MatchRe
         result.rule = Rule.CONFLICT if result.conflicts else Rule.STRONG
         # A strong key alone is not enough: manufacturer and class must be known and
         # agree. Unknown values leave the match for a reviewer.
-        result.auto_linkable = (
-            result.rule == Rule.STRONG
-            and winner["manufacturer_agrees"] is True
-            and winner["category_agrees"] is True
+        make_and_class = winner["manufacturer_agrees"] is True and winner["category_agrees"] is True
+        # ADR-014: a verified, unambiguous Entra device ID with nothing contradicting it
+        # and an independent identifier corroborating it.
+        entra_rule = any(k["key"] == "entra_device_id" for k in winner["keys"]) and bool(
+            _families(winner["keys"]) & CORROBORATING_FAMILIES
         )
+        result.auto_linkable = result.rule == Rule.STRONG and (make_and_class or entra_rule)
         return result
 
     clashing = [m for m in matches if any(k["key"] in CONFLICTING_KEYS for k in m["keys"])]
@@ -276,6 +306,19 @@ def _identifier_conflicts(instance, normalized: dict, asset) -> list:
         if known and uuid not in known:
             out.append(
                 "The source reports a hardware UUID that differs from the one other "
+                "sources report for this asset."
+            )
+    if entra := normalized.get("entra_device_id"):
+        known = {
+            str(u).lower()
+            for u in SourceLink.objects.filter(asset=asset, status__in=LIVE_LINKS)
+            .exclude(instance=instance, external_id=normalized["external_id"])
+            .values_list("last_observation__normalized__entra_device_id", flat=True)
+            if u
+        }
+        if known and entra not in known:
+            out.append(
+                "The source reports an Entra device ID that differs from the one other "
                 "sources report for this asset."
             )
     # One live record per device per source: a second active record from the same

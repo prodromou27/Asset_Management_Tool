@@ -48,7 +48,10 @@ const CAPABILITY_LABEL: Record<string, string> = {
   route_listing: 'API route listing',
   managed_devices: 'Managed device inventory (Graph v1.0)',
   detected_apps: 'Detected apps (not collected yet)',
-  permission_read_all: 'DeviceManagementManagedDevices.Read.All granted',
+  permission_read_all: 'Required read permission granted',
+  machines: 'Machines API (Defender for Endpoint)',
+  advanced_hunting: 'Advanced Hunting (not used)',
+  device_actions: 'Device actions (never used)',
 }
 // Shown in the permissions panel instead (a "yes" here is a problem, not a feature).
 const HIDDEN_CAPABILITIES = new Set(['excess_permissions'])
@@ -97,6 +100,18 @@ const PROFILES: Record<string, SourceProfile> = {
     schemeLabel: 'Authentication method',
     schemeHelp: 'Prefer a certificate uploaded to the app registration; use a client secret only if a certificate is not possible.',
     accountHint: 'Use a dedicated app registration with read-only application permissions.',
+  },
+  defender: {
+    url: 'https://api.security.microsoft.com',
+    token: 'file:defender-app.pem',
+    api: 'The connector only sends GET requests to /api/machines (Defender for Endpoint API, its own token audience).',
+    credentialLabel: 'Certificate reference',
+    credentialHelp:
+      'file:<name> holding the private key and the certificate (PEM) uploaded to the app registration. The certificate is never entered or shown here.',
+    schemeLabel: 'Authentication method',
+    schemeHelp: 'Defender integrations use certificate credentials only.',
+    accountHint:
+      'Use a dedicated app registration with only the WindowsDefenderATP application permission Machine.Read.All; never grant device actions.',
   },
 }
 const GENERIC: SourceProfile = {
@@ -528,8 +543,8 @@ function Permissions({ instance: i }: { instance: IntegrationInstance }) {
         ))}
       </ul>
       <p className="field__help">
-        Application permission with admin consent. Do not grant ReadWrite, PrivilegedOperations or other write
-        permissions: the connector only reads.
+        Application permission with admin consent. Do not grant write, device-action or privileged permissions: the
+        connector only reads.
       </p>
       {excess && (
         <p className="inline-note inline-note--warning" role="status">

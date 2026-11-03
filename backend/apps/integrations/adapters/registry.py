@@ -32,6 +32,9 @@ class Connector:
     uses_detail_refresh: bool = True
     # Defaults applied when an integration of this source is created.
     defaults: dict = field(default_factory=dict)
+    # Optional: store source facts kept apart from asset fields (e.g. security state),
+    # called after reconciliation as store_facts(instance, run, records, complete).
+    store_facts: Callable | None = None
 
 
 def _librenms() -> Connector:
@@ -64,26 +67,28 @@ def _endpoint_central() -> Connector:
     )
 
 
-def _intune() -> Connector:
-    from .intune import adapter
-    from .intune.auth import TokenProvider, make_credential
-    from .intune.client import GRAPH_BASE, REQUIRED_PERMISSION, GraphClient
+def _microsoft_client_factory(client_class, scope: str, user_agent: str) -> Callable:
+    """Entra client-credentials token provider + read-only client for one Microsoft API."""
 
-    def client_factory(
+    def factory(
         instance, secret, *, verify, timeout, max_retries, transport, sleep=None, **options
     ):
+        from .entra import TokenProvider, make_credential
+
         extra = {"sleep": sleep} if sleep else {}
         tokens = TokenProvider(
             instance.tenant_id,
             instance.client_id,
             make_credential(instance.auth_scheme, secret),
+            scope=scope,
+            user_agent=user_agent,
             timeout=timeout,
             max_retries=max_retries,
             verify=verify,
             transport=transport,
             **extra,
         )
-        return GraphClient(
+        return client_class(
             tokens,
             verify=verify,
             timeout=timeout,
@@ -93,6 +98,14 @@ def _intune() -> Connector:
             **options,
         )
 
+    return factory
+
+
+def _intune() -> Connector:
+    from .entra import GRAPH_SCOPE
+    from .intune import adapter
+    from .intune.client import GRAPH_BASE, REQUIRED_PERMISSION, GraphClient
+
     return Connector(
         code="intune",
         client_class=GraphClient,
@@ -101,7 +114,9 @@ def _intune() -> Connector:
         supports_evidence=False,
         test_connection=adapter.test_connection,
         make_adapter=adapter.IntuneAdapter,
-        client_factory=client_factory,
+        client_factory=_microsoft_client_factory(
+            GraphClient, GRAPH_SCOPE, "ITAM-Intune-Connector/1"
+        ),
         fixed_base_url=GRAPH_BASE,
         required_settings=("tenant_id", "client_id"),
         permissions=(REQUIRED_PERMISSION,),
@@ -113,7 +128,44 @@ def _intune() -> Connector:
     )
 
 
-_FACTORIES = {"librenms": _librenms, "endpoint_central": _endpoint_central, "intune": _intune}
+def _defender() -> Connector:
+    from .defender import adapter
+    from .defender.client import API_BASE, REQUIRED_PERMISSION, DefenderClient
+    from .entra import DEFENDER_SCOPE
+
+    return Connector(
+        code="defender",
+        client_class=DefenderClient,
+        # Certificate only: the task requires a certificate credential for Defender.
+        auth_schemes=("client_certificate",),
+        default_auth_scheme="client_certificate",
+        supports_evidence=False,
+        test_connection=adapter.test_connection,
+        make_adapter=adapter.DefenderAdapter,
+        client_factory=_microsoft_client_factory(
+            DefenderClient, DEFENDER_SCOPE, "ITAM-Defender-Connector/1"
+        ),
+        fixed_base_url=API_BASE,
+        required_settings=("tenant_id", "client_id"),
+        permissions=(REQUIRED_PERMISSION,),
+        uses_source_timezone=False,
+        uses_detail_refresh=False,
+        store_facts=adapter.store_security_states,
+        # docs/05: Defender daily. Published limit: 100 calls/minute, 1500/hour.
+        defaults={
+            "sync_interval_minutes": 1440,
+            "stale_after_hours": 168,
+            "requests_per_second": 1,
+        },
+    )
+
+
+_FACTORIES = {
+    "librenms": _librenms,
+    "endpoint_central": _endpoint_central,
+    "intune": _intune,
+    "defender": _defender,
+}
 _CACHE: dict[str, Connector] = {}
 
 

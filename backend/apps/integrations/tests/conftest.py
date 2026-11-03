@@ -399,3 +399,173 @@ def make_intune(site, server: FakeGraph, **extra):
 def intune(hq, live, graph, monkeypatch):
     monkeypatch.setenv("ITAM_INTEGRATION_INTUNE_SECRET", INTUNE_SECRET)
     return make_intune(hq, graph)
+
+
+# --- Microsoft Defender for Endpoint ------------------------------------------------------
+
+DEFENDER_FIXTURE = (
+    Path(__file__).resolve().parents[4] / "fixtures" / "defender" / "api" / "responses.json"
+)
+DEFENDER_HOST = "api.security.microsoft.com"
+DEFENDER_SCOPE = "https://api.securitycenter.microsoft.com/.default"
+MACHINE_ROLE = "Machine.Read.All"
+
+
+class FakeDefender:
+    """Entra token endpoint (Defender audience only) + GET /api/machines.
+
+    Pages honour $top/$skip; with `use_next_link` the fake returns @odata.nextLink
+    instead. `$filter=lastSeen gt <iso>` is applied. `overrides[key]` (key "token" or
+    "page<N>") works as in FakeGraph. Only GET reaches the API; only POST the token path."""
+
+    def __init__(self):
+        data = json.loads(DEFENDER_FIXTURE.read_text(encoding="utf-8"))
+        self.tenant_id = data["tenant_id"]
+        self.client_id = data["client_id"]
+        self.machines: list[dict] = data["machines"]
+        self.roles = [MACHINE_ROLE]
+        self.overrides: dict = {}
+        self.requests: list[httpx.Request] = []
+        self.token_forms: list[dict] = []
+        self.valid_tokens: set[str] = set()
+        self.use_next_link = False
+        self.next_link_base = f"https://{DEFENDER_HOST}/api/machines"
+        self.expires_in = 3599
+
+    def machine(self, n: int) -> dict:
+        return next(m for m in self.machines if m["id"].endswith(f"d{n:02d}"))
+
+    def remove(self, n: int) -> None:
+        self.machines[:] = [m for m in self.machines if not m["id"].endswith(f"d{n:02d}")]
+
+    def expire_tokens(self) -> None:
+        self.valid_tokens.clear()
+
+    _override = FakeGraph._override
+
+    def handler(self, request: httpx.Request) -> httpx.Response:
+        from urllib.parse import parse_qs
+
+        if request.url.host == LOGIN_HOST:
+            assert request.method == "POST", f"token endpoint got {request.method}"
+            assert request.url.path == f"/{self.tenant_id}/oauth2/v2.0/token"
+            form = {k: v[0] for k, v in parse_qs(request.content.decode()).items()}
+            assert form["scope"] == DEFENDER_SCOPE, form["scope"]  # not the Graph audience
+            self.token_forms.append(form)
+            if (response := self._override("token")) is not None:
+                return response
+            token = fake_jwt(self.roles, len(self.token_forms))
+            self.valid_tokens.add(token)
+            return httpx.Response(
+                200,
+                json={"token_type": "Bearer", "expires_in": self.expires_in, "access_token": token},
+            )
+
+        assert request.url.host == DEFENDER_HOST, f"request to {request.url.host}"
+        assert request.method == "GET", f"connector sent {request.method} to Defender"
+        assert request.url.path == "/api/machines", request.url.path
+        self.requests.append(request)
+        auth = request.headers.get("Authorization", "")
+        if not auth.startswith("Bearer ") or auth[7:] not in self.valid_tokens:
+            return httpx.Response(
+                401, json={"error": {"code": "Unauthorized", "message": "Token expired."}}
+            )
+        params = request.url.params
+        top = int(params.get("$top", 10000))
+        skip = int(params.get("$skip", 0))
+        page = skip // top + 1
+        if (response := self._override(f"page{page}")) is not None:
+            return response
+        rows = self.machines
+        if flt := params.get("$filter"):
+            assert flt.startswith("lastSeen gt "), flt
+            cutoff = flt.removeprefix("lastSeen gt ")
+            rows = [m for m in rows if (m.get("lastSeen") or "") > cutoff]
+        chunk = rows[skip : skip + top]
+        body = {
+            "@odata.context": f"https://{DEFENDER_HOST}/api/$metadata#Machines",
+            "value": copy.deepcopy(chunk),
+        }
+        if self.use_next_link and skip + top < len(rows):
+            body["@odata.nextLink"] = f"{self.next_link_base}?$top={top}&$skip={skip + top}"
+        return httpx.Response(200, json=body)
+
+    def pages(self) -> list[int]:
+        out = []
+        for r in self.requests:
+            top = int(r.url.params.get("$top", 10000))
+            out.append(int(r.url.params.get("$skip", 0)) // top + 1)
+        return out
+
+
+@pytest.fixture
+def defender_api(monkeypatch):
+    server = FakeDefender()
+    sleeps: list[float] = []
+    server.sleeps = sleeps
+    monkeypatch.setattr(
+        sync, "TRANSPORT_FACTORY", lambda instance: httpx.MockTransport(server.handler)
+    )
+    monkeypatch.setattr(sync, "SLEEP", sleeps.append)
+    return server
+
+
+def make_defender(site, server: FakeDefender, **extra):
+    values = {
+        "name": "Defender",
+        "source": DiscoverySource.objects.get(code="defender"),
+        "default_site": site,
+        "base_url": "https://api.security.microsoft.com",
+        "tenant_id": server.tenant_id,
+        "client_id": server.client_id,
+        "credential_ref": "file:defender-app.pem",
+        "auth_scheme": "client_certificate",
+        "live_access_approved": True,
+        "max_retries": 2,
+        "stale_after_hours": 168,
+        "requests_per_second": 1,
+    }
+    values.update(extra)
+    return IntegrationInstance.objects.create(**values)
+
+
+_CERT_PEM: list[str] = []
+
+
+def certificate_pem() -> str:
+    """One RSA key + self-signed certificate per test session (generation is slow)."""
+    if not _CERT_PEM:
+        from datetime import UTC, datetime, timedelta
+
+        from cryptography import x509
+        from cryptography.hazmat.primitives import hashes, serialization
+        from cryptography.hazmat.primitives.asymmetric import rsa
+        from cryptography.x509.oid import NameOID
+
+        key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+        name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "itam-defender-test")])
+        now = datetime.now(UTC)
+        cert = (
+            x509.CertificateBuilder()
+            .subject_name(name)
+            .issuer_name(name)
+            .public_key(key.public_key())
+            .serial_number(2)
+            .not_valid_before(now - timedelta(days=1))
+            .not_valid_after(now + timedelta(days=30))
+            .sign(key, hashes.SHA256())
+        )
+        key_pem = key.private_bytes(
+            serialization.Encoding.PEM,
+            serialization.PrivateFormat.PKCS8,
+            serialization.NoEncryption(),
+        ).decode()
+        _CERT_PEM.append(key_pem + cert.public_bytes(serialization.Encoding.PEM).decode())
+    return _CERT_PEM[0]
+
+
+@pytest.fixture
+def defender(hq, live, defender_api, settings, tmp_path):
+    (tmp_path / "defender-app.pem").write_text(certificate_pem(), encoding="utf-8")
+    settings.ITAM_SECRETS_DIR = str(tmp_path)
+    return make_defender(hq, defender_api)

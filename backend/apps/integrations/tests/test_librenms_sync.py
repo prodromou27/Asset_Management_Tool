@@ -384,11 +384,11 @@ def test_queue_refusals(lnms, changes, code):
 def test_sources_without_adapter_cannot_sync(hq, live):
     from apps.reconciliation.tests.conftest import make_instance
 
-    defender = make_instance(
-        "Defender", "defender", hq, live_access_approved=True, base_url="https://api.example"
+    m365 = make_instance(
+        "M365", "m365", hq, live_access_approved=True, base_url="https://graph.example"
     )
     with pytest.raises(sync.SyncRefused) as exc:
-        sync.queue_sync(defender, mode="full", triggered_by="test")
+        sync.queue_sync(m365, mode="full", triggered_by="test")
     assert exc.value.code == "NO_ADAPTER"
 
 

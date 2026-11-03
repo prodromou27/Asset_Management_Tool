@@ -26,6 +26,7 @@ import { Tabs } from '../../shared/ui/Tabs'
 import { EvidencePanel } from '../discovery/EvidencePanel'
 import { FieldEvidenceDrawer } from '../discovery/FieldEvidenceDrawer'
 import { NetworkEvidencePanel } from '../discovery/NetworkEvidencePanel'
+import { SecurityPanel } from '../discovery/SecurityPanel'
 import { CustomFieldInputs } from './CustomFieldInputs'
 import { toApiValues, type CustomValues } from './customValues'
 import {
@@ -160,7 +161,10 @@ export function AssetDetailPage() {
             content: <Network asset={data} evidence={can(PERMISSIONS.discoveryView)} />,
           },
           ...(can(PERMISSIONS.discoveryView)
-            ? [{ id: 'evidence', label: 'Source evidence', content: <EvidencePanel asset={data} /> }]
+            ? [
+                { id: 'evidence', label: 'Source evidence', content: <EvidencePanel asset={data} /> },
+                { id: 'security', label: 'Security', content: <SecurityPanel assetId={data.id} /> },
+              ]
             : []),
           { id: 'history', label: 'History', content: <History assetId={data.id} /> },
         ]}

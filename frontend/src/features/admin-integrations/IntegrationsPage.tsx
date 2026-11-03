@@ -117,9 +117,12 @@ export function IntegrationsPage() {
 }
 
 // Cloud sources whose endpoint is fixed by the connector (the server enforces it too).
-const FIXED_ENDPOINT: Record<string, string> = { intune: 'https://graph.microsoft.com' }
+const FIXED_ENDPOINT: Record<string, string> = {
+  intune: 'https://graph.microsoft.com',
+  defender: 'https://api.security.microsoft.com',
+}
 // Per-source default for "stale after"; Intune devices are often offline for days.
-const STALE_DEFAULT: Record<string, number> = { intune: 168 }
+const STALE_DEFAULT: Record<string, number> = { intune: 168, defender: 168 }
 
 function IntegrationDialog({
   instance,

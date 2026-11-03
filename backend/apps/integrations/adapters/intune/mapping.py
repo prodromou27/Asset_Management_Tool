@@ -160,6 +160,7 @@ def device_to_record(row: dict, *, tenant_id: str, fetched_at: str) -> tuple[dic
         "manufacturer": maker,
         "model": model,
         "serial": _text(get("serialnumber")),
+        "entra_device_id": entra_id,
         "hostname": hostname,
         "interfaces": interfaces,
         "os_name": os_name,

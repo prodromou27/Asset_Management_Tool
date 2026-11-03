@@ -59,6 +59,13 @@ export interface paths {
   "/api/v1/assets/{id}/restore/": {
     post: operations["assets_restore_create"];
   };
+  "/api/v1/assets/{id}/security/": {
+    /**
+     * @description Security observations of an asset's linked sources (Defender for Endpoint).
+     * Requires discovery.view and site access to the asset.
+     */
+    get: operations["assets_security_list"];
+  };
   "/api/v1/audit/events/": {
     get: operations["audit_events_list"];
   };
@@ -691,6 +698,47 @@ export interface components {
      * @enum {string}
      */
     DiscoverySourceKindEnum: "network" | "endpoint" | "security" | "directory" | "import";
+    EndpointSecurityState: {
+      /** Format: uuid */
+      id: string;
+      instance: components["schemas"]["SecuritySourceRef"];
+      external_id: string;
+      link_status: string;
+      tenant_id: string;
+      entra_device_id: string;
+      computer_dns_name: string;
+      os_platform: string;
+      os_version: string;
+      onboarding_status: string;
+      health_status: string;
+      exposure_level: string;
+      risk_score: string;
+      device_tags: readonly string[];
+      machine_group: string;
+      /** Format: date-time */
+      first_seen_at: string | null;
+      /** Format: date-time */
+      last_seen_at: string | null;
+      /** Format: date-time */
+      last_synced_at: string;
+      /** Format: date-time */
+      source_last_success_at: string | null;
+      /** Format: date-time */
+      missing_since: string | null;
+      /** Format: date-time */
+      changed_at: string | null;
+      /**
+       * @description fresh | stale. Stale when the source has not synchronised successfully within
+       * its threshold, the machine was missing from the last complete listing, the link is
+       * stale, or the device has not reported to the source within the threshold.
+       */
+      freshness: string;
+      /** Format: uuid */
+      observation_id: string | null;
+      original: {
+        [key: string]: unknown;
+      };
+    };
     /**
      * @description * `manual` - Manual
      * * `librenms` - LibreNMS
@@ -1423,6 +1471,12 @@ export interface components {
       modified_at: string;
       modified_by: string | null;
     };
+    SecuritySourceRef: {
+      /** Format: uuid */
+      id: string;
+      name: string;
+      source: string;
+    };
     Site: {
       /** Format: uuid */
       id: string;
@@ -2079,6 +2133,24 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["AssetDetail"];
+        };
+      };
+    };
+  };
+  /**
+   * @description Security observations of an asset's linked sources (Defender for Endpoint).
+   * Requires discovery.view and site access to the asset.
+   */
+  assets_security_list: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["EndpointSecurityState"][];
         };
       };
     };

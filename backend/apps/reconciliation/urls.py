@@ -2,6 +2,7 @@ from django.urls import path
 
 from apps.integrations import views as integration_views
 from apps.network import views as network_views
+from apps.security import views as security_views
 
 from . import views
 
@@ -61,6 +62,11 @@ asset_evidence_urlpatterns = [
         "<uuid:pk>/network-evidence/",
         network_views.AssetNetworkEvidenceView.as_view(),
         name="asset-network-evidence",
+    ),
+    path(
+        "<uuid:pk>/security/",
+        security_views.AssetSecurityView.as_view(),
+        name="asset-security",
     ),
 ]
 

@@ -17,7 +17,7 @@ from django.utils import timezone
 from apps.assets.models import Asset, AssetCategory, FieldLock
 from apps.audit.models import AuditEvent
 from apps.integrations import sync
-from apps.integrations.adapters.intune import auth
+from apps.integrations.adapters import entra as auth
 from apps.integrations.adapters.intune.client import GraphClient
 from apps.integrations.adapters.intune.mapping import device_to_record, device_type, parse_time
 from apps.integrations.models import IntegrationInstance, SyncRun

@@ -1,9 +1,13 @@
-"""Microsoft Entra OAuth 2.0 client-credentials tokens for Microsoft Graph.
+"""Microsoft Entra OAuth 2.0 client-credentials tokens (shared by the Microsoft connectors).
 
 The application authenticates as itself (application permissions, no user). The only
-non-GET request the Intune connector makes is this token request: a form POST to the
+non-GET request a Microsoft connector makes is this token request: a form POST to the
 fixed Entra token endpoint ``https://login.microsoftonline.com/{tenant}/oauth2/v2.0/token``.
-Graph itself only ever receives GET (adapters/http.py).
+The resource APIs only ever receive GET (adapters/http.py).
+
+Each connector passes the documented scope of its own API: Microsoft Graph
+(``https://graph.microsoft.com/.default``) for Intune, the Defender for Endpoint API
+(``https://api.securitycenter.microsoft.com/.default``) for Defender.
 
 Credentials, in order of preference:
 - ``client_certificate``: a PEM holding the unencrypted RSA private key and the
@@ -26,12 +30,13 @@ import uuid
 
 import httpx
 
-from ..base import AuthError, SourceError, Unavailable
+from .base import AuthError, SourceError, Unavailable
 
 logger = logging.getLogger(__name__)
 
 LOGIN_HOST = "login.microsoftonline.com"
 GRAPH_SCOPE = "https://graph.microsoft.com/.default"
+DEFENDER_SCOPE = "https://api.securitycenter.microsoft.com/.default"
 REFRESH_MARGIN = 300  # seconds before expiry at which a cached token is renewed
 ASSERTION_LIFETIME = 600
 MAX_RETRY_AFTER = 120
@@ -166,7 +171,7 @@ def make_credential(kind: str, secret: str):
 
 
 class TokenProvider:
-    """Caches one Graph access token and renews it shortly before it expires."""
+    """Caches one access token for one scope and renews it shortly before it expires."""
 
     def __init__(
         self,
@@ -174,6 +179,8 @@ class TokenProvider:
         client_id: str,
         credential,
         *,
+        scope: str = GRAPH_SCOPE,
+        user_agent: str = "ITAM-Entra-Connector/1",
         timeout: float = 30,
         max_retries: int = 3,
         verify: bool | str = True,
@@ -187,6 +194,9 @@ class TokenProvider:
         self.tenant_id = tenant_id
         self.client_id = client_id
         self.endpoint = f"https://{LOGIN_HOST}/{tenant_id}/oauth2/v2.0/token"
+        if scope not in (GRAPH_SCOPE, DEFENDER_SCOPE):
+            raise ValueError(f"Unsupported token scope {scope!r}")
+        self.scope = scope
         self._credential = credential
         self._max_retries = max_retries
         self._sleep = sleep
@@ -199,11 +209,14 @@ class TokenProvider:
             verify=verify if verify is not False else True,
             follow_redirects=False,
             transport=transport,
-            headers={"Accept": "application/json", "User-Agent": "ITAM-Intune-Connector/1"},
+            headers={"Accept": "application/json", "User-Agent": user_agent},
         )
 
     def __repr__(self):
-        return f"TokenProvider(tenant={self.tenant_id!r}, client={self.client_id!r})"
+        return (
+            f"TokenProvider(tenant={self.tenant_id!r}, client={self.client_id!r}, "
+            f"scope={self.scope!r})"
+        )
 
     def close(self) -> None:
         self._client.close()
@@ -223,7 +236,7 @@ class TokenProvider:
         while True:
             form = {
                 "client_id": self.client_id,
-                "scope": GRAPH_SCOPE,
+                "scope": self.scope,
                 "grant_type": "client_credentials",
                 **self._credential.form(self.client_id, self.endpoint),
             }

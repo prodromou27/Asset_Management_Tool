@@ -13,8 +13,8 @@ from urllib.parse import urlparse
 import httpx
 
 from ..base import AuthError, SourceError, UnsafeTarget
+from ..entra import TokenProvider
 from ..http import ReadOnlyClient
-from .auth import TokenProvider
 
 GRAPH_BASE = "https://graph.microsoft.com"
 API_VERSION = "/v1.0"
@@ -40,15 +40,21 @@ def _graph_error(response: httpx.Response) -> tuple[str, str]:
 
 
 class GraphClient(ReadOnlyClient):
+    """Read-only client for a Microsoft API with Entra bearer tokens. Subclasses (Defender)
+    change the fixed host, path prefix, labels and required permission."""
+
+    base = GRAPH_BASE
     api_prefix = API_VERSION
     user_agent = "ITAM-Intune-Connector/1 (read-only)"
     source_label = "Microsoft Graph"
-    # Continuations are allowed only for these collection paths (after the version).
+    required_permission = REQUIRED_PERMISSION
+    license_hint = "and the tenant needs an active Intune license"
+    # Continuations are allowed only for these collection paths (after the prefix).
     continuation_paths = ("/deviceManagement/managedDevices",)
 
     def __init__(self, tokens: TokenProvider, **kwargs):
         kwargs.pop("auth_scheme", None)
-        super().__init__(GRAPH_BASE, "", auth_scheme="bearer", **kwargs)
+        super().__init__(self.base, "", auth_scheme="bearer", **kwargs)
         self.tokens = tokens
 
     def close(self) -> None:
@@ -70,10 +76,10 @@ class GraphClient(ReadOnlyClient):
     def check_continuation(self, url: str) -> str:
         super().check_continuation(url)
         path = urlparse(url).path
-        if path not in {f"{API_VERSION}{p}" for p in self.continuation_paths}:
+        if path not in {f"{self.api_prefix}{p}" for p in self.continuation_paths}:
             raise UnsafeTarget(
-                "Microsoft Graph returned a continuation link for an unexpected resource; "
-                "it was not followed."
+                f"{self.source_label} returned a continuation link for an unexpected "
+                "resource; it was not followed."
             )
         return url
 
@@ -83,25 +89,25 @@ class GraphClient(ReadOnlyClient):
             code, _ = _graph_error(response)
             detail = f"HTTP 401, {code}" if code else "HTTP 401"
             return AuthError(
-                f"Microsoft Graph rejected the access token ({detail}). Check the app "
+                f"{self.source_label} rejected the access token ({detail}). Check the app "
                 "registration and that admin consent was granted."
             )
         if status == 403:
             code, _ = _graph_error(response)
             return AuthError(
-                f"Microsoft Graph refused access (HTTP 403{f', {code}' if code else ''}). The "
-                f"application needs the {REQUIRED_PERMISSION} application permission with admin "
-                "consent, and the tenant needs an active Intune license."
+                f"{self.source_label} refused access (HTTP 403{f', {code}' if code else ''}). "
+                f"The application needs the {self.required_permission} application permission "
+                f"with admin consent, {self.license_hint}."
             )
         if status == 400:
             code, message = _graph_error(response)
             return InvalidQuery(
-                f"Microsoft Graph rejected the request (HTTP 400{f', {code}' if code else ''}"
+                f"{self.source_label} rejected the request (HTTP 400{f', {code}' if code else ''}"
                 f"{f': {message}' if message else ''})."
             )
         result = super()._handle(response, url)
         if isinstance(result, SourceError) and status not in (404, 429) and status < 500:
             code, message = _graph_error(response)
             if code:
-                return SourceError(f"Microsoft Graph error {code}: {message or 'no detail'}")
+                return SourceError(f"{self.source_label} error {code}: {message or 'no detail'}")
         return result

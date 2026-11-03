@@ -93,6 +93,7 @@ export const RUN_PHASE: Record<string, string> = {
   enrichment: 'Reading device details',
   reconciliation: 'Reconciling with assets',
   evidence: 'Reading FDB and neighbour evidence',
+  security: 'Storing security observations',
   done: 'Finished',
   failed: 'Stopped',
 }

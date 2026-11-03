@@ -127,6 +127,14 @@ scripts/compose.sh dev exec api python manage.py load_observations \
 - Stored per device: Intune managed device ID (external ID), Entra device ID, tenant, device name, manufacturer, model, serial, OS and version, enrollment type and time, compliance, management agent, ownership and registration state, Wi-Fi MAC. User names, e-mail addresses and phone identifiers are not requested.
 - Matching follows the shared rules: Intune gives no chassis type, so only unambiguous models (for example MacBook, Latitude, EliteDesk, virtual machines) get a category hint, and devices without one are never linked automatically. A second active Intune record for an already linked asset (re-enrollment) becomes a conflict candidate. Sanitized fixtures and scenarios: `fixtures/intune/graph/README.md`.
 
+### Microsoft Defender for Endpoint connector (Task 009, Beta — live access off)
+
+- Reads only `GET https://api.security.microsoft.com/api/machines` with a token for the Defender for Endpoint API (`https://api.securitycenter.microsoft.com/.default`). Pages with `$top`/`$skip` or `@odata.nextLink`; incremental runs filter on `lastSeen`. Never calls device actions (isolation, scans, quarantine, live response, offboarding) or Advanced Hunting.
+- **App registration (DEC-16):** single-tenant Entra application with only the WindowsDefenderATP **application** permission `Machine.Read.All` and admin consent, authenticating with a **certificate** (PEM with the private key and certificate mounted under `/run/secrets`, referenced as `file:<name>`). Client secrets are not accepted for Defender. The connection test and every sync warn about any device-action or write permission in the token.
+- Throttling stays under the published limits (one request per 0.6 s; a run stops before 1,400 requests in an hour) and honours Retry-After.
+- Matching: the Entra device ID links a Defender machine to the asset of an Intune device from the **same tenant** when a hostname or MAC corroborates it and nothing conflicts (ADR-014); otherwise it is a review candidate. Hostname or IP alone never links.
+- Security facts (onboarding, sensor health, exposure, risk, tags, first/last seen, original values) are stored apart from asset fields and shown on the asset's **Security** tab (requires `discovery.view` and site access). "Last report received" is not an online status, and a machine missing from Defender's list is flagged, never treated as deleted. Sanitized fixtures: `fixtures/defender/api/README.md`.
+
 After changing an API serializer, regenerate the contract: `cd backend && uv run python manage.py spectacular --file ../frontend/src/shared/api/openapi.yaml`, then `cd frontend && pnpm run gen:api`. CI fails on drift.
 
 Dev ports are bound to 127.0.0.1 only. Stop with `scripts/compose.sh dev down` (add `-v` only to discard the local PostgreSQL volume).

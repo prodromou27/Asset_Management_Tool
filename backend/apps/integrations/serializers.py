@@ -218,7 +218,7 @@ class IntegrationInstanceWriteSerializer(serializers.Serializer):
         return self.validate_credential_ref(value)
 
     def validate_tenant_id(self, value):
-        from .adapters.intune.auth import valid_tenant
+        from .adapters.entra import valid_tenant
 
         value = value.strip()
         if value and not valid_tenant(value):
@@ -229,7 +229,7 @@ class IntegrationInstanceWriteSerializer(serializers.Serializer):
         return value
 
     def validate_client_id(self, value):
-        from .adapters.intune.auth import valid_client_id
+        from .adapters.entra import valid_client_id
 
         value = value.strip()
         if value and not valid_client_id(value):

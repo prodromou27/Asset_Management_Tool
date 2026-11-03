@@ -184,6 +184,11 @@ def _hostname(value, warnings) -> str | None:
         return None
 
 
+def _entra_id(value) -> str | None:
+    uuid_value = normalize_uuid(value)
+    return None if uuid_value in (None, "00000000-0000-0000-0000-000000000000") else uuid_value
+
+
 def _observed_at(value) -> str:
     if not isinstance(value, str):
         raise RecordError("observed_at is required (RFC 3339 with offset).")
@@ -268,6 +273,9 @@ def normalize_record(record, *, site_id: str, default_vrf: str = "") -> dict:
         # Strong identity needs both: a serial is only unique per manufacturer.
         "serial_verified": bool(serial and manufacturer),
         "hardware_uuid": normalize_uuid(record.get("hardware_uuid")),
+        # Microsoft Entra device object ID (Intune azureADDeviceId, Defender aadDeviceId).
+        # Tenant-scoped: matching only compares it between instances of the same tenant.
+        "entra_device_id": _entra_id(record.get("entra_device_id")),
         "hostnames": hostnames,
         "short_hostnames": sorted({h.split(".")[0] for h in hostnames}),
         "interfaces": interfaces,

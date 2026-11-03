@@ -5,6 +5,7 @@ import type {
   Candidate,
   ConnectionTest,
   DiscoverySource,
+  EndpointSecurityState,
   FieldAuthorityPolicy,
   FieldConflict,
   IntegrationInstance,
@@ -31,6 +32,7 @@ export const discoveryKeys = {
   integrations: ['integrations'] as const,
   integration: (id: string) => ['integrations', id] as const,
   networkEvidence: (assetId: string) => ['assets', 'network-evidence', assetId] as const,
+  security: (assetId: string) => ['assets', 'security', assetId] as const,
   runs: (id: string) => ['integrations', id, 'runs'] as const,
   evidence: (assetId: string) => ['assets', 'evidence', assetId] as const,
   authority: ['discovery', 'field-authority'] as const,
@@ -103,6 +105,8 @@ export const setLiveAccess = (id: string, approved: boolean, reason: string) =>
   apiRequest<IntegrationInstance>('POST', `/integrations/${id}/live-access/`, { body: { approved, reason } })
 export const fetchNetworkEvidence = (assetId: string) =>
   apiGet<NeighborEvidence[]>(`/assets/${assetId}/network-evidence/`)
+export const fetchSecurityStates = (assetId: string) =>
+  apiGet<EndpointSecurityState[]>(`/assets/${assetId}/security/`)
 export const fetchFieldAuthority = () => apiGet<FieldAuthorityPolicy>('/discovery/field-authority/')
 export const updateFieldAuthority = (version: number, precedence: Record<string, string[]>) =>
   apiRequest<FieldAuthorityPolicy>('PATCH', '/discovery/field-authority/', {
