@@ -1,6 +1,6 @@
 # Current Task: 011 | Reconciliation review and category reclassification
 
-Status: **Complete (workstation-verified; CI pending at the time of writing)**
+Status: **Complete (CI run 41739915106 green)**
 (2026-11-04, branch DEV).
 
 **Read:** AGENTS.md, docs/00, 01 (Reclassify, Reconcile discovery, dedicated queues), 03, 07,
@@ -110,6 +110,10 @@ Changed:
 - Ruff check and format are clean; no migration drift; the OpenAPI schema validates with
   `--fail-on-warn` and matches the committed file.
 - Frontend: typecheck, oxlint, **109 tests** (9 new) and the build all pass.
+- GitHub CI run 41739915106 on `7698c5c` (PostgreSQL 16 + Redis 7): backend **566 passed,
+  0 skipped**; migrations applied and reversed (including `quality` and `reconciliation`);
+  OpenAPI drift check; frontend 109 tests; Compose config and production image builds
+  pass.
 - Not run: Docker stack, Playwright, browser review at 1440×900 and 390×844.
 
 **Still open from earlier tasks (need decisions or outside input):**
