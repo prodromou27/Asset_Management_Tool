@@ -21,6 +21,8 @@ x-backend-env: &backend-env
   ITAM_ALLOW_LIVE_INTEGRATIONS: ${ITAM_ALLOW_LIVE_INTEGRATIONS:-false}
   # Referenced from the UI as env:ITAM_INTEGRATION_LIBRENMS_TOKEN; never stored in the DB.
   ITAM_INTEGRATION_LIBRENMS_TOKEN: ${ITAM_INTEGRATION_LIBRENMS_TOKEN:-}
+  # Referenced as env:ITAM_INTEGRATION_ENDPOINT_CENTRAL_KEY (read-only API key).
+  ITAM_INTEGRATION_ENDPOINT_CENTRAL_KEY: ${ITAM_INTEGRATION_ENDPOINT_CENTRAL_KEY:-}
 
 x-backend-depends: &backend-depends
   postgres:

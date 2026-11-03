@@ -111,6 +111,13 @@ scripts/compose.sh dev exec api python manage.py load_observations \
 - **Live access is disabled.** It requires both `ITAM_ALLOW_LIVE_INTEGRATIONS=true` on the host *and* an approval recorded on the integration. Do not enable either until the Docker-host verification has passed and a read-only LibreNMS API account is approved (DEC-05). Then put the token in `.env` as `ITAM_INTEGRATION_LIBRENMS_TOKEN` (or a file in `ITAM_SECRETS_DIR`) and reference it as `env:ITAM_INTEGRATION_LIBRENMS_TOKEN`; the token is never entered in, stored by, or shown in the application.
 - Scheduled syncs run from Celery beat (`integrations.dispatch_due_syncs`, every 5 minutes, honouring each integration's interval). Sanitized fixtures and scenarios: `fixtures/librenms/README.md`.
 
+### Endpoint Central connector (Task 007, Beta — live access off)
+
+- Same integration page and gates as LibreNMS. Configure the verified HTTPS listener (for example `https://endpointcentral.example:8383`), a read-only API key reference (`env:ITAM_INTEGRATION_ENDPOINT_CENTRAL_KEY`) and the header format (raw `Authorization` by default).
+- The connection test detects the API generation (`/dcapi` first, then `/api/1.4`) and the build number. Syncs read the paginated computer list and, only for new or rescanned computers, hardware, OS and network adapter details. Installed software is not read yet (Task 016).
+- Laptops, desktops, servers and virtual machines are proposed in the Discovery queue with category hints; nothing is merged on hostname, IP or MAC. Sanitized fixtures and scenarios: `fixtures/endpoint_central/README.md`.
+- Do not enable live access until the Docker-host verification has passed and DEC-06 (read-only key, build, sample responses) is approved.
+
 After changing an API serializer, regenerate the contract: `cd backend && uv run python manage.py spectacular --file ../frontend/src/shared/api/openapi.yaml`, then `cd frontend && pnpm run gen:api`. CI fails on drift.
 
 Dev ports are bound to 127.0.0.1 only. Stop with `scripts/compose.sh dev down` (add `-v` only to discard the local PostgreSQL volume).

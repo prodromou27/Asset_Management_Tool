@@ -50,6 +50,7 @@ class IntegrationInstance(models.Model):
     class AuthScheme(models.TextChoices):
         BEARER = "bearer", "Authorization: Bearer"
         X_AUTH_TOKEN = "x_auth_token", "X-Auth-Token header"
+        AUTHORIZATION = "authorization", "Authorization: <token>"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     source = models.ForeignKey(DiscoverySource, on_delete=models.PROTECT, related_name="instances")

@@ -409,6 +409,7 @@ export function makeIntegration(overrides: Partial<IntegrationInstance> = {}): I
     source_timezone: 'UTC',
     last_evidence_at: null,
     has_adapter: false,
+    connector: null,
     live_integrations_enabled: false,
     live_access_approved: false,
     live_access_approved_by: null,

@@ -39,11 +39,49 @@ const CAPABILITY_LABEL: Record<string, string> = {
   device_ports: 'Ports per device',
   inventory: 'Hardware inventory',
   fdb: 'MAC table (FDB)',
+  computers: 'Computer list',
+  computer_details: 'Hardware, OS and network details',
+  software: 'Installed software (not collected yet)',
+  route_dcapi: 'Inventory API: dcapi (current)',
+  route_api_1_4: 'Inventory API: api/1.4 (older builds)',
   links: 'LLDP/CDP neighbours',
   route_listing: 'API route listing',
 }
 
 const ACTIVE: SyncRun['status'][] = ['queued', 'running']
+
+const AUTH_LABEL: Record<string, string> = {
+  bearer: 'Authorization: Bearer <token>',
+  x_auth_token: 'X-Auth-Token: <token>',
+  authorization: 'Authorization: <token>',
+}
+
+interface SourceProfile {
+  url: string
+  token: string
+  api: string
+  schemeHelp?: string
+}
+
+const PROFILES: Record<string, SourceProfile> = {
+  librenms: {
+    url: 'https://librenms.example',
+    token: 'env:ITAM_INTEGRATION_LIBRENMS_TOKEN',
+    api: 'The connector only sends GET requests to /api/v0.',
+    schemeHelp: 'Use X-Auth-Token if your LibreNMS version rejects Bearer.',
+  },
+  endpoint_central: {
+    url: 'https://endpointcentral.example:8383',
+    token: 'env:ITAM_INTEGRATION_ENDPOINT_CENTRAL_KEY',
+    api: 'Use the verified HTTPS listener and port. The connector only sends GET requests to the inventory API (dcapi or api/1.4, detected automatically).',
+    schemeHelp: 'On-premises API keys are normally sent as the raw Authorization header value.',
+  },
+}
+const GENERIC: SourceProfile = {
+  url: 'https://',
+  token: 'env:ITAM_INTEGRATION_<NAME>',
+  api: 'The connector only sends GET requests.',
+}
 
 export function IntegrationDetailPage() {
   const { id = '' } = useParams()
@@ -131,8 +169,8 @@ export function IntegrationDetailPage() {
       {i.has_adapter && blocked && <p className="inline-note inline-note--warning">{blocked}</p>}
       {i.source.availability === 'beta' && (
         <p className="inline-note">
-          Beta: tested against sanitized fixtures only. Validate against your LibreNMS version with a read-only
-          account before relying on scheduled synchronisation.
+          Beta: tested against sanitized fixtures only. Validate against your {i.source.name} version with a
+          read-only account before relying on scheduled synchronisation.
         </p>
       )}
       {syncMutation.error && <p className="field__error">{syncMutation.error.message}</p>}
@@ -140,7 +178,7 @@ export function IntegrationDetailPage() {
       {test && (
         <p className={test.ok ? 'inline-success' : 'field__error'} role="status">
           {test.message}
-          {test.ok && test.version && ` LibreNMS ${test.version}.`}
+          {test.ok && test.version && ` ${i.source.name} ${test.version}.`}
         </p>
       )}
 
@@ -211,7 +249,7 @@ export function IntegrationDetailPage() {
 
 function gateMessage(i: IntegrationInstance): string | null {
   if (!i.live_integrations_enabled) {
-    return 'Live integrations are disabled for this deployment (ITAM_ALLOW_LIVE_INTEGRATIONS). Nothing will contact LibreNMS until an operator enables them on the host.'
+    return `Live integrations are disabled for this deployment (ITAM_ALLOW_LIVE_INTEGRATIONS). Nothing will contact ${i.source.name} until an operator enables them on the host.`
   }
   if (!i.live_access_approved) return 'Record live-access approval before the first connection.'
   if (!i.is_enabled) return 'The integration is disabled.'
@@ -281,7 +319,7 @@ function Health({ instance: i }: { instance: IntegrationInstance }) {
           <dd>{i.consecutive_failures}</dd>
         </div>
         <div className="meta-grid__pair">
-          <dt>LibreNMS version</dt>
+          <dt>{i.source.name} version</dt>
           <dd>{i.source_software_version || 'Unknown (run a connection test)'}</dd>
         </div>
         <div className="meta-grid__pair">
@@ -291,10 +329,12 @@ function Health({ instance: i }: { instance: IntegrationInstance }) {
             {i.last_test_message && <span className="cell-secondary">{i.last_test_message}</span>}
           </dd>
         </div>
-        <div className="meta-grid__pair">
-          <dt>Last FDB/neighbour pass</dt>
-          <dd>{formatDateTime(i.last_evidence_at)}</dd>
-        </div>
+        {i.connector?.supports_evidence && (
+          <div className="meta-grid__pair">
+            <dt>Last FDB/neighbour pass</dt>
+            <dd>{formatDateTime(i.last_evidence_at)}</dd>
+          </div>
+        )}
       </dl>
     </section>
   )
@@ -404,8 +444,8 @@ function LiveAccessPanel({ instance: i, onChanged }: { instance: IntegrationInst
         </dl>
       ) : (
         <p className="field__help">
-          No request reaches LibreNMS until access is approved here and live integrations are enabled on the host.
-          Use a read-only LibreNMS API account.
+          No request reaches {i.source.name} until access is approved here and live integrations are enabled on
+          the host. Use a read-only {i.source.name} API account.
         </p>
       )}
       <TextAreaField
@@ -481,6 +521,7 @@ function ConfigurationForm({
   saved: boolean
   onSaved: () => Promise<void>
 }) {
+  const profile = PROFILES[i.source.code] ?? GENERIC
   const [baseUrl, setBaseUrl] = useState(i.base_url)
   const [credential, setCredential] = useState(i.credential_ref)
   const [scheme, setScheme] = useState(i.auth_scheme)
@@ -545,22 +586,23 @@ function ConfigurationForm({
       >
         {summary && <p className="field__error">{summary}</p>}
         <h3 className="subsection-title">Connection</h3>
+        {/* Profile texts are per source; unknown sources get generic wording. */}
         <TextField
           label="Base URL"
           name="cfg_url"
           className="field__control mono"
-          placeholder="https://librenms.example"
+          placeholder={profile.url}
           value={baseUrl}
           onChange={(e) => setBaseUrl(e.target.value)}
           error={errors.base_url}
-          help="HTTPS with a valid certificate. The connector only sends GET requests to /api/v0."
+          help={`HTTPS with a valid certificate. ${profile.api}`}
         />
         <div className="form-grid">
           <TextField
             label="API token reference"
             name="cfg_credential"
             className="field__control mono"
-            placeholder="env:ITAM_INTEGRATION_LIBRENMS_TOKEN"
+            placeholder={profile.token}
             value={credential}
             onChange={(e) => setCredential(e.target.value)}
             error={errors.credential_ref}
@@ -569,14 +611,14 @@ function ConfigurationForm({
           <SelectField
             label="Authentication header"
             name="cfg_scheme"
-            options={[
-              { value: 'bearer', label: 'Authorization: Bearer' },
-              { value: 'x_auth_token', label: 'X-Auth-Token' },
-            ]}
+            options={(i.connector?.auth_schemes ?? [i.auth_scheme]).map((value) => ({
+              value,
+              label: AUTH_LABEL[value] ?? value,
+            }))}
             value={scheme}
             onChange={(e) => setScheme(e.target.value as IntegrationInstance['auth_scheme'])}
             error={errors.auth_scheme}
-            help="Use X-Auth-Token if your LibreNMS version rejects Bearer."
+            help={profile.schemeHelp}
           />
         </div>
         <TextField
@@ -587,26 +629,26 @@ function ConfigurationForm({
           value={caBundle}
           onChange={(e) => setCaBundle(e.target.value)}
           error={errors.ca_bundle_ref}
-          help="Only needed when LibreNMS uses an internal CA. Certificate validation cannot be turned off."
+          help={`Only needed when ${i.source.name} uses an internal CA. Certificate validation cannot be turned off.`}
         />
         <div className="form-grid">
           {numberField('timeout_seconds', 'Timeout (seconds)')}
           {numberField('max_retries', 'Retries')}
-          {numberField('requests_per_second', 'Requests per second', 'Rate limit towards LibreNMS.')}
+          {numberField('requests_per_second', 'Requests per second', `Rate limit towards ${i.source.name}.`)}
         </div>
         <h3 className="subsection-title">Schedule</h3>
         <div className="form-grid">
           {numberField('sync_interval_minutes', 'Sync every (minutes)')}
-          {numberField('evidence_interval_hours', 'FDB/neighbours every (hours)')}
+          {i.connector?.supports_evidence && numberField('evidence_interval_hours', 'FDB/neighbours every (hours)')}
           {numberField('enrichment_max_age_hours', 'Re-read device details after (hours)')}
         </div>
         <TextField
-          label="LibreNMS server time zone"
+          label="Source server time zone"
           name="cfg_tz"
           value={timezone}
           onChange={(e) => setTimezone(e.target.value)}
           error={errors.source_timezone}
-          help="LibreNMS reports times without a zone; for example UTC or Europe/Nicosia."
+          help="Used for times the source reports without a zone; for example UTC or Europe/Nicosia."
         />
         <CheckboxGroup
           legend="State"

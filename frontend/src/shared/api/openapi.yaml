@@ -3128,10 +3128,12 @@ components:
       enum:
       - bearer
       - x_auth_token
+      - authorization
       type: string
       description: |-
         * `bearer` - Authorization: Bearer
         * `x_auth_token` - X-Auth-Token header
+        * `authorization` - Authorization: <token>
     AvailabilityEnum:
       enum:
       - planned
@@ -3453,6 +3455,18 @@ components:
       - message
       - ok
       - version
+    ConnectorInfo:
+      type: object
+      properties:
+        auth_schemes:
+          type: array
+          items:
+            type: string
+        supports_evidence:
+          type: boolean
+      required:
+      - auth_schemes
+      - supports_evidence
     CustomFieldCreateRequest:
       type: object
       properties:
@@ -4121,6 +4135,11 @@ components:
         has_adapter:
           type: boolean
           readOnly: true
+        connector:
+          allOf:
+          - $ref: '#/components/schemas/ConnectorInfo'
+          nullable: true
+          readOnly: true
         live_integrations_enabled:
           type: boolean
           readOnly: true
@@ -4189,6 +4208,7 @@ components:
       - base_url
       - ca_bundle_ref
       - capabilities
+      - connector
       - consecutive_failures
       - created_at
       - credential_ref

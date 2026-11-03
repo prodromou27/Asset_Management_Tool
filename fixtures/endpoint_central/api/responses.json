@@ -1,0 +1,738 @@
+{
+ "_comment": "Sanitized, fictitious Endpoint Central responses: RFC 5737 IPs, 02: MACs, .example names, invented serials. Field names and envelopes are fixture assumptions to verify against the installed build (docs/17 ASM-29).",
+ "api_1_4": {
+  "server": {
+   "message_type": "serverproperties",
+   "message_version": "1.0",
+   "status": "success",
+   "message_response": {
+    "serverproperties": {
+     "server_build_number": "11.3.2416.1"
+    }
+   }
+  },
+  "computers": [
+   {
+    "resource_id": 301,
+    "resource_name": "LT-0042",
+    "fqdn_name": "lt-0042.corp.example",
+    "domain_netbios_name": "CORP",
+    "os_name": "Windows 11 Enterprise Edition (x64)",
+    "ip_address": "192.0.2.42",
+    "mac_address": "02:00:00:00:10:42",
+    "agent_version": "11.3.2416.1",
+    "computer_live_status": 1,
+    "agent_last_contact_time": 1793606460000,
+    "last_successful_scan": 1793606400000,
+    "scan_status": 221,
+    "branch_office_name": "HQ"
+   },
+   {
+    "resource_id": 302,
+    "resource_name": "DT-0107",
+    "fqdn_name": "dt-0107.corp.example",
+    "domain_netbios_name": "CORP",
+    "os_name": "Windows 10 Professional Edition (x64)",
+    "ip_address": "192.0.2.107",
+    "mac_address": "02:00:00:00:11:07",
+    "agent_version": "11.3.2416.1",
+    "computer_live_status": 1,
+    "agent_last_contact_time": 1793606460000,
+    "last_successful_scan": 1793606400000,
+    "scan_status": 221,
+    "branch_office_name": "HQ"
+   },
+   {
+    "resource_id": 303,
+    "resource_name": "SRV-FS01",
+    "fqdn_name": "srv-fs01.corp.example",
+    "domain_netbios_name": "CORP",
+    "os_name": "Windows Server 2022 Standard Edition (x64)",
+    "ip_address": "192.0.2.201",
+    "mac_address": "02:00:00:00:12:01",
+    "agent_version": "11.3.2416.1",
+    "computer_live_status": 1,
+    "agent_last_contact_time": 1793606460000,
+    "last_successful_scan": 1793606400000,
+    "scan_status": 221,
+    "branch_office_name": "HQ"
+   },
+   {
+    "resource_id": 304,
+    "resource_name": "SRV-APP02",
+    "fqdn_name": "srv-app02.corp.example",
+    "domain_netbios_name": "CORP",
+    "os_name": "Windows Server 2019 Standard Edition (x64)",
+    "ip_address": "192.0.2.202",
+    "mac_address": "02:00:00:00:12:02",
+    "agent_version": "11.3.2416.1",
+    "computer_live_status": 1,
+    "agent_last_contact_time": 1793606460000,
+    "last_successful_scan": 1793606400000,
+    "scan_status": 221,
+    "branch_office_name": "HQ"
+   },
+   {
+    "resource_id": 305,
+    "resource_name": "DT-0150",
+    "fqdn_name": "dt-0150.corp.example",
+    "domain_netbios_name": "CORP",
+    "os_name": "Windows 11 Pro Edition (x64)",
+    "ip_address": "192.0.2.150",
+    "mac_address": "02:00:00:00:11:50",
+    "agent_version": "11.3.2416.1",
+    "computer_live_status": 1,
+    "agent_last_contact_time": 1793606460000,
+    "last_successful_scan": 1793606400000,
+    "scan_status": 221,
+    "branch_office_name": "HQ"
+   },
+   {
+    "resource_id": 306,
+    "resource_name": "LT-0042",
+    "fqdn_name": "lt-0042.lab.example",
+    "domain_netbios_name": "LAB",
+    "os_name": "Windows 11 Enterprise Edition (x64)",
+    "ip_address": "198.51.100.42",
+    "mac_address": "02:00:00:00:20:42",
+    "agent_version": "11.3.2416.1",
+    "computer_live_status": 1,
+    "agent_last_contact_time": 1793606460000,
+    "last_successful_scan": 1793606400000,
+    "scan_status": 221,
+    "branch_office_name": "HQ"
+   },
+   {
+    "resource_id": 307,
+    "resource_name": "MBP-0007",
+    "fqdn_name": "mbp-0007.corp.example",
+    "domain_netbios_name": "CORP",
+    "os_name": "macOS Sonoma 14.5",
+    "ip_address": "192.0.2.77",
+    "mac_address": "02:00:00:00:13:07",
+    "agent_version": "11.3.2416.1",
+    "computer_live_status": 1,
+    "agent_last_contact_time": 1793606460000,
+    "last_successful_scan": 1793606400000,
+    "scan_status": 221,
+    "branch_office_name": "HQ"
+   },
+   {
+    "resource_id": 308,
+    "resource_name": "DT-0199",
+    "fqdn_name": "dt-0199.corp.example",
+    "domain_netbios_name": "CORP",
+    "os_name": "Windows 10 Pro Edition (x64)",
+    "ip_address": "192.0.2.199",
+    "mac_address": "02:00:00:00:11:99",
+    "agent_version": "11.3.2416.1",
+    "computer_live_status": 1,
+    "agent_last_contact_time": 1793606460000,
+    "last_successful_scan": 0,
+    "scan_status": 221,
+    "branch_office_name": "HQ"
+   },
+   {
+    "resource_id": 309,
+    "resource_name": "DT-0222",
+    "fqdn_name": "dt-0222.corp.example",
+    "domain_netbios_name": "CORP",
+    "os_name": "Windows 11 Pro Edition (x64)",
+    "ip_address": "192.0.2.222",
+    "mac_address": "02:00:00:00:12:22",
+    "agent_version": "11.3.2416.1",
+    "computer_live_status": 1,
+    "agent_last_contact_time": 1793606460000,
+    "last_successful_scan": 1793606400000,
+    "scan_status": 221,
+    "branch_office_name": "HQ"
+   },
+   {
+    "resource_id": 310,
+    "resource_name": "lnx-build01",
+    "fqdn_name": "lnx-build01.corp.example",
+    "domain_netbios_name": "CORP",
+    "os_name": "Ubuntu 22.04.4 LTS",
+    "ip_address": "192.0.2.210",
+    "mac_address": "02:00:00:00:12:10",
+    "agent_version": "11.3.2416.1",
+    "computer_live_status": 1,
+    "agent_last_contact_time": 1793606460000,
+    "last_successful_scan": 1793606400000,
+    "scan_status": 221,
+    "branch_office_name": "HQ"
+   }
+  ],
+  "details": {
+   "301": {
+    "message_type": "compdetailssummary",
+    "message_version": "1.0",
+    "status": "success",
+    "message_response": {
+     "compdetailssummary": {
+      "computer_summary": {
+       "resource_id": 301,
+       "resource_name": "LT-0042",
+       "fqdn_name": "lt-0042.corp.example",
+       "agent_version": "11.3.2416.1"
+      },
+      "computer_hardware_summary": {
+       "device_manufacturer": "Dell Inc.",
+       "device_model": "Latitude 7440",
+       "serial_number": "7XK2Q93",
+       "chassis_type": "Notebook",
+       "memory": "16 GB",
+       "free_memory": "7.1 GB",
+       "processor_count": 1,
+       "system_uuid": "4c4c4544-0058-4b10-8032-b7c04f513933"
+      },
+      "computer_os_summary": {
+       "os_name": "Windows 11 Enterprise Edition (x64)",
+       "os_version": "10.0.22631",
+       "build_number": "22631",
+       "service_pack": "",
+       "os_last_boot_time": 1793602800000
+      },
+      "network_adapter_summary": [
+       {
+        "adapter_name": "Intel(R) Wi-Fi 6E AX211",
+        "mac_address": "02:00:00:00:10:42",
+        "ip_address": "192.0.2.42",
+        "dhcp_enabled": "true",
+        "dhcp_lease_obtained": 1793599200000,
+        "speed": "1000 Mbps"
+       },
+       {
+        "adapter_name": "Intel(R) Ethernet I219-LM",
+        "mac_address": "02:00:00:00:10:43",
+        "ip_address": "",
+        "dhcp_enabled": "true",
+        "dhcp_lease_obtained": 1793599200000,
+        "speed": "1000 Mbps"
+       }
+      ]
+     }
+    }
+   },
+   "302": {
+    "message_type": "compdetailssummary",
+    "message_version": "1.0",
+    "status": "success",
+    "message_response": {
+     "compdetailssummary": {
+      "computer_summary": {
+       "resource_id": 302,
+       "resource_name": "DT-0107",
+       "fqdn_name": "dt-0107.corp.example",
+       "agent_version": "11.3.2416.1"
+      },
+      "computer_hardware_summary": {
+       "device_manufacturer": "HP",
+       "device_model": "HP EliteDesk 800 G6 Small Form Factor PC",
+       "serial_number": "CZC0000107",
+       "chassis_type": "Small Form Factor",
+       "memory": "16 GB",
+       "free_memory": "7.1 GB",
+       "processor_count": 1
+      },
+      "computer_os_summary": {
+       "os_name": "Windows 10 Professional Edition (x64)",
+       "os_version": "10.0.19045",
+       "build_number": "19045",
+       "service_pack": "",
+       "os_last_boot_time": 1793602800000
+      },
+      "network_adapter_summary": [
+       {
+        "adapter_name": "Realtek PCIe GbE",
+        "mac_address": "02:00:00:00:11:07",
+        "ip_address": "192.0.2.107",
+        "dhcp_enabled": "true",
+        "dhcp_lease_obtained": 1793599200000,
+        "speed": "1000 Mbps"
+       }
+      ]
+     }
+    }
+   },
+   "303": {
+    "message_type": "compdetailssummary",
+    "message_version": "1.0",
+    "status": "success",
+    "message_response": {
+     "compdetailssummary": {
+      "computer_summary": {
+       "resource_id": 303,
+       "resource_name": "SRV-FS01",
+       "fqdn_name": "srv-fs01.corp.example",
+       "agent_version": "11.3.2416.1"
+      },
+      "computer_hardware_summary": {
+       "device_manufacturer": "Dell Inc.",
+       "device_model": "PowerEdge R650",
+       "serial_number": "FS0000301",
+       "chassis_type": "Rack Mount Chassis",
+       "memory": "16 GB",
+       "free_memory": "7.1 GB",
+       "processor_count": 1,
+       "system_uuid": "4c4c4544-0000-0000-0000-000000000303"
+      },
+      "computer_os_summary": {
+       "os_name": "Windows Server 2022 Standard Edition (x64)",
+       "os_version": "10.0.20348",
+       "build_number": "20348",
+       "service_pack": "",
+       "os_last_boot_time": 1793602800000
+      },
+      "network_adapter_summary": [
+       {
+        "adapter_name": "Broadcom NetXtreme",
+        "mac_address": "02:00:00:00:12:01",
+        "ip_address": "192.0.2.201, 203.0.113.201",
+        "dhcp_enabled": "true",
+        "dhcp_lease_obtained": 1793599200000,
+        "speed": "1000 Mbps"
+       }
+      ]
+     }
+    }
+   },
+   "304": {
+    "message_type": "compdetailssummary",
+    "message_version": "1.0",
+    "status": "success",
+    "message_response": {
+     "compdetailssummary": {
+      "computer_summary": {
+       "resource_id": 304,
+       "resource_name": "SRV-APP02",
+       "fqdn_name": "srv-app02.corp.example",
+       "agent_version": "11.3.2416.1"
+      },
+      "computer_hardware_summary": {
+       "device_manufacturer": "VMware, Inc.",
+       "device_model": "VMware Virtual Platform",
+       "serial_number": "VMware-42 1a 00 00 00 00 03 04-00 00 00 00 00 00 03 04",
+       "chassis_type": "Other",
+       "memory": "16 GB",
+       "free_memory": "7.1 GB",
+       "processor_count": 1,
+       "system_uuid": "421a0000-0000-0304-0000-000000000304"
+      },
+      "computer_os_summary": {
+       "os_name": "Windows Server 2019 Standard Edition (x64)",
+       "os_version": "10.0.17763",
+       "build_number": "17763",
+       "service_pack": "",
+       "os_last_boot_time": 1793602800000
+      },
+      "network_adapter_summary": [
+       {
+        "adapter_name": "vmxnet3 Ethernet Adapter",
+        "mac_address": "02:00:00:00:12:02",
+        "ip_address": "192.0.2.202",
+        "dhcp_enabled": "true",
+        "dhcp_lease_obtained": 1793599200000,
+        "speed": "1000 Mbps"
+       }
+      ]
+     }
+    }
+   },
+   "305": {
+    "message_type": "compdetailssummary",
+    "message_version": "1.0",
+    "status": "success",
+    "message_response": {
+     "compdetailssummary": {
+      "computer_summary": {
+       "resource_id": 305,
+       "resource_name": "DT-0150",
+       "fqdn_name": "dt-0150.corp.example",
+       "agent_version": "11.3.2416.1"
+      },
+      "computer_hardware_summary": {
+       "device_manufacturer": "To be filled by O.E.M.",
+       "device_model": "To be filled by O.E.M.",
+       "serial_number": "To be filled by O.E.M.",
+       "chassis_type": "Desktop",
+       "memory": "16 GB",
+       "free_memory": "7.1 GB",
+       "processor_count": 1
+      },
+      "computer_os_summary": {
+       "os_name": "Windows 11 Pro Edition (x64)",
+       "os_version": "10.0.22631",
+       "build_number": "22631",
+       "service_pack": "",
+       "os_last_boot_time": 1793602800000
+      },
+      "network_adapter_summary": [
+       {
+        "adapter_name": "Realtek PCIe GbE",
+        "mac_address": "02:00:00:00:11:50",
+        "ip_address": "192.0.2.150",
+        "dhcp_enabled": "true",
+        "dhcp_lease_obtained": 1793599200000,
+        "speed": "1000 Mbps"
+       }
+      ]
+     }
+    }
+   },
+   "306": {
+    "message_type": "compdetailssummary",
+    "message_version": "1.0",
+    "status": "success",
+    "message_response": {
+     "compdetailssummary": {
+      "computer_summary": {
+       "resource_id": 306,
+       "resource_name": "LT-0042",
+       "fqdn_name": "lt-0042.lab.example",
+       "agent_version": "11.3.2416.1"
+      },
+      "computer_hardware_summary": {
+       "device_manufacturer": "Lenovo",
+       "device_model": "ThinkPad T14 Gen 4",
+       "serial_number": "PF0000306",
+       "chassis_type": "Notebook",
+       "memory": "16 GB",
+       "free_memory": "7.1 GB",
+       "processor_count": 1
+      },
+      "computer_os_summary": {
+       "os_name": "Windows 11 Enterprise Edition (x64)",
+       "os_version": "10.0.22631",
+       "build_number": "22631",
+       "service_pack": "",
+       "os_last_boot_time": 1793602800000
+      },
+      "network_adapter_summary": [
+       {
+        "adapter_name": "Intel(R) Wi-Fi 6E AX211",
+        "mac_address": "02:00:00:00:20:42",
+        "ip_address": "198.51.100.42",
+        "dhcp_enabled": "true",
+        "dhcp_lease_obtained": 1793599200000,
+        "speed": "1000 Mbps"
+       }
+      ]
+     }
+    }
+   },
+   "307": {
+    "message_type": "compdetailssummary",
+    "message_version": "1.0",
+    "status": "success",
+    "message_response": {
+     "compdetailssummary": {
+      "computer_summary": {
+       "resource_id": 307,
+       "resource_name": "MBP-0007",
+       "fqdn_name": "mbp-0007.corp.example",
+       "agent_version": "11.3.2416.1"
+      },
+      "computer_hardware_summary": {
+       "device_manufacturer": "Apple Inc.",
+       "device_model": "MacBookPro18,3",
+       "serial_number": "C02000000307",
+       "chassis_type": "Laptop",
+       "memory": "16 GB",
+       "free_memory": "7.1 GB",
+       "processor_count": 1
+      },
+      "computer_os_summary": {
+       "os_name": "macOS Sonoma",
+       "os_version": "14.5",
+       "build_number": "23F79",
+       "service_pack": "",
+       "os_last_boot_time": 1793602800000
+      },
+      "network_adapter_summary": [
+       {
+        "adapter_name": "en0",
+        "mac_address": "02:00:00:00:13:07",
+        "ip_address": "192.0.2.77",
+        "dhcp_enabled": "true",
+        "dhcp_lease_obtained": 1793599200000,
+        "speed": "1000 Mbps"
+       }
+      ]
+     }
+    }
+   },
+   "308": {
+    "message_type": "compdetailssummary",
+    "message_version": "1.0",
+    "status": "success",
+    "message_response": {
+     "compdetailssummary": {
+      "computer_summary": {
+       "resource_id": 308,
+       "resource_name": "DT-0199",
+       "fqdn_name": "dt-0199.corp.example",
+       "agent_version": "11.3.2416.1"
+      },
+      "computer_hardware_summary": {
+       "device_manufacturer": "Dell Inc.",
+       "device_model": "OptiPlex 7090",
+       "serial_number": "DT0000308",
+       "chassis_type": "Mini Tower",
+       "memory": "16 GB",
+       "free_memory": "7.1 GB",
+       "processor_count": 1
+      },
+      "computer_os_summary": {
+       "os_name": "Windows 10 Pro Edition (x64)",
+       "os_version": "10.0.19045",
+       "build_number": "19045",
+       "service_pack": "",
+       "os_last_boot_time": 1793602800000
+      },
+      "network_adapter_summary": [
+       {
+        "adapter_name": "Intel(R) Ethernet",
+        "mac_address": "02:00:00:00:11:99",
+        "ip_address": "192.0.2.199",
+        "dhcp_enabled": "true",
+        "dhcp_lease_obtained": 1793599200000,
+        "speed": "1000 Mbps"
+       }
+      ]
+     }
+    }
+   },
+   "309": {
+    "status": "success",
+    "data": {
+     "system": {
+      "system_manufacturer": "Dell Inc.",
+      "computer_model": "OptiPlex 7010",
+      "service_tag": "DT0000309",
+      "form_factor": "Desktop",
+      "new_unknown_field": {
+       "x": 1
+      }
+     },
+     "os": {
+      "operating_system": "Windows 11 Pro Edition (x64)",
+      "os_version": "10.0.22631"
+     },
+     "adapters": [
+      {
+       "description": "Intel(R) Ethernet I219-V",
+       "physical_address": "02-00-00-00-12-22",
+       "ipaddress": [
+        "192.0.2.222",
+        "fe80::1"
+       ]
+      }
+     ]
+    }
+   },
+   "310": {
+    "message_type": "compdetailssummary",
+    "message_version": "1.0",
+    "status": "success",
+    "message_response": {
+     "compdetailssummary": {
+      "computer_summary": {
+       "resource_id": 310,
+       "resource_name": "lnx-build01",
+       "fqdn_name": "lnx-build01.corp.example",
+       "agent_version": "11.3.2416.1"
+      },
+      "computer_hardware_summary": {
+       "device_manufacturer": "Supermicro",
+       "device_model": "SYS-5019C-M",
+       "serial_number": "SM0000310",
+       "chassis_type": "Main System Chassis",
+       "memory": "16 GB",
+       "free_memory": "7.1 GB",
+       "processor_count": 1
+      },
+      "computer_os_summary": {
+       "os_name": "Ubuntu 22.04.4 LTS",
+       "os_version": "22.04",
+       "build_number": "5.15.0-105-generic",
+       "service_pack": "",
+       "os_last_boot_time": 1793602800000
+      },
+      "network_adapter_summary": [
+       {
+        "adapter_name": "eno1",
+        "mac_address": "02:00:00:00:12:10",
+        "ip_address": "192.0.2.210",
+        "dhcp_enabled": "true",
+        "dhcp_lease_obtained": 1793599200000,
+        "speed": "1000 Mbps"
+       }
+      ]
+     }
+    }
+   }
+  }
+ },
+ "dcapi": {
+  "computers": [
+   {
+    "resourceId": 301,
+    "resourceName": "LT-0042",
+    "fqdnName": "lt-0042.corp.example",
+    "osName": "Windows 11 Enterprise Edition (x64)",
+    "lastSuccessfulScan": 1793606400000,
+    "agentLastContactTime": 1793606460000,
+    "agentVersion": "11.3.2416.1"
+   },
+   {
+    "resourceId": 302,
+    "resourceName": "DT-0107",
+    "fqdnName": "dt-0107.corp.example",
+    "osName": "Windows 10 Professional Edition (x64)",
+    "lastSuccessfulScan": 1793606400000,
+    "agentLastContactTime": 1793606460000,
+    "agentVersion": "11.3.2416.1"
+   },
+   {
+    "resourceId": 303,
+    "resourceName": "SRV-FS01",
+    "fqdnName": "srv-fs01.corp.example",
+    "osName": "Windows Server 2022 Standard Edition (x64)",
+    "lastSuccessfulScan": 1793606400000,
+    "agentLastContactTime": 1793606460000,
+    "agentVersion": "11.3.2416.1"
+   }
+  ],
+  "details": {
+   "301": {
+    "summary": {
+     "status": "success",
+     "data": {
+      "resourceId": 301,
+      "computerName": "LT-0042",
+      "fqdnName": "lt-0042.corp.example",
+      "agentVersion": "11.3.2416.1"
+     }
+    },
+    "hardware": {
+     "status": "success",
+     "data": {
+      "manufacturer": "Dell Inc.",
+      "model": "Latitude 7440",
+      "serialNumber": "7XK2Q93",
+      "chassisType": "Notebook",
+      "systemUuid": "4c4c4544-0058-4b10-8032-b7c04f513933"
+     }
+    },
+    "osInformation": {
+     "status": "success",
+     "data": {
+      "osName": "Windows 11 Enterprise Edition (x64)",
+      "osVersion": "10.0.22631",
+      "buildNumber": "22631"
+     }
+    },
+    "network": {
+     "status": "success",
+     "data": [
+      {
+       "adapterName": "Intel(R) Wi-Fi 6E AX211",
+       "macAddress": "02:00:00:00:10:42",
+       "ipAddress": [
+        "192.0.2.42"
+       ]
+      },
+      {
+       "adapterName": "Intel(R) Ethernet I219-LM",
+       "macAddress": "02:00:00:00:10:43",
+       "ipAddress": []
+      }
+     ]
+    }
+   },
+   "302": {
+    "summary": {
+     "status": "success",
+     "data": {
+      "resourceId": 302,
+      "computerName": "DT-0107",
+      "fqdnName": "dt-0107.corp.example",
+      "agentVersion": "11.3.2416.1"
+     }
+    },
+    "hardware": {
+     "status": "success",
+     "data": {
+      "manufacturer": "HP",
+      "model": "HP EliteDesk 800 G6 Small Form Factor PC",
+      "serialNumber": "CZC0000107",
+      "chassisType": "Small Form Factor"
+     }
+    },
+    "osInformation": {
+     "status": "success",
+     "data": {
+      "osName": "Windows 10 Professional Edition (x64)",
+      "osVersion": "10.0.19045",
+      "buildNumber": "19045"
+     }
+    },
+    "network": {
+     "status": "success",
+     "data": [
+      {
+       "adapterName": "Realtek PCIe GbE",
+       "macAddress": "02:00:00:00:11:07",
+       "ipAddress": [
+        "192.0.2.107"
+       ]
+      }
+     ]
+    }
+   },
+   "303": {
+    "summary": {
+     "status": "success",
+     "data": {
+      "resourceId": 303,
+      "computerName": "SRV-FS01",
+      "fqdnName": "srv-fs01.corp.example",
+      "agentVersion": "11.3.2416.1"
+     }
+    },
+    "hardware": {
+     "status": "success",
+     "data": {
+      "manufacturer": "Dell Inc.",
+      "model": "PowerEdge R650",
+      "serialNumber": "FS0000301",
+      "chassisType": "Rack Mount Chassis",
+      "systemUuid": "4c4c4544-0000-0000-0000-000000000303"
+     }
+    },
+    "osInformation": {
+     "status": "success",
+     "data": {
+      "osName": "Windows Server 2022 Standard Edition (x64)",
+      "osVersion": "10.0.20348",
+      "buildNumber": "20348"
+     }
+    },
+    "network": {
+     "status": "success",
+     "data": [
+      {
+       "adapterName": "Broadcom NetXtreme",
+       "macAddress": "02:00:00:00:12:01",
+       "ipAddress": [
+        "192.0.2.201",
+        "203.0.113.201"
+       ]
+      }
+     ]
+    }
+   }
+  }
+ }
+}

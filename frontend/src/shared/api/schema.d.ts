@@ -459,9 +459,10 @@ export interface components {
     /**
      * @description * `bearer` - Authorization: Bearer
      * * `x_auth_token` - X-Auth-Token header
+     * * `authorization` - Authorization: <token>
      * @enum {string}
      */
-    AuthSchemeEnum: "bearer" | "x_auth_token";
+    AuthSchemeEnum: "bearer" | "x_auth_token" | "authorization";
     /**
      * @description * `planned` - Planned
      * * `beta` - Beta (fixture-tested)
@@ -594,6 +595,10 @@ export interface components {
       capabilities: {
         [key: string]: boolean;
       };
+    };
+    ConnectorInfo: {
+      auth_schemes: string[];
+      supports_evidence: boolean;
     };
     CustomFieldCreateRequest: {
       key: string;
@@ -839,6 +844,7 @@ export interface components {
       /** Format: date-time */
       last_evidence_at: string | null;
       has_adapter: boolean;
+      connector: components["schemas"]["ConnectorInfo"] | null;
       live_integrations_enabled: boolean;
       live_access_approved: boolean;
       live_access_approved_by: string | null;

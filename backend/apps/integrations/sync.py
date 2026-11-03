@@ -19,13 +19,12 @@ from apps.network.models import NeighborEvidence
 from apps.reconciliation import services as reconciliation
 
 from . import secrets
+from .adapters import registry
 from .adapters.base import AuthError, SourceError
-from .adapters.librenms import adapter as librenms
-from .adapters.librenms.client import LibreNMSClient
+from .adapters.http import ReadOnlyClient
 from .models import IntegrationInstance, SyncRun
 
 logger = logging.getLogger(__name__)
-ADAPTERS = {"librenms"}
 HEARTBEAT_TIMEOUT = timedelta(minutes=30)
 ACTIVE = (SyncRun.Status.QUEUED, SyncRun.Status.RUNNING)
 
@@ -42,7 +41,14 @@ class SyncRefused(Exception):
 
 
 def has_adapter(instance: IntegrationInstance) -> bool:
-    return instance.source_id in ADAPTERS
+    return registry.get(instance.source_id) is not None
+
+
+def connector_for(instance: IntegrationInstance) -> registry.Connector:
+    connector = registry.get(instance.source_id)
+    if connector is None:
+        raise SyncRefused("NO_ADAPTER", "This source has no adapter; it cannot be synchronised.")
+    return connector
 
 
 def check_live_access(instance: IntegrationInstance) -> None:
@@ -62,14 +68,19 @@ def check_live_access(instance: IntegrationInstance) -> None:
         raise SyncRefused("NOT_CONFIGURED", "Set the source base URL first.")
 
 
-def build_client(instance: IntegrationInstance) -> LibreNMSClient:
+def build_client(instance: IntegrationInstance) -> ReadOnlyClient:
     check_live_access(instance)
+    connector = connector_for(instance)
+    if instance.auth_scheme not in connector.auth_schemes:
+        raise SyncRefused(
+            "NOT_CONFIGURED", "The selected authentication header is not supported by this source."
+        )
     try:
         token = secrets.resolve(instance.credential_ref)
         verify = secrets.resolve_path(instance.ca_bundle_ref) or True
     except secrets.SecretError as exc:
         raise SyncRefused("CREDENTIAL_UNAVAILABLE", str(exc)) from exc
-    return LibreNMSClient(
+    return connector.client_class(
         instance.base_url,
         token,
         auth_scheme=instance.auth_scheme,
@@ -90,7 +101,7 @@ def test_connection(request, instance: IntegrationInstance) -> dict:
     result = {"ok": False, "message": "", "version": "", "capabilities": {}}
     try:
         with build_client(instance) as client:
-            details = librenms.test_connection(client)
+            details = connector_for(instance).test_connection(client)
         result.update(
             ok=True,
             message="Connected. Read-only API access works.",
@@ -214,10 +225,9 @@ def execute(run_id) -> SyncRun:
 
     try:
         with build_client(instance) as client:
-            adapter = librenms.LibreNMSAdapter(instance, client)
-            if not adapter.caps:
-                adapter.caps = librenms.discover_capabilities(client)
-                IntegrationInstance.objects.filter(pk=instance.pk).update(capabilities=adapter.caps)
+            connector = connector_for(instance)
+            adapter = connector.make_adapter(instance, client)
+            adapter.prepare()
             records, complete = adapter.collect(run, progress)
             run.phase = "reconciliation"
             progress()
@@ -230,7 +240,7 @@ def execute(run_id) -> SyncRun:
                 complete=complete,
                 on_progress=progress,
             )
-            if _evidence_due(instance):
+            if connector.supports_evidence and _evidence_due(instance):
                 run.phase = "evidence"
                 progress()
                 _store_evidence(instance, run, adapter)

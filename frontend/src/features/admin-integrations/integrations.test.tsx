@@ -35,6 +35,7 @@ function librenms(overrides: Partial<IntegrationInstance> = {}): IntegrationInst
     credential_ref: 'env:ITAM_INTEGRATION_LIBRENMS_TOKEN',
     credential_status: 'configured',
     has_adapter: true,
+    connector: { auth_schemes: ['bearer', 'x_auth_token'], supports_evidence: true },
     live_integrations_enabled: true,
     live_access_approved: true,
     live_access_approved_by: 'admin.one',
@@ -326,5 +327,49 @@ describe('Asset network evidence', () => {
     expect(await screen.findByRole('heading', { name: 'Hostnames' })).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'Observed network evidence' })).not.toBeInTheDocument()
     expect(calls.some((c) => c.path.endsWith('/network-evidence/'))).toBe(false)
+  })
+})
+
+describe('Endpoint Central integration page', () => {
+  const endpointCentral = () =>
+    librenms({
+      name: 'Endpoint Central',
+      source: {
+        code: 'endpoint_central',
+        name: 'Endpoint Central (on-premises)',
+        kind: 'endpoint',
+        availability: 'beta',
+        description: '',
+        instance_count: 1,
+      },
+      base_url: 'https://ec.corp.example:8383',
+      auth_scheme: 'authorization',
+      connector: { auth_schemes: ['authorization', 'bearer'], supports_evidence: false },
+      source_software_version: '11.3.2416.1',
+      capabilities: { computers: true, route_api_1_4: true, route_dcapi: false, software: false },
+    })
+
+  it('offers only the source’s auth headers and hides network evidence settings', async () => {
+    mockApi(routes(endpointCentral()))
+    renderApp(URL)
+
+    const form = await screen.findByRole('region', { name: 'Configuration' })
+    const header = within(form).getByLabelText('Authentication header')
+    expect(within(header).getAllByRole('option').map((o) => o.textContent)).toEqual([
+      'Authorization: <token>',
+      'Authorization: Bearer <token>',
+    ])
+    expect(within(form).queryByLabelText('FDB/neighbours every (hours)')).not.toBeInTheDocument()
+    expect(within(form).getByPlaceholderText('https://endpointcentral.example:8383')).toBeInTheDocument()
+
+    const health = screen.getByRole('region', { name: 'Health' })
+    expect(within(health).getByText('Endpoint Central (on-premises) version')).toBeInTheDocument()
+    expect(within(health).queryByText('Last FDB/neighbour pass')).not.toBeInTheDocument()
+
+    const caps = screen.getByRole('region', { name: 'API capabilities' })
+    expect(within(caps).getByText('Inventory API: api/1.4 (older builds)').parentElement).toHaveTextContent('Available')
+    expect(within(caps).getByText('Installed software (not collected yet)').parentElement).toHaveTextContent(
+      'Not available',
+    )
   })
 })

@@ -69,6 +69,14 @@ class LibreNMSAdapter:
         self.client = client
         self.caps = capabilities or instance.capabilities or {}
 
+    def prepare(self) -> None:
+        """Detect optional routes once (stored on the instance) if not known yet."""
+        if not self.caps:
+            from apps.integrations.models import IntegrationInstance
+
+            self.caps = discover_capabilities(self.client)
+            IntegrationInstance.objects.filter(pk=self.instance.pk).update(capabilities=self.caps)
+
     def _list(self, path: str, key: str, **params) -> list[dict]:
         body = self.client.get(path, params=params or None)
         rows = body.get(key, []) if isinstance(body, dict) else []

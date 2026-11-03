@@ -12,6 +12,7 @@ from apps.assets.serializers import SiteRefSerializer
 from apps.organizations.models import Site
 
 from . import secrets, sync
+from .adapters import registry
 from .models import DiscoverySource, FieldAuthorityPolicy, IntegrationInstance, SyncRun
 
 
@@ -46,6 +47,11 @@ class SyncRunSummarySerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
+class ConnectorInfoSerializer(serializers.Serializer):
+    auth_schemes = serializers.ListField(child=serializers.CharField())
+    supports_evidence = serializers.BooleanField()
+
+
 class IntegrationInstanceSerializer(serializers.ModelSerializer):
     source = DiscoverySourceSerializer(read_only=True)
     default_site = SiteRefSerializer(read_only=True)
@@ -55,6 +61,7 @@ class IntegrationInstanceSerializer(serializers.ModelSerializer):
     freshness = serializers.SerializerMethodField()
     credential_status = serializers.SerializerMethodField()
     has_adapter = serializers.SerializerMethodField()
+    connector = serializers.SerializerMethodField()
     live_integrations_enabled = serializers.SerializerMethodField()
     live_access_approved_by = serializers.SlugRelatedField(
         read_only=True, allow_null=True, slug_field="username"
@@ -96,6 +103,7 @@ class IntegrationInstanceSerializer(serializers.ModelSerializer):
             "source_timezone",
             "last_evidence_at",
             "has_adapter",
+            "connector",
             "live_integrations_enabled",
             "live_access_approved",
             "live_access_approved_by",
@@ -121,6 +129,17 @@ class IntegrationInstanceSerializer(serializers.ModelSerializer):
 
     def get_has_adapter(self, obj) -> bool:
         return sync.has_adapter(obj)
+
+    @extend_schema_field(ConnectorInfoSerializer(allow_null=True))
+    def get_connector(self, obj):
+        """What this source's adapter supports; null when there is no adapter."""
+        connector = registry.get(obj.source_id)
+        if connector is None:
+            return None
+        return {
+            "auth_schemes": list(connector.auth_schemes),
+            "supports_evidence": connector.supports_evidence,
+        }
 
     def get_live_integrations_enabled(self, obj) -> bool:
         return bool(getattr(settings, "ITAM_ALLOW_LIVE_INTEGRATIONS", False))
@@ -215,6 +234,19 @@ class IntegrationInstanceWriteSerializer(serializers.Serializer):
         if self.instance is not None and value.pk != self.instance.source_id:
             raise serializers.ValidationError("The source type of an integration cannot change.")
         return value
+
+    def validate(self, attrs):
+        source = attrs.get("source") or (self.instance.source if self.instance else None)
+        connector = registry.get(source.pk) if source is not None else None
+        if connector is not None:
+            scheme = attrs.get("auth_scheme")
+            if scheme and scheme not in connector.auth_schemes:
+                raise serializers.ValidationError(
+                    {"auth_scheme": ["This source does not support that authentication header."]}
+                )
+            if self.instance is None and not scheme:
+                attrs["auth_scheme"] = connector.default_auth_scheme
+        return attrs
 
 
 class SyncRunSerializer(serializers.ModelSerializer):
