@@ -1,4 +1,36 @@
-# Current Task: 004 | Discovery Observations and Asset Identity
+# Current Task: 005 | Asset list/detail UI, search, filters, provenance drawer
+
+Status: **In progress** (started 2026-11-03 on branch DEV).
+
+**Read:** AGENTS.md, docs/00, 04, 07, 08 (backlog list for 005).
+
+## Re-scope (owner approved "proceed" on the proposal in the Task 004 report)
+
+List, detail, URL filters, search and the Source evidence tab already exist (Tasks 003–004).
+Task 005 delivers what docs/07 AssetTable and SourceEvidenceDrawer still require:
+
+1. Saved views (personal; shareable by users with asset edit rights), applied via URL.
+2. Column chooser, remembered per user.
+3. Last seen and Sources columns; filters by source integration and observation status.
+4. Source evidence drawer opened from technical fields on the asset Overview.
+5. Search/list performance at 10k assets: PostgreSQL trigram indexes and a timed
+   PostgreSQL test (docs/14 p95 < 2 s target, single-request approximation).
+
+Out of scope: bulk edit/selection toolbar (Task 012 groups / 013 imports), exports (014),
+column width persistence.
+
+## Acceptance
+
+- Saved views never widen site scope (filters always run through `visible_assets`).
+- Only the owner edits/deletes a view; shared views are read-only to others.
+- Unknown filter keys, columns or ordering in a view are rejected (422).
+- List query count stays bounded with the new annotations.
+- 10k-asset list, count and search each complete within budget on PostgreSQL CI.
+- Drawer: keyboard reachable, Escape closes, focus returns to the trigger.
+
+---
+
+## Task 004 | Discovery Observations and Asset Identity (previous)
 
 Status: **Provisionally Complete / Pending Docker host verification** (2026-11-03, branch DEV).
 

@@ -37,6 +37,9 @@ export type SourceLink = Schemas['SourceLink']
 export type AssetMerge = Schemas['AssetMerge']
 export type ObservationDetail = Schemas['ObservationDetail']
 export type FieldAuthorityPolicy = Schemas['FieldAuthorityPolicy']
+export type SavedView = Schemas['SavedView']
+export type SavedViewWrite = Schemas['SavedViewWriteRequest']
+export type AssetColumn = NonNullable<SavedViewWrite['columns']>[number]
 export type Paginated<T> = {
   items: T[]
   next_cursor: string | null

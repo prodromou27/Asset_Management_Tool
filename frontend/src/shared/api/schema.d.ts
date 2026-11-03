@@ -159,6 +159,14 @@ export interface paths {
   "/api/v1/roles/": {
     get: operations["roles_list"];
   };
+  "/api/v1/saved-views/": {
+    get: operations["saved_views_list"];
+    post: operations["saved_views_create"];
+  };
+  "/api/v1/saved-views/{id}/": {
+    delete: operations["saved_views_destroy"];
+    patch: operations["saved_views_partial_update"];
+  };
   "/api/v1/settings/security/": {
     get: operations["settings_security_retrieve"];
     patch: operations["settings_security_partial_update"];
@@ -264,6 +272,9 @@ export interface components {
       support_status: components["schemas"]["SupportStatusEnum"];
       is_archived: boolean;
       /** Format: date-time */
+      last_seen_at: string | null;
+      source_count: number;
+      /** Format: date-time */
       modified_at: string;
       version: number;
       os_name: string;
@@ -325,6 +336,9 @@ export interface components {
       observation_status: components["schemas"]["ObservationStatusEnum"];
       support_status: components["schemas"]["SupportStatusEnum"];
       is_archived: boolean;
+      /** Format: date-time */
+      last_seen_at: string | null;
+      source_count: number;
       /** Format: date-time */
       modified_at: string;
       version: number;
@@ -431,6 +445,8 @@ export interface components {
      * @enum {string}
      */
     AvailabilityEnum: "planned" | "available";
+    /** @enum {unknown} */
+    BlankEnum: "";
     /**
      * @description * `ordered` - Ordered
      * * `in_stock` - In stock
@@ -530,6 +546,23 @@ export interface components {
       };
       reason: string;
     };
+    /**
+     * @description * `name` - name
+     * * `category` - category
+     * * `manufacturer_model` - manufacturer_model
+     * * `serial` - serial
+     * * `primary_ip` - primary_ip
+     * * `site` - site
+     * * `owner` - owner
+     * * `business_status` - business_status
+     * * `observation_status` - observation_status
+     * * `support_status` - support_status
+     * * `last_seen` - last_seen
+     * * `sources` - sources
+     * * `modified` - modified
+     * @enum {string}
+     */
+    ColumnsEnum: "name" | "category" | "manufacturer_model" | "serial" | "primary_ip" | "site" | "owner" | "business_status" | "observation_status" | "support_status" | "last_seen" | "sources" | "modified";
     CustomFieldCreateRequest: {
       key: string;
       label: string;
@@ -949,6 +982,19 @@ export interface components {
       };
     };
     /**
+     * @description * `` -
+     * * `name` - name
+     * * `-name` - -name
+     * * `asset_tag` - asset_tag
+     * * `-asset_tag` - -asset_tag
+     * * `modified_at` - modified_at
+     * * `-modified_at` - -modified_at
+     * * `created_at` - created_at
+     * * `-created_at` - -created_at
+     * @enum {string}
+     */
+    OrderingEnum: "name" | "-name" | "asset_tag" | "-asset_tag" | "modified_at" | "-modified_at" | "created_at" | "-created_at";
+    /**
      * @description * `success` - Success
      * * `failure` - Failure
      * * `denied` - Denied
@@ -1090,6 +1136,15 @@ export interface components {
       kind?: components["schemas"]["LocationKindEnum"];
       is_active?: boolean;
     };
+    PatchedSavedViewWriteRequest: {
+      name?: string;
+      is_shared?: boolean;
+      filters?: {
+        [key: string]: string;
+      };
+      columns?: components["schemas"]["ColumnsEnum"][];
+      ordering?: components["schemas"]["OrderingEnum"] | components["schemas"]["BlankEnum"];
+    };
     PatchedSecuritySettingsUpdateRequest: {
       session_idle_timeout_minutes?: number;
       session_absolute_timeout_hours?: number;
@@ -1164,6 +1219,11 @@ export interface components {
       resolution: components["schemas"]["ResolutionEnum"];
       reason: string;
     };
+    /**
+     * @description * `assets` - Assets
+     * @enum {string}
+     */
+    ResourceEnum: "assets";
     Role: {
       code: string;
       name: string;
@@ -1184,6 +1244,34 @@ export interface components {
      * @enum {string}
      */
     RuleEnum: "new_device" | "weak" | "corroborated" | "strong" | "conflict";
+    SavedView: {
+      /** Format: uuid */
+      id: string;
+      resource: components["schemas"]["ResourceEnum"];
+      name: string;
+      is_shared: boolean;
+      filters: {
+        [key: string]: string;
+      };
+      columns: readonly string[];
+      ordering: string;
+      owner: string;
+      is_mine: boolean;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      modified_at: string;
+      version: number;
+    };
+    SavedViewWriteRequest: {
+      name: string;
+      is_shared?: boolean;
+      filters?: {
+        [key: string]: string;
+      };
+      columns?: components["schemas"]["ColumnsEnum"][];
+      ordering?: components["schemas"]["OrderingEnum"] | components["schemas"]["BlankEnum"];
+    };
     SecuritySettings: {
       session_idle_timeout_minutes: number;
       session_absolute_timeout_hours: number;
@@ -1508,6 +1596,8 @@ export interface operations {
         q?: string;
         /** @description Site ID (includes child sites) */
         site?: string;
+        /** @description Integration instance ID */
+        source?: string;
         support_status?: string;
       };
     };
@@ -1537,6 +1627,8 @@ export interface operations {
         q?: string;
         /** @description Site ID (includes child sites) */
         site?: string;
+        /** @description Integration instance ID */
+        source?: string;
         support_status?: string;
       };
     };
@@ -2412,6 +2504,68 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["Role"][];
+        };
+      };
+    };
+  };
+  saved_views_list: {
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["SavedView"][];
+        };
+      };
+    };
+  };
+  saved_views_create: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SavedViewWriteRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["SavedViewWriteRequest"];
+        "multipart/form-data": components["schemas"]["SavedViewWriteRequest"];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          "application/json": components["schemas"]["SavedView"];
+        };
+      };
+    };
+  };
+  saved_views_destroy: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description No response body */
+      204: {
+        content: never;
+      };
+    };
+  };
+  saved_views_partial_update: {
+    parameters: {
+      header: {
+        "If-Match": string;
+      };
+      path: {
+        id: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["PatchedSavedViewWriteRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["PatchedSavedViewWriteRequest"];
+        "multipart/form-data": components["schemas"]["PatchedSavedViewWriteRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["SavedView"];
         };
       };
     };

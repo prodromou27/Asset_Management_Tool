@@ -248,6 +248,11 @@ paths:
           type: string
         description: Site ID (includes child sites)
       - in: query
+        name: source
+        schema:
+          type: string
+        description: Integration instance ID
+      - in: query
         name: support_status
         schema:
           type: string
@@ -327,6 +332,11 @@ paths:
         schema:
           type: string
         description: Site ID (includes child sites)
+      - in: query
+        name: source
+        schema:
+          type: string
+        description: Integration instance ID
       - in: query
         name: support_status
         schema:
@@ -1743,6 +1753,100 @@ paths:
                 items:
                   $ref: '#/components/schemas/Role'
           description: ''
+  /api/v1/saved-views/:
+    get:
+      operationId: saved_views_list
+      tags:
+      - saved-views
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SavedView'
+          description: ''
+    post:
+      operationId: saved_views_create
+      tags:
+      - saved-views
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SavedViewWriteRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SavedViewWriteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SavedViewWriteRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SavedView'
+          description: ''
+  /api/v1/saved-views/{id}/:
+    patch:
+      operationId: saved_views_partial_update
+      parameters:
+      - in: header
+        name: If-Match
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - saved-views
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedSavedViewWriteRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedSavedViewWriteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedSavedViewWriteRequest'
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SavedView'
+          description: ''
+    delete:
+      operationId: saved_views_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - saved-views
+      security:
+      - sessionAuth: []
+      responses:
+        '204':
+          description: No response body
   /api/v1/settings/security/:
     get:
       operationId: settings_security_retrieve
@@ -2371,6 +2475,14 @@ components:
         is_archived:
           type: boolean
           readOnly: true
+        last_seen_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        source_count:
+          type: integer
+          readOnly: true
         modified_at:
           type: string
           format: date-time
@@ -2465,6 +2577,7 @@ components:
       - interfaces
       - ip_addresses
       - is_archived
+      - last_seen_at
       - location
       - manufacturer
       - missing_required_fields
@@ -2482,6 +2595,7 @@ components:
       - retained_custom_fields
       - serial_number
       - site
+      - source_count
       - support_status
       - version
     AssetEvidence:
@@ -2607,6 +2721,14 @@ components:
         is_archived:
           type: boolean
           readOnly: true
+        last_seen_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        source_count:
+          type: integer
+          readOnly: true
         modified_at:
           type: string
           format: date-time
@@ -2620,6 +2742,7 @@ components:
       - category
       - id
       - is_archived
+      - last_seen_at
       - location
       - manufacturer
       - model
@@ -2631,6 +2754,7 @@ components:
       - primary_ip
       - serial_number
       - site
+      - source_count
       - support_status
       - version
     AssetMerge:
@@ -2894,6 +3018,9 @@ components:
       description: |-
         * `planned` - Planned
         * `available` - Available
+    BlankEnum:
+      enum:
+      - ''
     BusinessStatusEnum:
       enum:
       - ordered
@@ -3154,6 +3281,36 @@ components:
       required:
       - category
       - reason
+    ColumnsEnum:
+      enum:
+      - name
+      - category
+      - manufacturer_model
+      - serial
+      - primary_ip
+      - site
+      - owner
+      - business_status
+      - observation_status
+      - support_status
+      - last_seen
+      - sources
+      - modified
+      type: string
+      description: |-
+        * `name` - name
+        * `category` - category
+        * `manufacturer_model` - manufacturer_model
+        * `serial` - serial
+        * `primary_ip` - primary_ip
+        * `site` - site
+        * `owner` - owner
+        * `business_status` - business_status
+        * `observation_status` - observation_status
+        * `support_status` - support_status
+        * `last_seen` - last_seen
+        * `sources` - sources
+        * `modified` - modified
     CustomFieldCreateRequest:
       type: object
       properties:
@@ -4254,6 +4411,20 @@ components:
       - observed_at
       - received_at
       - source_version
+    OrderingEnum:
+      enum:
+      - name
+      - -name
+      - asset_tag
+      - -asset_tag
+      - modified_at
+      - -modified_at
+      - created_at
+      - -created_at
+      type: string
+      description: "* `` - \n* `name` - name\n* `-name` - -name\n* `asset_tag` - asset_tag\n*
+        `-asset_tag` - -asset_tag\n* `modified_at` - modified_at\n* `-modified_at`
+        - -modified_at\n* `created_at` - created_at\n* `-created_at` - -created_at"
     OutcomeEnum:
       enum:
       - success
@@ -4644,6 +4815,29 @@ components:
           $ref: '#/components/schemas/LocationKindEnum'
         is_active:
           type: boolean
+    PatchedSavedViewWriteRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        is_shared:
+          type: boolean
+        filters:
+          type: object
+          additionalProperties:
+            type: string
+            maxLength: 200
+        columns:
+          type: array
+          items:
+            $ref: '#/components/schemas/ColumnsEnum'
+          maxItems: 13
+        ordering:
+          oneOf:
+          - $ref: '#/components/schemas/OrderingEnum'
+          - $ref: '#/components/schemas/BlankEnum'
     PatchedSecuritySettingsUpdateRequest:
       type: object
       properties:
@@ -4820,6 +5014,11 @@ components:
       required:
       - reason
       - resolution
+    ResourceEnum:
+      enum:
+      - assets
+      type: string
+      description: '* `assets` - Assets'
     Role:
       type: object
       properties:
@@ -4872,6 +5071,91 @@ components:
         * `corroborated` - Multiple corroborating identifiers
         * `strong` - Strong identifier
         * `conflict` - Conflicting identifiers
+    SavedView:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        resource:
+          allOf:
+          - $ref: '#/components/schemas/ResourceEnum'
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+        is_shared:
+          type: boolean
+          readOnly: true
+        filters:
+          type: object
+          additionalProperties:
+            type: string
+          readOnly: true
+        columns:
+          type: array
+          items:
+            type: string
+          readOnly: true
+        ordering:
+          type: string
+          readOnly: true
+        owner:
+          type: string
+          readOnly: true
+        is_mine:
+          type: boolean
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        modified_at:
+          type: string
+          format: date-time
+          readOnly: true
+        version:
+          type: integer
+          readOnly: true
+      required:
+      - columns
+      - created_at
+      - filters
+      - id
+      - is_mine
+      - is_shared
+      - modified_at
+      - name
+      - ordering
+      - owner
+      - resource
+      - version
+    SavedViewWriteRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        is_shared:
+          type: boolean
+        filters:
+          type: object
+          additionalProperties:
+            type: string
+            maxLength: 200
+        columns:
+          type: array
+          items:
+            $ref: '#/components/schemas/ColumnsEnum'
+          maxItems: 13
+        ordering:
+          oneOf:
+          - $ref: '#/components/schemas/OrderingEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+      required:
+      - name
     SecuritySettings:
       type: object
       properties:

@@ -96,6 +96,13 @@ scripts/compose.sh dev exec api python manage.py load_observations \
   --instance "<integration name>" --file /tmp/network_devices.json --mode full
 ```
 
+### Inventory views (Task 005)
+
+- **Saved views** on the Assets page: save the current filters, sort order and columns; apply them from the "Saved view" selector (the view id is kept in the URL). Users with asset edit rights can share views; shared views show each person only assets in their own sites.
+- **Columns**: choose visible columns (Name is always shown). Includes Last seen (relative time, exact time on hover and for screen readers), Sources and Observation.
+- **Evidence drawer**: on an asset's Overview, "Evidence" next to each technical field shows its value, source, time, lock and every linked source's report.
+- New filters: Observation status and Source (integration).
+
 After changing an API serializer, regenerate the contract: `cd backend && uv run python manage.py spectacular --file ../frontend/src/shared/api/openapi.yaml`, then `cd frontend && pnpm run gen:api`. CI fails on drift.
 
 Dev ports are bound to 127.0.0.1 only. Stop with `scripts/compose.sh dev down` (add `-v` only to discard the local PostgreSQL volume).

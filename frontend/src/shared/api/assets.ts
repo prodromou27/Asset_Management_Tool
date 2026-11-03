@@ -7,6 +7,8 @@ import type {
   AssetPatch,
   AssetWrite,
   ClassificationImpact,
+  SavedView,
+  SavedViewWrite,
   CustomFieldDefinition,
   Department,
   Location,
@@ -24,6 +26,8 @@ export interface AssetFilters {
   owner?: string
   business_status?: string
   support_status?: string
+  observation_status?: string
+  source?: string
   archived?: string
   ordering?: string
 }
@@ -39,6 +43,7 @@ export const assetKeys = {
   locations: (siteId?: string) => ['locations', siteId ?? 'all'] as const,
   departments: ['departments'] as const,
   userLookup: ['users', 'lookup'] as const,
+  savedViews: ['saved-views'] as const,
 }
 
 // --- Assets ---------------------------------------------------------------------
@@ -117,3 +122,12 @@ export const updateDepartment = (id: string, version: number, body: Record<strin
   apiRequest<Department>('PATCH', `/departments/${id}/`, { body, ifMatch: version })
 
 export const fetchUserLookup = () => apiGet<UserLookup[]>('/users/lookup/')
+
+// --- Saved views --------------------------------------------------------------------
+
+export const fetchSavedViews = () => apiGet<SavedView[]>('/saved-views/')
+export const createSavedView = (body: SavedViewWrite) =>
+  apiRequest<SavedView>('POST', '/saved-views/', { body })
+export const updateSavedView = (id: string, version: number, body: Partial<SavedViewWrite>) =>
+  apiRequest<SavedView>('PATCH', `/saved-views/${id}/`, { body, ifMatch: version })
+export const deleteSavedView = (id: string) => apiRequest<void>('DELETE', `/saved-views/${id}/`)

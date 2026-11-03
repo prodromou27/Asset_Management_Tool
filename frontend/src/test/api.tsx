@@ -321,6 +321,8 @@ export function makeAsset(overrides: Partial<AssetDetail> = {}): AssetDetail {
     observation_status: 'manual_only',
     support_status: 'unknown',
     is_archived: false,
+    last_seen_at: null,
+    source_count: 0,
     modified_at: '2026-11-02T09:00:00Z',
     version: 3,
     os_name: '',

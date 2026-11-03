@@ -298,6 +298,8 @@ class AssetListSerializer(serializers.ModelSerializer):
     primary_hostname = serializers.CharField(read_only=True, allow_null=True)
     primary_ip = serializers.CharField(read_only=True, allow_null=True)
     is_archived = serializers.BooleanField(read_only=True)
+    last_seen_at = serializers.DateTimeField(read_only=True, allow_null=True)
+    source_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Asset
@@ -318,6 +320,8 @@ class AssetListSerializer(serializers.ModelSerializer):
             "observation_status",
             "support_status",
             "is_archived",
+            "last_seen_at",
+            "source_count",
             "modified_at",
             "version",
         ]

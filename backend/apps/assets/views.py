@@ -68,6 +68,7 @@ class AssetPagination(ItemsCursorPagination):
         OpenApiParameter("business_status", str),
         OpenApiParameter("observation_status", str),
         OpenApiParameter("support_status", str),
+        OpenApiParameter("source", str, description="Integration instance ID"),
         OpenApiParameter("archived", str, enum=list(selectors.ARCHIVED_MODES)),
         OpenApiParameter("ordering", str, enum=list(selectors.ORDERING)),
     ]

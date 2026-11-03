@@ -385,3 +385,33 @@ class FieldLock(models.Model):
 
     class Meta:
         constraints = [models.UniqueConstraint("asset", "field", name="assets_field_lock_unique")]
+
+
+class SavedView(models.Model):
+    """A named inventory view: filters, visible columns and ordering. Filters are
+    re-applied through visible_assets(), so a shared view never widens site scope."""
+
+    class Resource(models.TextChoices):
+        ASSETS = "assets", "Assets"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="saved_views"
+    )
+    resource = models.CharField(max_length=30, choices=Resource.choices, default=Resource.ASSETS)
+    name = models.CharField(max_length=100)
+    is_shared = models.BooleanField(default=False)
+    filters = models.JSONField(default=dict, blank=True)
+    columns = models.JSONField(default=list, blank=True)
+    ordering = models.CharField(max_length=40, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    modified_at = models.DateTimeField(auto_now=True)
+    version = models.PositiveIntegerField(default=1)
+
+    class Meta:
+        ordering = ["name"]
+        constraints = [
+            models.UniqueConstraint(
+                "owner", "resource", Lower("name"), name="assets_savedview_name_unique_per_owner"
+            )
+        ]

@@ -3,6 +3,7 @@ from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 from apps.accounts import views as account_views
 from apps.accounts.urls import auth_urlpatterns, user_urlpatterns
+from apps.assets import saved_views
 from apps.assets.urls import asset_urlpatterns, category_urlpatterns, custom_field_urlpatterns
 from apps.organizations.urls import (
     department_urlpatterns,
@@ -41,6 +42,12 @@ urlpatterns = [
     path("api/v1/source-links/", include(link_urlpatterns)),
     path("api/v1/merges/", include(merge_urlpatterns)),
     path("api/v1/asset-categories/", include(category_urlpatterns)),
+    path("api/v1/saved-views/", saved_views.SavedViewListCreateView.as_view(), name="saved-views"),
+    path(
+        "api/v1/saved-views/<uuid:pk>/",
+        saved_views.SavedViewDetailView.as_view(),
+        name="saved-view-detail",
+    ),
     path("api/v1/custom-fields/", include(custom_field_urlpatterns)),
     path("api/v1/schema/", SpectacularAPIView.as_view(), name="schema"),
     path(

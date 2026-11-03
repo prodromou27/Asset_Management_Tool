@@ -24,6 +24,7 @@ import { EmptyState, LoadingState, QueryErrorState } from '../../shared/ui/State
 import { StatusBadge } from '../../shared/ui/StatusBadge'
 import { Tabs } from '../../shared/ui/Tabs'
 import { EvidencePanel } from '../discovery/EvidencePanel'
+import { FieldEvidenceDrawer } from '../discovery/FieldEvidenceDrawer'
 import { CustomFieldInputs } from './CustomFieldInputs'
 import { toApiValues, type CustomValues } from './customValues'
 import {
@@ -170,8 +171,17 @@ function Overview({ asset }: { asset: AssetDetail }) {
     queryKey: assetKeys.fields(asset.category.id, true),
     queryFn: () => fetchCategoryFields(asset.category.id, true),
   })
+  const { can } = useSession()
+  const [evidenceField, setEvidenceField] = useState<string | null>(null)
   const unset = (text = 'Not recorded') => <span className="cell-muted">{text}</span>
-  const os = [asset.os_name, asset.os_version].filter(Boolean).join(' ')
+  const technical: { field: keyof AssetDetail; label: string; mono?: boolean; empty?: string }[] = [
+    { field: 'manufacturer', label: 'Manufacturer', empty: 'Unknown' },
+    { field: 'model', label: 'Model', empty: 'Unknown' },
+    { field: 'serial_number', label: 'Serial number', mono: true },
+    { field: 'os_name', label: 'Operating system' },
+    { field: 'os_version', label: 'OS version', mono: true },
+    { field: 'firmware_version', label: 'Firmware', mono: true },
+  ]
 
   return (
     <div className="detail-layout">
@@ -181,21 +191,34 @@ function Overview({ asset }: { asset: AssetDetail }) {
             Hardware and software
           </h2>
           <dl className="meta-grid meta-grid--two">
-            <dt>Manufacturer</dt>
-            <dd>{asset.manufacturer || unset('Unknown')}</dd>
-            <dt>Model</dt>
-            <dd>{asset.model || unset('Unknown')}</dd>
-            <dt>Serial number</dt>
-            <dd className="mono">{asset.serial_number || unset()}</dd>
-            <dt>Operating system</dt>
-            <dd>{os || unset()}</dd>
-            <dt>Firmware</dt>
-            <dd className="mono">{asset.firmware_version || unset()}</dd>
+            {technical.map(({ field, label, mono, empty }) => (
+              <div className="meta-grid__pair" key={field}>
+                <dt>{label}</dt>
+                <dd className={mono ? 'mono' : undefined}>
+                  {(asset[field] as string) || unset(empty)}
+                  {can(PERMISSIONS.discoveryView) && (
+                    <button
+                      type="button"
+                      className="link-button evidence-trigger"
+                      aria-haspopup="dialog"
+                      onClick={() => setEvidenceField(field)}
+                    >
+                      Evidence<span className="visually-hidden"> for {label}</span>
+                    </button>
+                  )}
+                </dd>
+              </div>
+            ))}
             <dt>Primary hostname</dt>
             <dd className="mono">{asset.primary_hostname ?? unset('None')}</dd>
             <dt>Primary IP</dt>
             <dd className="mono">{asset.primary_ip ?? unset('None')}</dd>
           </dl>
+          <FieldEvidenceDrawer
+            assetId={asset.id}
+            field={evidenceField}
+            onClose={() => setEvidenceField(null)}
+          />
         </section>
 
         <section className="panel" aria-labelledby="cf-heading">
