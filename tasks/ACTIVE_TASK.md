@@ -1,6 +1,6 @@
 # Current Task: 005 | Asset list/detail UI, search, filters, provenance drawer
 
-Status: **In progress** (started 2026-11-03 on branch DEV).
+Status: **Provisionally Complete / Pending Docker host verification** (2026-11-03, branch DEV, commit `14c2c30`).
 
 **Read:** AGENTS.md, docs/00, 04, 07, 08 (backlog list for 005).
 
@@ -27,6 +27,37 @@ column width persistence.
 - List query count stays bounded with the new annotations.
 - 10k-asset list, count and search each complete within budget on PostgreSQL CI.
 - Drawer: keyboard reachable, Escape closes, focus returns to the trigger.
+
+## Outcome
+
+**Migrations:** `assets.0006_saved_view` (SavedView), `assets.0007_search_trigram_indexes`
+(pg_trgm + GIN on UPPER(name/tag/serial/manufacturer/model/hostname); PostgreSQL only).
+Both reversible.
+
+**APIs (2 new paths, 59 total):** `GET/POST /saved-views/`, `PATCH/DELETE /saved-views/{id}/`
+(If-Match on PATCH). `GET /assets/` adds `last_seen_at`, `source_count` fields and `source`
+filter; search now uses EXISTS subqueries (no DISTINCT, no duplicate rows).
+
+**UI:** Assets page saved-view selector (apply / save as / update / delete; view id in URL),
+column chooser (name always shown; per-user memory), Last seen (relative + exact for
+screen readers), Sources and Observation columns, Observation and Source filters, sticky
+table header; asset Overview "Evidence" buttons opening the source evidence drawer
+(Escape closes, focus returns).
+
+**Verification:**
+- GitHub CI run 41621601226 (PostgreSQL 16 + Redis 7): backend **321 passed, 0 skipped**,
+  including the 10k-asset list/count/search timing test (< 1.5 s per request);
+  frontend **76 tests**, lint, typecheck, build; Compose valid; images build.
+- Workstation (SQLite test-only): backend 315 passed, 6 skipped (PostgreSQL-only).
+- Not run: Docker dev stack, Playwright, manual browser review at 1440×900.
+
+**Unresolved:** ASM-19/ASM-20 in docs/17. No bulk selection/actions (Tasks 012–014);
+column widths not persisted; timing test is a single-request approximation, not a p95
+load test (Task 022); trigram indexes built non-concurrently.
+
+Proposed next task: **006 | LibreNMS read-only adapter + fixtures** (tasks/BACKLOG.md).
+Needs a real or sanitized LibreNMS API sample to verify field mapping (docs/05: "first
+test installed version and available data"). Do not start automatically.
 
 ---
 
