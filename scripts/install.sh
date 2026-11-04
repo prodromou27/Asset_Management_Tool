@@ -10,6 +10,7 @@
 # scripts/enable_https.sh. SELinux and firewalld stay enabled; only the web port opens.
 
 set -euo pipefail
+trap 'echo "ERROR: ${BASH_SOURCE[0]##*/} stopped at line $LINENO: $BASH_COMMAND" >&2' ERR
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ENV_FILE="$REPO_ROOT/.env"
@@ -18,7 +19,8 @@ DOCKER_GPG_FPR="060A61C51B558A7F742B77AAC52FEB6B621E9F35"   # docs.docker.com/en
 
 say() { printf '\n==> %s\n' "$*"; }
 die() { printf '\nERROR: %s\n' "$*" >&2; exit 1; }
-envval() { grep -E "^$1=" "$ENV_FILE" | tail -1 | cut -d= -f2-; }
+# Prints the value of a .env key, or nothing when the key is absent (never fails).
+envval() { { grep -E "^$1=" "$ENV_FILE" || true; } | tail -1 | cut -d= -f2-; }
 
 [[ $EUID -eq 0 ]] || die "run with sudo: sudo bash scripts/install.sh"
 IP=""

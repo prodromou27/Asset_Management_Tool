@@ -11,12 +11,14 @@
 # Port 80 keeps working and redirects to HTTPS.
 
 set -euo pipefail
+trap 'echo "ERROR: ${BASH_SOURCE[0]##*/} stopped at line $LINENO: $BASH_COMMAND" >&2' ERR
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ENV_FILE="$REPO_ROOT/.env"
 CERT_DIR=/etc/itam/tls
 die() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
-envval() { grep -E "^$1=" "$ENV_FILE" | tail -1 | cut -d= -f2-; }
+# Prints the value of a .env key, or nothing when the key is absent (never fails).
+envval() { { grep -E "^$1=" "$ENV_FILE" || true; } | tail -1 | cut -d= -f2-; }
 setenv() {
   if grep -qE "^$1=" "$ENV_FILE"; then sed -i "s|^$1=.*|$1=$2|" "$ENV_FILE"; else echo "$1=$2" >> "$ENV_FILE"; fi
 }
