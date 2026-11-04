@@ -269,6 +269,19 @@ software CSV import family; Software & Licenses area and entitlements (016b).
 
 # Previous record: Task 015 | EOL catalogue, evidence and assessment
 
+### Revalidation requested 2026-11-05
+
+The repeated Task 015 request was checked against the existing implementation on DEV;
+no product changes or new migrations were needed. Focused backend lifecycle and export
+tests: **92 passed** using the SQLite test-only fallback (one pytest cache permission
+warning). Frontend lifecycle tests: **10 passed**; frontend typecheck and oxlint passed;
+lifecycle Ruff lint and format checks passed. GitHub confirmed both the original Task 015
+CI run 41833135237 (`e3c58a9`) and the latest implementation CI run 41912261776 (`26d1688`)
+succeeded; the latter covers PostgreSQL/Redis, migration reversal, schema/type drift,
+Compose configuration and production image builds. Those infrastructure gates were not
+rerun locally (Docker is unavailable). Existing ASM-53 limitations remain. Tasks 016a,
+016b, 017 and 018 are already complete; next action remains Task 019, only when requested.
+
 Status: **Complete (CI run 41833135237 green)** (2026-11-04, branch DEV).
 
 **Read:** AGENTS.md, docs/00, 01 (support states, Review EOL), 03 (lifecycle tables), 04 (EOL
