@@ -1,6 +1,6 @@
 # Current Task: 016a | Software catalogue, installations and software lifecycle
 
-Status: **Complete locally; awaiting CI** (2026-11-04, branch DEV). Owner decisions: split
+Status: **Complete (CI run 41842547955 green)** (2026-11-04, branch DEV). Owner decisions: split
 Task 016 into 016a (this) and 016b (entitlements, allocations, Software & Licenses area with
 M365); connector software reads for both Endpoint Central and Intune, off by default.
 
@@ -50,6 +50,8 @@ M365); connector software reads for both Endpoint Central and Intune, off by def
 - Frontend: typecheck, oxlint, **160 tests** (7 new) and build pass. Screenshots of the
   Software products and product pages (mocked API) led to clearer suggested-match text,
   pluralisation and heading spacing.
+- GitHub CI run 41842547955 on `1bb5734`: backend **726 passed, 0 skipped** (PostgreSQL 16 +
+  Redis 7; `software` migration reversed), frontend 160, Compose config and image builds pass.
 - Not run: Docker stack, live sources, the 1m-installation performance target (Task 022).
 
 **Open (ASM-54):** sanitized EC/Graph captures (DEC-06/07); request volume with real tenants;
