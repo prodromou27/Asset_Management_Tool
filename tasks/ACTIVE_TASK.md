@@ -1,4 +1,61 @@
-# Current Task: 013 | CSV/XLSX imports with preview/guarded upsert
+# Current Task: Staging installation kit (between 013 and 014)
+
+Status: **Complete locally; awaiting CI** (2026-11-04, branch DEV). Requested by the
+owner: "prepare the installation; the hostname and certificate are not needed yet".
+
+**Read:** AGENTS.md, docs/00, 12 (sections 0-8), 14, 17 (DEC-01, DEC-04, DEC-11, ASM-03).
+
+## Scope
+
+Staging install on one AlmaLinux 10.2 host reached by IP with a temporary self-signed
+certificate. Production go-live remains blocked (ADR-011 gates: Tasks 018/019, Task 022,
+open decisions). Nothing was installed or run on a real host.
+
+## Outcome
+
+- **Fix: api healthcheck under production settings.** It called
+  `http://localhost:8000` without a proxy marker, so `SECURE_SSL_REDIRECT` answered 301
+  and `localhost` failed host validation; nginx-proxy (which waits for a healthy api)
+  would never start. It now sends the first `ITAM_ALLOWED_HOSTS` entry as Host and
+  `X-Forwarded-Proto: https`; host validation and the redirect stay strict.
+- `CSRF_TRUSTED_ORIGINS` is passed through Compose (optional; empty = none).
+- `scripts/staging/`:
+  - `preflight.sh`: read-only checks (OS, SELinux, firewalld, NTP, updates, resources,
+    conflicting runtimes, port 443, repository reachability).
+  - `install_docker.sh`: dry run by default; `--yes` installs from Docker's RHEL
+    repository after a GPG fingerprint check and writes an install record. Never
+    removes packages or touches SELinux/firewalld.
+  - `make_selfsigned_cert.sh`: 90-day certificate with IP (and optional short-name)
+    SAN, root-owned key, `container_file_t` label.
+  - `make_env.sh`: `.env` (mode 600) with generated secrets that are never printed;
+    `ITAM_ENV=staging`, integrations off.
+  - `deploy.sh`: guarded by `ITAM_CONFIRM_STAGING=yes`; labels bind mounts, validates
+    Compose and refuses any published port other than `nginx-proxy:443`, builds,
+    migrates once, waits for health, `check --deploy --fail-level WARNING`, smoke tests
+    through the proxy (ready 200, frontend 200, unauthenticated API refused), writes a
+    record to `.deploy/` (git-ignored).
+- docs/12 section 9: step-by-step runbook, certificate/FQDN replacement, known limits.
+  README pointer.
+
+## Verification (workstation; no Docker or AlmaLinux host here)
+
+- New `backend/tests/test_container_healthcheck.py` (4 tests): the healthcheck request
+  passes with production-like settings, plain HTTP is redirected, unlisted hosts get
+  400, and the Compose healthcheck sends the first allowed host and the https marker.
+- `manage.py check --deploy --fail-level WARNING` under production settings with a
+  staging-style environment: no issues.
+- `make_env.sh` run in a scratch directory: expected keys, secret lengths, valid Fernet
+  key, refuses to overwrite. The certificate command checked with OpenSSL 3.5.
+- `bash -n` on all scripts (shellcheck not available here).
+- Not run: the scripts on AlmaLinux, Docker builds or the stack itself. The first run on
+  the staging host is the real test; send me any failing step output.
+
+Proposed next task: **014 | CSV/XLSX/JSON exports with RBAC and async jobs**
+(tasks/BACKLOG.md). Do not start automatically.
+
+---
+
+# Previous record: Task 013
 
 Status: **Complete (CI run 41797570026 green)**
 (2026-11-04, branch DEV).
@@ -153,6 +210,3 @@ read-only to `audit.view` holders.
 - Earlier open items: DEC-15, DEC-16 and DEC-17; regional Defender hosts; whether excess
   roles should block syncs; phone and tablet categories; ASM-46 severities; group
   re-evaluation on asset change.
-
-Proposed next task: **014 | CSV/XLSX/JSON exports with RBAC and async jobs**
-(tasks/BACKLOG.md). Do not start automatically.

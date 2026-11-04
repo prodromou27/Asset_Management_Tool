@@ -6,6 +6,9 @@ name: itam
 x-backend-env: &backend-env
   ITAM_ENV: ${ITAM_ENV:?ITAM_ENV is required}
   ITAM_ALLOWED_HOSTS: ${ITAM_ALLOWED_HOSTS:?ITAM_ALLOWED_HOSTS is required}
+  # Optional comma-separated https origins (for example https://10.0.0.5). Same-origin
+  # requests through the proxy on 443 already pass Django's origin check.
+  CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:-}
   ITAM_TIMEZONE: ${ITAM_TIMEZONE:-Asia/Nicosia}
   ITAM_LOG_LEVEL: ${ITAM_LOG_LEVEL:-INFO}
   DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?DJANGO_SECRET_KEY is required}
@@ -75,7 +78,9 @@ services:
         - CMD
         - python
         - -c
-        - "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/api/v1/health/live/', timeout=3).status == 200 else 1)"
+        # Sends the first allowed host and the proxy's https marker so the check passes
+        # host validation and production's HTTPS redirect without widening either.
+        - "import os,sys,urllib.request as u; h=os.environ['ITAM_ALLOWED_HOSTS'].split(',')[0].strip(); r=u.Request('http://127.0.0.1:8000/api/v1/health/live/', headers={'Host': h, 'X-Forwarded-Proto': 'https'}); sys.exit(0 if u.urlopen(r, timeout=3).status == 200 else 1)"
       interval: 10s
       timeout: 5s
       retries: 6

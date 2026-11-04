@@ -187,6 +187,10 @@ scripts/compose.sh prod config --quiet
 scripts/compose.sh prod exec api python manage.py check --deploy
 ```
 
+### Staging installation (by IP, temporary self-signed certificate)
+
+`scripts/staging/` holds the preflight, Docker install, certificate, `.env` and deploy scripts; follow [docs/12 section 9](docs/12_DEPLOY_DOCKER_ALMALINUX.md#9-staging-installation-no-fqdn-or-trusted-certificate-yet). Staging only: integrations stay off and data is disposable.
+
 Production settings refuse to start with `ITAM_DEBUG` enabled, a missing/short/test secret key, wildcard `ITAM_ALLOWED_HOSTS` or a missing database password. PostgreSQL and Redis publish no host ports in `compose.prod.yaml`; only the proxy publishes 443.
 
 Frontend:

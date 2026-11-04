@@ -119,3 +119,33 @@ One-off migration and bootstrap commands must be provided in scripts/ with guard
 ## 8. Rollback
 
 Application rollback is to previously tested pinned images **only if database schema remains compatible**. For incompatible migrations, use planned recovery to a separate environment and a reviewed data migration/rollback path; do not assume container image rollback undoes a schema change. Preserve last verified backup and audit logs.
+
+## 9. Staging installation (no FQDN or trusted certificate yet)
+
+Purpose: evaluate the application and perform the AlmaLinux 10.2 + Docker compatibility check from sections 0–1 on a **staging** host. It is not a production deployment: the ADR-011 gates (verified backup/restore, SMTP), Task 022 and the open decisions still apply. Data on this host is disposable; integrations stay off (`ITAM_ALLOW_LIVE_INTEGRATIONS=false`) and no live source is configured.
+
+Until DNS and the internal CA are ready, the host is reached by IP over HTTPS with a **temporary self-signed certificate** (90 days). Browsers will warn; compare the SHA-256 fingerprint printed by the certificate script before accepting it. HSTS is ignored for IP addresses and for certificates with errors, so this does not lock browsers out later.
+
+The stack runs with the production settings and hardening of `compose.prod.yaml`; only `ITAM_ENV=staging` differs. Scripts live in `scripts/staging/`; each one refuses to overwrite existing secrets, certificates or `.env`.
+
+| Step | Command (run from the repository root on the host) | Changes the host? |
+|---|---|---|
+| 1. Get the code | `git clone -b DEV <repo> /opt/itam` (deploy key with read-only access), or copy a `git archive` of the reviewed commit | Yes |
+| 2. Preflight | `scripts/staging/preflight.sh` — OS, SELinux enforcing, firewalld, NTP, updates, resources, conflicting runtimes, port 443, reachability of Docker's repository and Docker Hub | No |
+| 3. Docker | `sudo scripts/staging/install_docker.sh` prints the plan; `sudo scripts/staging/install_docker.sh --yes` installs from Docker's RHEL repository after checking the GPG fingerprint, enables the service and writes `/root/itam-docker-install-*.txt`. It stops if Podman/runc are installed or the repository does not resolve on 10.2 — record that as a compatibility result instead of forcing it | Yes |
+| 4. Certificate | `sudo scripts/staging/make_selfsigned_cert.sh <ip> [short-name]` → `/etc/itam/tls/{fullchain,privkey}.pem`, root-owned, key mode 600, labelled `container_file_t` | Yes |
+| 5. Configuration | `scripts/staging/make_env.sh <ip> [short-name]` → `.env` (mode 600) with generated PostgreSQL password, Django secret key and import encryption key; nothing is printed. Store a protected copy outside the host | Yes |
+| 6. Deploy | `sudo ITAM_CONFIRM_STAGING=yes scripts/staging/deploy.sh` — labels the two bind mounts, validates Compose and refuses any published port other than `nginx-proxy:443`, builds, starts PostgreSQL/Redis, migrates once, starts the rest and waits for health, runs `check --deploy --fail-level WARNING`, smoke-tests through the proxy and writes `.deploy/staging-*.txt` | Yes |
+| 7. Firewall | `sudo firewall-cmd --permanent --add-service=https && sudo firewall-cmd --reload` (443/tcp only; nothing else is published) | Yes |
+| 8. First admin | `sudo scripts/bootstrap_admin.sh prod <username> "<Display Name>" [email]` — the password is prompted, never passed as an argument. MFA/SSO is not implemented yet (ASM-03, DEC-04/DEC-11), so use a long unique password and keep the host off public networks | Yes |
+| 9. Verify from a workstation | Browse to `https://<ip>/`, accept the certificate after comparing the fingerprint, sign in. From another machine confirm only 443 answers (Docker-published ports can bypass firewalld zone rules, so test reachability rather than trusting the rule list) | No |
+
+Day-2 commands use the same wrapper: `sudo scripts/compose.sh prod ps`, `… logs --tail=100 api`, `… restart nginx-proxy`. Update: `git pull`, then step 6 again. Do not run `down --volumes`; it deletes the database.
+
+Replacing the temporary certificate when the FQDN and internal CA are ready:
+
+1. Put the CA-issued `fullchain.pem` (server certificate followed by intermediates) and `privkey.pem` in `/etc/itam/tls/` (or a new directory and update `ITAM_TLS_CERT_DIR`), mode 600 for the key, then `sudo chcon -R -t container_file_t /etc/itam/tls`.
+2. Put the FQDN **first** in `ITAM_ALLOWED_HOSTS` and add `https://<fqdn>` to `CSRF_TRUSTED_ORIGINS`; set `ITAM_PUBLIC_URL`. The api container healthcheck uses the first allowed host.
+3. Re-run step 6 (or `sudo scripts/compose.sh prod up -d` followed by `… restart nginx-proxy`).
+
+Known limits of this staging install: no backups (Task 019), no SMTP (Task 018), no load test (Task 022), images built on the host and not yet scanned or signed (section 6 step 4), and the Docker-on-AlmaLinux compatibility record still needs review before production.
