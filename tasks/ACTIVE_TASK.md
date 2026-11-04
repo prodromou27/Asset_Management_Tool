@@ -1,6 +1,6 @@
 # Current Task: 018b | Notification rules
 
-Status: **Complete locally; awaiting CI** (2026-11-04, branch DEV). No mail sent outside the
+Status: **Complete (CI run 41912261776 green)** (2026-11-04, branch DEV). No mail sent outside the
 machine: rules were tested by inspecting the outbox.
 
 **Read:** AGENTS.md, docs/00, 06, 09, 10 (events, dedup key), 14, 17 (ASM-53, ASM-56,
@@ -34,6 +34,8 @@ ASM-57, DEC-14).
   validates with `--fail-on-warn`; types regenerated. Ruff clean.
 - Frontend: typecheck, oxlint, **180 tests** (3 new) and build pass. Screenshots of the
   rules list and dialog (mocked API) checked.
+- GitHub CI run 41912261776 on `26d1688`: backend **771 passed, 0 skipped** (PostgreSQL 16 +
+  Redis 7), frontend 180, Compose config and image builds pass.
 - Not run: Docker stack, delivery through a real relay (DEC-08/DEC-14).
 
 **Open (ASM-58):** digests per site/owner (Task 021), escalation, backup alerts (Task 019),
