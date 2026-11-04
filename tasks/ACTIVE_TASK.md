@@ -1,6 +1,6 @@
 # Current Task: 018a | SMTP config UI, template engine, outbox and test mail
 
-Status: **Complete locally; awaiting CI** (2026-11-04, branch DEV). Owner decisions: split
+Status: **Complete (CI run 41889402046 green)** (2026-11-04, branch DEV). Owner decisions: split
 Task 018 into 018a (this) and 018b (alert rules, recipients, dedup); SMTP password as a
 secret reference. No real mail server contacted: tests use a local SMTP server with a
 generated test CA.
@@ -43,6 +43,8 @@ generated test CA.
 - Frontend: typecheck, oxlint, **177 tests** (6 new) and build pass. Screenshots (mocked
   API) of settings, templates, queue and System health led to shorter security labels and the
   template layout.
+- GitHub CI run 41889402046 on `e0e6f15`: backend **763 passed, 0 skipped** (PostgreSQL 16 +
+  Redis 7), frontend 177, Compose config and image builds pass.
 - Not run: Docker stack with Mailpit, A18 against the real relay (needs DEC-08).
 
 **Open (ASM-57):** alert rules and recipients (018b); OAuth SMTP; production relay and
