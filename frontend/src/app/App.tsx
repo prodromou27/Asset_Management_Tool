@@ -8,6 +8,8 @@ import { IntegrationsPage } from '../features/admin-integrations/IntegrationsPag
 import { CandidatePage } from '../features/discovery/CandidatePage'
 import { GroupDetailPage } from '../features/groups/GroupDetailPage'
 import { GroupsPage } from '../features/groups/GroupsPage'
+import { ImportJobPage } from '../features/imports/ImportJobPage'
+import { ImportsPage } from '../features/imports/ImportsPage'
 import { LicensesPage } from '../features/licenses/LicensesPage'
 import { SubscriptionPage } from '../features/licenses/SubscriptionPage'
 import { DiscoveryPage } from '../features/discovery/DiscoveryPage'
@@ -119,6 +121,30 @@ export function AppRoutes() {
         element={
           <Protected permission={PERMISSIONS.groupsView} what="groups">
             <GroupDetailPage />
+          </Protected>
+        }
+      />
+      <Route
+        path="/imports"
+        element={
+          <Protected permission={PERMISSIONS.importsRun} what="imports">
+            <ImportsPage />
+          </Protected>
+        }
+      />
+      <Route
+        path="/imports/new"
+        element={
+          <Protected permission={PERMISSIONS.importsRun} what="imports">
+            <ImportJobPage />
+          </Protected>
+        }
+      />
+      <Route
+        path="/imports/:id"
+        element={
+          <Protected permission={PERMISSIONS.importsRun} what="imports">
+            <ImportJobPage />
           </Protected>
         }
       />

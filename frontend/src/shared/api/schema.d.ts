@@ -179,6 +179,36 @@ export interface paths {
     /** @description Process and its required dependencies (DB, Redis) are reachable. */
     get: operations["health_ready_retrieve"];
   };
+  "/api/v1/imports/": {
+    get: operations["imports_list"];
+    post: operations["imports_create"];
+  };
+  "/api/v1/imports/{id}/": {
+    get: operations["imports_retrieve"];
+    patch: operations["imports_partial_update"];
+  };
+  "/api/v1/imports/{id}/commit/": {
+    post: operations["imports_commit_create"];
+  };
+  "/api/v1/imports/{id}/errors/": {
+    get: operations["imports_errors_retrieve"];
+  };
+  "/api/v1/imports/{id}/preview/": {
+    post: operations["imports_preview_create"];
+  };
+  "/api/v1/imports/{id}/rollback/": {
+    post: operations["imports_rollback_create"];
+  };
+  "/api/v1/imports/{id}/rows/": {
+    get: operations["imports_rows_list"];
+  };
+  "/api/v1/imports/templates/": {
+    get: operations["imports_templates_list"];
+  };
+  "/api/v1/imports/templates/{family}/csv/": {
+    /** @description CSV template: header row plus one example row (formula-escaped). */
+    get: operations["imports_templates_csv_retrieve"];
+  };
   "/api/v1/integrations/": {
     get: operations["integrations_list"];
     post: operations["integrations_create"];
@@ -804,6 +834,13 @@ export interface components {
       };
       reason: string;
     };
+    Column: {
+      name: string;
+      label: string;
+      required: components["schemas"]["RequiredEnum"] | components["schemas"]["BlankEnum"];
+      help: string;
+      example: string;
+    };
     /**
      * @description * `name` - name
      * * `category` - category
@@ -987,6 +1024,14 @@ export interface components {
      * @enum {string}
      */
     EvidenceSourceEnum: "manual" | "librenms" | "endpoint_central" | "intune" | "defender" | "import" | "fixture";
+    /**
+     * @description * `asset` - asset
+     * * `location` - location
+     * * `group` - group
+     * * `group_membership` - group_membership
+     * @enum {string}
+     */
+    FamilyEnum: "asset" | "location" | "group" | "group_membership";
     FieldAdded: {
       key: string;
       label: string;
@@ -1181,6 +1226,24 @@ export interface components {
       /** @default false */
       is_primary?: boolean;
     };
+    /**
+     * @description * `uploaded` - Uploaded
+     * * `previewing` - Checking
+     * * `previewed` - Ready to import
+     * * `committing` - Importing
+     * * `completed` - Completed
+     * * `failed` - Failed
+     * * `rolled_back` - Rolled back
+     * @enum {string}
+     */
+    ImportJobStatusEnum: "uploaded" | "previewing" | "previewed" | "committing" | "completed" | "failed" | "rolled_back";
+    /**
+     * @description * `create_only` - Create only
+     * * `update_matched` - Update matched
+     * * `upsert` - Create and update
+     * @enum {string}
+     */
+    ImportModeEnum: "create_only" | "update_matched" | "upsert";
     InstanceRef: {
       /** Format: uuid */
       id: string;
@@ -1302,6 +1365,89 @@ export interface components {
       name: string;
       /** @default */
       mac_address?: string;
+    };
+    Job: {
+      /** Format: uuid */
+      id: string;
+      family: string;
+      template_version: number;
+      status: components["schemas"]["ImportJobStatusEnum"];
+      mode: components["schemas"]["ImportModeEnum"];
+      filename: string;
+      file_format: string;
+      size_bytes: number;
+      checksum: string;
+      encoding: string;
+      sheet: string;
+      headers: readonly string[];
+      mapping: {
+        [key: string]: string;
+      };
+      row_count: number;
+      totals: {
+        [key: string]: unknown;
+      };
+      warnings: readonly string[];
+      error_message: string;
+      progress: number;
+      file_retained: boolean;
+      /** Format: date-time */
+      purge_after: string;
+      created_by: string;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      previewed_at: string | null;
+      committed_by: string | null;
+      /** Format: date-time */
+      committed_at: string | null;
+      /** Format: date-time */
+      completed_at: string | null;
+      /** Format: date-time */
+      rolled_back_at: string | null;
+      version: number;
+    };
+    JobDetail: {
+      /** Format: uuid */
+      id: string;
+      family: string;
+      template_version: number;
+      status: components["schemas"]["ImportJobStatusEnum"];
+      mode: components["schemas"]["ImportModeEnum"];
+      filename: string;
+      file_format: string;
+      size_bytes: number;
+      checksum: string;
+      encoding: string;
+      sheet: string;
+      headers: readonly string[];
+      mapping: {
+        [key: string]: string;
+      };
+      row_count: number;
+      totals: {
+        [key: string]: unknown;
+      };
+      warnings: readonly string[];
+      error_message: string;
+      progress: number;
+      file_retained: boolean;
+      /** Format: date-time */
+      purge_after: string;
+      created_by: string;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      previewed_at: string | null;
+      committed_by: string | null;
+      /** Format: date-time */
+      committed_at: string | null;
+      /** Format: date-time */
+      completed_at: string | null;
+      /** Format: date-time */
+      rolled_back_at: string | null;
+      version: number;
+      sample: readonly string[][];
     };
     LicenseSource: {
       /** Format: uuid */
@@ -1442,12 +1588,6 @@ export interface components {
       source_asset: string;
       reason: string;
     };
-    /**
-     * @description * `full` - Full
-     * * `incremental` - Incremental
-     * @enum {string}
-     */
-    ModeEnum: "full" | "incremental";
     NeighborEvidence: {
       /** Format: uuid */
       id: string;
@@ -1590,6 +1730,12 @@ export interface components {
       previous_cursor: string | null;
       count: number;
     };
+    PaginatedJobList: {
+      items: components["schemas"]["Job"][];
+      next_cursor: string | null;
+      previous_cursor: string | null;
+      count: number;
+    };
     PaginatedMembershipList: {
       items: components["schemas"]["Membership"][];
       next_cursor: string | null;
@@ -1604,6 +1750,12 @@ export interface components {
     };
     PaginatedObservationSummaryList: {
       items: components["schemas"]["ObservationSummary"][];
+      next_cursor: string | null;
+      previous_cursor: string | null;
+      count: number;
+    };
+    PaginatedRowList: {
+      items: components["schemas"]["Row"][];
       next_cursor: string | null;
       previous_cursor: string | null;
       count: number;
@@ -1720,6 +1872,12 @@ export interface components {
       enrichment_max_age_hours?: number;
       source_timezone?: string;
     };
+    PatchedJobUpdateRequest: {
+      mapping?: {
+        [key: string]: string;
+      };
+      mode?: components["schemas"]["ImportModeEnum"];
+    };
     PatchedLocationWriteRequest: {
       /** Format: uuid */
       site?: string;
@@ -1819,6 +1977,14 @@ export interface components {
       refreshed: number;
       resolved: number;
     };
+    /**
+     * @description * `` -
+     * * `always` - always
+     * * `create` - create
+     * * `match` - match
+     * @enum {string}
+     */
+    RequiredEnum: "always" | "create" | "match";
     ResetPasswordRequest: {
       password: string;
     };
@@ -1837,6 +2003,16 @@ export interface components {
      * @enum {string}
      */
     ResourceEnum: "assets";
+    /**
+     * @description * `` - Not applied
+     * * `applied` - Applied
+     * * `skipped` - Skipped
+     * * `failed` - Failed
+     * * `rolled_back` - Rolled back
+     * * `not_rolled_back` - Changed since import; not rolled back
+     * @enum {string}
+     */
+    ResultEnum: "applied" | "skipped" | "failed" | "rolled_back" | "not_rolled_back";
     Role: {
       code: string;
       name: string;
@@ -1848,6 +2024,31 @@ export interface components {
       code: string;
       name: string;
     };
+    Row: {
+      row_number: number;
+      action: components["schemas"]["RowActionEnum"];
+      key: string;
+      target_id: string;
+      target_label: string;
+      messages: readonly string[];
+      values: {
+        [key: string]: unknown;
+      };
+      changes: {
+        [key: string]: unknown;
+      };
+      result: components["schemas"]["ResultEnum"] | components["schemas"]["BlankEnum"];
+      result_message: string;
+    };
+    /**
+     * @description * `create` - Create
+     * * `update` - Update
+     * * `skip` - Skip
+     * * `conflict` - Conflict
+     * * `error` - Error
+     * @enum {string}
+     */
+    RowActionEnum: "create" | "update" | "skip" | "conflict" | "error";
     /**
      * @description * `new_device` - No matching asset
      * * `weak` - Weak identifier only
@@ -2121,12 +2322,12 @@ export interface components {
     SupportStatusEnum: "supported" | "eol_announced" | "expiring" | "security_maintenance_ended" | "eos" | "unknown" | "not_announced";
     SyncRequestRequest: {
       /** @default full */
-      mode?: components["schemas"]["ModeEnum"];
+      mode?: components["schemas"]["SyncRunModeEnum"];
     };
     SyncRun: {
       /** Format: uuid */
       id: string;
-      mode: components["schemas"]["ModeEnum"];
+      mode: components["schemas"]["SyncRunModeEnum"];
       status: components["schemas"]["SyncRunStatusEnum"];
       triggered_by: string;
       /** Format: date-time */
@@ -2161,6 +2362,12 @@ export interface components {
       heartbeat_at: string | null;
     };
     /**
+     * @description * `full` - Full
+     * * `incremental` - Incremental
+     * @enum {string}
+     */
+    SyncRunModeEnum: "full" | "incremental";
+    /**
      * @description * `queued` - Queued
      * * `running` - Running
      * * `succeeded` - Succeeded
@@ -2172,7 +2379,7 @@ export interface components {
     SyncRunSummary: {
       /** Format: uuid */
       id: string;
-      mode: components["schemas"]["ModeEnum"];
+      mode: components["schemas"]["SyncRunModeEnum"];
       status: components["schemas"]["SyncRunStatusEnum"];
       phase: string;
       /** Format: date-time */
@@ -2187,6 +2394,21 @@ export interface components {
       errors: number;
       warnings: number;
       error_message: string;
+    };
+    Template: {
+      code: string;
+      label: string;
+      version: number;
+      description: string;
+      match_help: string;
+      columns: components["schemas"]["Column"][];
+      custom_columns: boolean;
+      allowed: boolean;
+    };
+    UploadRequest: {
+      family: components["schemas"]["FamilyEnum"];
+      /** Format: binary */
+      file: string;
     };
     User: {
       /** Format: uuid */
@@ -3357,6 +3579,194 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["Readiness"];
+        };
+      };
+    };
+  };
+  imports_list: {
+    parameters: {
+      query?: {
+        /** @description The pagination cursor value. */
+        cursor?: string;
+        /** @description Number of results to return per page. */
+        page_size?: number;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["PaginatedJobList"];
+        };
+      };
+    };
+  };
+  imports_create: {
+    requestBody: {
+      content: {
+        "multipart/form-data": components["schemas"]["UploadRequest"];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          "application/json": components["schemas"]["JobDetail"];
+        };
+      };
+    };
+  };
+  imports_retrieve: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["JobDetail"];
+        };
+      };
+    };
+  };
+  imports_partial_update: {
+    parameters: {
+      header: {
+        "If-Match": string;
+      };
+      path: {
+        id: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["PatchedJobUpdateRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["PatchedJobUpdateRequest"];
+        "multipart/form-data": components["schemas"]["PatchedJobUpdateRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["JobDetail"];
+        };
+      };
+    };
+  };
+  imports_commit_create: {
+    parameters: {
+      header: {
+        "If-Match": string;
+        "X-Idempotency-Key": string;
+      };
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      202: {
+        content: {
+          "application/json": components["schemas"]["JobDetail"];
+        };
+      };
+    };
+  };
+  imports_errors_retrieve: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "text/csv": string;
+        };
+      };
+    };
+  };
+  imports_preview_create: {
+    parameters: {
+      header: {
+        "If-Match": string;
+      };
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      202: {
+        content: {
+          "application/json": components["schemas"]["JobDetail"];
+        };
+      };
+    };
+  };
+  imports_rollback_create: {
+    parameters: {
+      header: {
+        "If-Match": string;
+      };
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ReasonRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["ReasonRequest"];
+        "multipart/form-data": components["schemas"]["ReasonRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["JobDetail"];
+        };
+      };
+    };
+  };
+  imports_rows_list: {
+    parameters: {
+      query?: {
+        action?: "conflict" | "create" | "error" | "skip" | "update";
+        /** @description The pagination cursor value. */
+        cursor?: string;
+        /** @description Number of results to return per page. */
+        page_size?: number;
+        result?: string;
+      };
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["PaginatedRowList"];
+        };
+      };
+    };
+  };
+  imports_templates_list: {
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["Template"][];
+        };
+      };
+    };
+  };
+  /** @description CSV template: header row plus one example row (formula-escaped). */
+  imports_templates_csv_retrieve: {
+    parameters: {
+      path: {
+        family: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "text/csv": string;
         };
       };
     };

@@ -26,6 +26,7 @@ LICENSES_VIEW = "licenses.view"
 GROUPS_VIEW = "groups.view"
 GROUPS_MANAGE = "groups.manage"
 GROUPS_MEMBERS = "groups.members"
+IMPORTS_RUN = "imports.run"
 
 PERMISSIONS: dict[str, str] = {
     USERS_VIEW: "View user accounts, role assignments and access review data",
@@ -52,6 +53,7 @@ PERMISSIONS: dict[str, str] = {
     GROUPS_VIEW: "View asset groups and their members in permitted sites",
     GROUPS_MANAGE: "Create, edit and archive asset groups and dynamic group rules",
     GROUPS_MEMBERS: "Add and remove static group members in permitted sites",
+    IMPORTS_RUN: "Upload, preview and commit CSV/XLSX imports (plus the family's own permission)",
 }
 
 SYSTEM_ADMIN = "system_admin"
@@ -82,6 +84,7 @@ ROLES: list[tuple[str, str, str, list[str]]] = [
             GROUPS_VIEW,
             GROUPS_MANAGE,
             GROUPS_MEMBERS,
+            IMPORTS_RUN,
         ],
     ),
     (
@@ -100,7 +103,7 @@ ROLES: list[tuple[str, str, str, list[str]]] = [
         "asset_operator",
         "Asset Operator",
         "Maintains authorized business fields and static group membership.",
-        [ASSETS_VIEW, ASSETS_CREATE, ASSETS_EDIT, GROUPS_VIEW, GROUPS_MEMBERS],
+        [ASSETS_VIEW, ASSETS_CREATE, ASSETS_EDIT, GROUPS_VIEW, GROUPS_MEMBERS, IMPORTS_RUN],
     ),
     (
         "auditor",

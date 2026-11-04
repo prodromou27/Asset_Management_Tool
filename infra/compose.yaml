@@ -29,6 +29,10 @@ x-backend-env: &backend-env
   ITAM_INTEGRATION_INTUNE_CLIENT_SECRET: ${ITAM_INTEGRATION_INTUNE_CLIENT_SECRET:-}
   # Microsoft 365 licenses (Task 010): fallback client secret; prefer a certificate file.
   ITAM_INTEGRATION_M365_CLIENT_SECRET: ${ITAM_INTEGRATION_M365_CLIENT_SECRET:-}
+  # Imports (Task 013): Fernet key for retained original files (derived from the Django
+  # secret key when empty) and their retention in days.
+  ITAM_IMPORT_ENCRYPTION_KEY: ${ITAM_IMPORT_ENCRYPTION_KEY:-}
+  ITAM_IMPORT_RETENTION_DAYS: ${ITAM_IMPORT_RETENTION_DAYS:-90}
 
 x-backend-depends: &backend-depends
   postgres:

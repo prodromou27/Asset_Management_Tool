@@ -50,6 +50,10 @@ export type GroupRuleVersion = Schemas['RuleVersion']
 export type GroupPreview = Schemas['Preview']
 export type RuleField = Schemas['RuleField']
 export type AssetGroupRef = Schemas['AssetGroupRef']
+export type ImportJob = Schemas['JobDetail']
+export type ImportJobSummary = Schemas['Job']
+export type ImportRow = Schemas['Row']
+export type ImportTemplate = Schemas['Template']
 export type FieldConflict = Schemas['FieldConflict']
 export type AssetEvidence = Schemas['AssetEvidence']
 export type FieldEvidence = Schemas['FieldEvidence']
@@ -90,4 +94,5 @@ export const PERMISSIONS = {
   groupsView: 'groups.view',
   groupsManage: 'groups.manage',
   groupsMembers: 'groups.members',
+  importsRun: 'imports.run',
 } as const

@@ -1,127 +1,147 @@
-# Current Task: 012 | Static/dynamic groups + editor
+# Current Task: 013 | CSV/XLSX imports with preview/guarded upsert
 
-Status: **Complete (CI run 41793548771 green)**
+Status: **Complete (workstation-verified; CI pending at the time of writing)**
 (2026-11-04, branch DEV).
 
-**Read:** AGENTS.md, docs/00, 01 (Make asset group), 03 (Groups, group rule representation),
-04 (Groups endpoints), 07 (GroupRuleBuilder), 08 (§8 Groups), 09 (role matrix), 11 (Groups),
-15 (A07), 17.
+**Read:** AGENTS.md, docs/00, 04 (Import/export endpoints, idempotency), 08 (§10 Import/Export
+Center), 09 (role matrix), 11 (Import), 14 (untrusted upload, formula injection), 15 (A13,
+A23), 17.
 
-**Previous:** 011 reconciliation review, category reviews and data-quality queues (CI run
-41739915106 green: backend 566 passed, frontend 109).
+**Previous:** 012 static/dynamic groups (CI run 41793548771 green: backend 588 passed,
+frontend 116).
 
 ## Scope
 
-- Static and dynamic asset groups with a typed rule builder, live preview, versioned rules,
-  explained and historical membership, nesting without cycles, and site-scoped visibility
-  (groups never grant access).
+- Import framework: templates, upload, mapping, dry run, commit, receipt, error report and
+  rollback.
+- Families for the entities that exist now: assets, locations, groups and static group
+  memberships.
 
 Out of scope:
-- Group export and import (Tasks 014 and 013).
-- Report recipients and notification policy (Task 018).
-- Lifecycle stats and source coverage on the group page (Tasks 015 and 022).
-- Bulk "add to group" from the asset list.
+- The other docs/11 families (categories, manufacturers/models, software entitlements,
+  domains, TLS endpoints, relationships) arrive with their tasks.
+- Exports are Task 014.
 
 ## Outcome
 
-**Backend (`apps.groups`):**
-- Models:
-  - `AssetGroup`: static or dynamic, parent, owner, current rule and version, last
-    evaluated, archived, version.
-  - `AssetGroupRuleVersion`: number, rule, reason, author.
-  - `AssetGroupMembership`: explicit or evaluated, rule version, who and why added or
-    removed. Never deleted; one active row per group and asset.
-- `rules.py`:
-  - a validated JSON tree (`and`/`or`/`not`; `eq`, `in`, `contains`, `before`, `after`)
-    over an allowlist of 21 asset fields;
-  - limits: depth 5, 50 nodes, 100 values per list, 200 characters per value;
-  - compiled to parameterised ORM `Q`/`Exists`, with category and site subtrees,
-    "not set" values, source links, last seen and `member_of`;
-  - archived assets never match.
-- `services.py`:
-  - create and update (rule changes need a reason, create a new version and re-evaluate);
-  - parent and reference cycle checks;
-  - archive, refused while the group has children or is referenced; frees the name;
-  - evaluate (adds and removes with rule-version reasons), and `evaluate_all` (referenced
-    groups first; hourly Celery beat);
-  - static member add/remove (removals need a reason; dynamic groups refuse explicit
-    members);
-  - preview (visible assets only; for an existing group, would add/remove).
-- Audit entries: `groups.create`, `groups.update`, `groups.archive`, `groups.evaluate`,
-  `groups.members`.
-- Permissions (docs/09):
-  - `groups.view`: all roles;
-  - `groups.manage`: System Admin, ITAM Manager;
-  - `groups.members`: System Admin, ITAM Manager, Infrastructure Engineer, Asset Operator.
+**Parsing (`apps/imports/parsing.py`, ASM-49):**
+- CSV: UTF-8/BOM or Windows-1252; delimiter sniffed.
+- XLSX: openpyxl read-only with defusedxml; zip-bomb, path and macro checks.
+- Limits: 5 MB, 10,000 rows, 100 columns, 10,000 characters per cell.
+- Duplicate or blank headers and binary data are refused.
+- Formula detection, and cell escaping on all outputs.
 
-**Migrations (all reversible; CI reverses `groups`):**
-- `groups.0001_asset_groups`
-- `accounts.0006_group_permissions`
+**Storage:** the original file is kept Fernet-encrypted (`crypto.py`) until
+`ITAM_IMPORT_RETENTION_DAYS` (default 90), then purged by a daily Celery beat task; row
+results remain.
 
-**APIs (new):**
+**Models:**
+- `ImportJob`: status flow, mode, mapping, totals, warnings, checksum, idempotency key,
+  committer and rollback.
+- `ImportRow`: planned action, key, target, messages, values, changes, result and
+  version after.
+
+**Families (ASM-50):**
+- **Assets:**
+  - matches on id or asset tag only;
+  - manufacturer + serial and name + site are review-only conflicts; never hostname/IP;
+  - in-file duplicates are conflicts;
+  - blank cells mean no change; category changes are refused;
+  - locked fields become conflicts; discovery-sourced values need technical rights;
+  - site scope; `cf.<key>` custom fields with required-field enforcement;
+  - create, update and rollback use the existing asset services (history, audit).
+- **Locations:** site + name.
+- **Groups:** name; dynamic rules validated.
+- **Static memberships:** add only.
+
+**Workflow:**
+- Upload: suggests a mapping (names, labels, aliases, `cf.`) and warns when the exact file
+  was imported before.
+- Mapping and mode changes invalidate the preview.
+- Preview is a dry run with no business writes, giving totals per action.
+- Commit needs `X-Idempotency-Key` (a repeated key returns the original job) and If-Match.
+  Each row is re-planned against current data and applied in its own savepoint; a row
+  whose plan changed since the preview fails and the others continue.
+- Rollback archives created records and restores updated ones only where unchanged since
+  the import; the rest are listed for supervised correction.
+- Missing rows never delete anything.
+- Audit entries: `imports.upload`, `imports.commit`, `imports.complete`,
+  `imports.rollback`.
+
+**Permissions:** new `imports.run` (System Admin, ITAM Manager, Asset Operator;
+`accounts.0007`) plus the family permission (assets create/edit, `sites.manage`,
+`groups.manage`, `groups.members`) and site scope. Jobs are visible to their uploader, and
+read-only to `audit.view` holders.
+
+**Migrations (reversible; CI reverses `imports`):**
+- `imports.0001_import_jobs`
+- `accounts.0007_import_permission`
+
+**APIs:**
 
 | Method | Path | Notes |
 |---|---|---|
-| GET, POST | `/groups/` | List with visible member counts; create |
-| GET, PATCH | `/groups/{id}/` | PATCH needs If-Match |
-| POST | `/groups/{id}/archive/` | Needs If-Match and a reason |
-| POST | `/groups/preview/`, `/groups/{id}/preview/` | Rule preview |
-| GET | `/groups/{id}/assets/` | `history`, `q` |
-| POST | `/groups/{id}/members/` | Static add/remove |
-| POST | `/groups/{id}/evaluate/` | Re-evaluate now |
-| GET | `/groups/{id}/rule-versions/` | Rule history |
-| GET | `/groups/fields/` | Rule-builder field catalogue |
-| GET | `/assets/{id}/groups/` | Groups an asset belongs to |
+| GET | `/imports/templates/` | Template list |
+| GET | `/imports/templates/{family}/csv/` | CSV template download |
+| GET, POST | `/imports/` | POST is a multipart upload |
+| GET, PATCH | `/imports/{id}/` | PATCH sets mapping and mode |
+| POST | `/imports/{id}/preview/` | Dry run |
+| GET | `/imports/{id}/rows/` | Filters `action`, `result` |
+| GET | `/imports/{id}/errors/` | CSV report |
+| POST | `/imports/{id}/commit/` | Needs If-Match and X-Idempotency-Key |
+| POST | `/imports/{id}/rollback/` | Needs If-Match and a reason |
 
-**UI:**
-- **Groups** in the sidebar.
-- List: kind, rule summary, members in your sites, owner, last evaluated.
-- "New group" dialog: kind, name, description, parent, owner, and for dynamic groups the
-  rule builder (typed rows, field-specific operators, enum, reference and date pickers,
-  multi-select for `in`, Exclude, nested AND/OR groups) with a live preview of the
-  matching count and sample.
-- Group page:
-  - details, re-evaluate, edit details, archive with a reason;
-  - rule panel: edit with a preview of the membership difference, plus a reason;
-  - rule history;
-  - members table: why (manual or rule version), since, removed history, search;
-  - static: add assets by search, remove selected with a reason.
-- Asset page: **Groups** tab.
-- Shared helpers in `ruleUtils.ts`; builder styles.
+**Frontend:**
+- The API client sends `FormData` and extra headers.
+- **Imports** page (history) in the sidebar, plus an Import button on the Assets page.
+- Wizard:
+  1. Choose: family, template download and column help, file.
+  2. Map: column → field with sample values, and mode.
+  3. Dry run: totals, rows with messages and change details, report download, change
+     mapping, "Import N rows".
+  4. Import: progress, then a receipt with results, checksum, retention, report and
+     rollback with a reason.
 
-**Docs:** docs/17 ASM-47 and ASM-48; README section.
+**Config:**
+- nginx `client_max_body_size 6m` on `/api/`.
+- `ITAM_IMPORT_ENCRYPTION_KEY` and `ITAM_IMPORT_RETENTION_DAYS` in Compose and
+  `.env.example`.
+- New dependencies `openpyxl` and `defusedxml`.
+
+**Docs:** docs/17 ASM-49 and ASM-50; README section.
 
 ## Verification (workstation; SQLite test-only fallback, no Docker/PostgreSQL here)
 
-- **Backend: 582 passed, 6 skipped** (the 6 skips are PostgreSQL/Redis-only). 22 new tests
-  in `apps/groups/tests/test_groups.py`:
-  - 9 invalid-rule cases; size and depth limits;
-  - rule semantics: subtrees, text, empty, enum, owner, hostname, and/or/not, archived;
-  - dates, source links, last seen and `member_of`;
-  - dynamic lifecycle via the API: preview, create, evaluate, audit, diff preview, rule
-    change with reason, history reasons, versions;
-  - re-evaluation follows asset changes;
-  - dependency-ordered evaluation; circular references and parents rejected;
-  - archive blocked while referenced, and the name is reusable;
-  - static members: idempotent adds, removal reasons, audit, asset groups endpoint,
-    dynamic refuses explicit members;
-  - **no access widening** (docs/15 A07);
-  - role permissions and site scope for members;
-  - kind immutable, static has no rule, unique names;
-  - field catalogue.
+- **Backend: 604 passed, 6 skipped** (the 6 skips are PostgreSQL/Redis-only). 22 new tests
+  in `apps/imports/tests/test_imports.py`:
+  - templates and download;
+  - format, encoding and mapping detection with encrypted storage and audit;
+  - Windows-1252 and XLSX;
+  - 4 bad files; row limit, zip bomb and macro;
+  - formula detection; mapping validation;
+  - **A13**: 100 assets with 5 duplicates → 95 create / 5 conflict, commit, report, safe
+    re-import;
+  - **A23**: monitor/TV with no IP or serial;
+  - review-only serial/name matches;
+  - update by id/tag with lock, category and duplicate checks;
+  - formulas and custom fields;
+  - site scope and permissions;
+  - commit rules: preview first, 428 without key, re-planning, duplicate key;
+  - rollback of untouched rows only; missing rows never archive;
+  - location, group and membership families; purged originals; other users cannot see
+    jobs.
 - Ruff check and format are clean; no migration drift; the OpenAPI schema validates with
   `--fail-on-warn` and matches the committed file.
-- Frontend: typecheck, oxlint, **116 tests** (7 new) and the build all pass.
-- GitHub CI run 41793548771 on `b98d534` (PostgreSQL 16 + Redis 7): backend **588 passed,
-  0 skipped**; migrations applied and reversed (including `groups`); OpenAPI drift check;
-  frontend 116 tests; Compose config and production image builds pass.
+- Frontend: typecheck, oxlint, **122 tests** (6 new) and the build all pass.
 - Not run: Docker stack, Playwright, browser review at 1440×900 and 390×844.
 
 **Open:**
-- Evaluation runs on save, on demand and hourly, not on every asset change (ASM-48).
-- Group export, import and notifications come with Tasks 013, 014 and 018.
+- Retention period pending DEC-15.
+- Limits to be confirmed by load tests (Task 022).
+- Remaining families come with Tasks 015 to 017.
 - Earlier open items: DEC-15, DEC-16 and DEC-17; regional Defender hosts; whether excess
-  roles should block syncs; phone and tablet categories; ASM-46 severities.
+  roles should block syncs; phone and tablet categories; ASM-46 severities; group
+  re-evaluation on asset change.
 
-Proposed next task: **013 | CSV/XLSX imports with preview/guarded upsert**
+Proposed next task: **014 | CSV/XLSX/JSON exports with RBAC and async jobs**
 (tasks/BACKLOG.md). Do not start automatically.

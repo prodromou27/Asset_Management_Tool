@@ -135,6 +135,12 @@ scripts/compose.sh dev exec api python manage.py load_observations \
 - Matching: the Entra device ID links a Defender machine to the asset of an Intune device from the **same tenant** when a hostname or MAC corroborates it and nothing conflicts (ADR-014); otherwise it is a review candidate. Hostname or IP alone never links.
 - Security facts (onboarding, sensor health, exposure, risk, tags, first/last seen, original values) are stored apart from asset fields and shown on the asset's **Security** tab (requires `discovery.view` and site access). "Last report received" is not an online status, and a machine missing from Defender's list is flagged, never treated as deleted. Sanitized fixtures: `fixtures/defender/api/README.md`.
 
+### Imports (Task 013)
+
+- **Imports** (sidebar, and Import on the Assets page): choose what to import (assets, locations, groups, static group members), download the versioned CSV template, upload a CSV or XLSX file (up to 5 MB / 10,000 rows), map columns, choose create only / update matched / create and update, and run a dry run that shows Create/Update/Skip/Conflict/Error per row before anything changes.
+- Assets update only by id or asset tag; a matching manufacturer + serial or name + site without them is a conflict for review, never a merge, and hostname/IP are never used. Locked fields, discovery-sourced values and site scope are respected. Missing rows never delete anything; re-importing the same file is safe.
+- Importing needs a confirmation with an idempotency key; each row is re-checked and applied on its own. The receipt shows applied/not applied/failed rows with a downloadable report (formula-safe), and rollback undoes rows nobody has changed since. Original files are kept encrypted for 90 days (`ITAM_IMPORT_RETENTION_DAYS`).
+
 ### Asset groups (Task 012)
 
 - **Groups** (sidebar): static groups (members added and removed by hand, removals with a reason) and dynamic groups (a typed AND/OR/NOT rule builder over asset fields, with a live preview of matching assets and, when editing, how many members the change would add or remove).

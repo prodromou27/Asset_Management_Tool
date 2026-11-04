@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/api/v1'
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/api/v1'
 const CSRF_COOKIE = 'itam_csrftoken'
 const UNSAFE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
 
@@ -39,15 +39,19 @@ interface RequestOptions {
   body?: unknown
   ifMatch?: number
   query?: Record<string, string | undefined>
+  /** Extra request headers (for example X-Idempotency-Key). */
+  headers?: Record<string, string>
 }
 
 export async function apiRequest<T>(
   method: string,
   path: string,
-  { body, ifMatch, query }: RequestOptions = {},
+  { body, ifMatch, query, headers: extra }: RequestOptions = {},
 ): Promise<T> {
-  const headers: Record<string, string> = { Accept: 'application/json' }
-  if (body !== undefined) headers['Content-Type'] = 'application/json'
+  const multipart = body instanceof FormData
+  const headers: Record<string, string> = { Accept: 'application/json', ...extra }
+  // FormData sets its own multipart boundary.
+  if (body !== undefined && !multipart) headers['Content-Type'] = 'application/json'
   if (UNSAFE_METHODS.has(method)) {
     const token = readCookie(CSRF_COOKIE)
     if (token) headers['X-CSRFToken'] = token
@@ -64,7 +68,7 @@ export async function apiRequest<T>(
     method,
     headers,
     credentials: 'same-origin',
-    body: body === undefined ? undefined : JSON.stringify(body),
+    body: body === undefined ? undefined : multipart ? body : JSON.stringify(body),
   })
 
   if (response.status === 204) return undefined as T

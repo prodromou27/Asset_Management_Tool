@@ -16,6 +16,7 @@ const PRIMARY: NavItem[] = [
   { to: '/discovery', label: 'Discovery', permission: PERMISSIONS.discoveryView },
   { to: '/groups', label: 'Groups', permission: PERMISSIONS.groupsView },
   { to: '/licenses', label: 'Licenses', permission: PERMISSIONS.licensesView },
+  { to: '/imports', label: 'Imports', permission: PERMISSIONS.importsRun },
   { to: '/', label: 'System health' },
 ]
 

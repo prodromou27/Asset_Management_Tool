@@ -167,11 +167,18 @@ export function AssetsListPage() {
               }${activeView ? ` · view “${activeView.name}”` : ''}`
         }
         actions={
-          can(PERMISSIONS.assetsCreate) && (
-            <Link className="button button--primary" to="/assets/new">
-              Add asset
-            </Link>
-          )
+          <>
+            {can(PERMISSIONS.importsRun) && (
+              <Link className="button button--secondary" to="/imports/new?family=asset">
+                Import
+              </Link>
+            )}
+            {can(PERMISSIONS.assetsCreate) && (
+              <Link className="button button--primary" to="/assets/new">
+                Add asset
+              </Link>
+            )}
+          </>
         }
       />
 

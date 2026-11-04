@@ -24,6 +24,8 @@ env = environ.Env(
     ITAM_TRUSTED_PROXY_COUNT=(int, 0),
     ITAM_SECRETS_DIR=(str, "/run/secrets"),
     ITAM_ALLOW_LIVE_INTEGRATIONS=(bool, False),
+    ITAM_IMPORT_ENCRYPTION_KEY=(str, ""),
+    ITAM_IMPORT_RETENTION_DAYS=(int, 90),
 )
 
 env_file = BASE_DIR / ".env"
@@ -56,6 +58,7 @@ INSTALLED_APPS = [
     "apps.licensing",
     "apps.quality",
     "apps.groups",
+    "apps.imports",
 ]
 
 AUTH_USER_MODEL = "accounts.User"
@@ -182,6 +185,9 @@ SPECTACULAR_SETTINGS = {
         "FindingKindEnum": "apps.quality.models.DataQualityFinding.Kind",
         "AssetGroupKindEnum": "apps.groups.models.AssetGroup.Kind",
         "RuleFieldKindEnum": ["text", "enum", "ref", "date"],
+        "ImportJobStatusEnum": "apps.imports.models.ImportJob.Status",
+        "ImportModeEnum": "apps.imports.models.ImportJob.Mode",
+        "SyncRunModeEnum": "apps.integrations.models.SyncRun.Mode",
     },
 }
 
@@ -209,6 +215,10 @@ CELERY_BEAT_SCHEDULE = {
         "task": "groups.evaluate_all",
         "schedule": 3600.0,
     },
+    "purge-import-originals": {
+        "task": "imports.purge_originals",
+        "schedule": 86400.0,
+    },
 }
 
 LOGGING = {
@@ -224,6 +234,10 @@ DISPLAY_TIMEZONE = env("ITAM_TIMEZONE")
 
 # Integration credentials are injected as files or ITAM_INTEGRATION_* variables.
 ITAM_SECRETS_DIR = env("ITAM_SECRETS_DIR")
+# Imports (Task 013): Fernet key for retained originals (derived from SECRET_KEY if empty)
+# and how long originals are kept.
+ITAM_IMPORT_ENCRYPTION_KEY = env("ITAM_IMPORT_ENCRYPTION_KEY")
+ITAM_IMPORT_RETENTION_DAYS = env("ITAM_IMPORT_RETENTION_DAYS")
 # Deployment-level kill switch: no connector contacts a live source unless true,
 # in addition to the per-instance approval recorded by an administrator.
 ITAM_ALLOW_LIVE_INTEGRATIONS = env("ITAM_ALLOW_LIVE_INTEGRATIONS")

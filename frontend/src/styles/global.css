@@ -1465,3 +1465,36 @@ code,
     grid-template-columns: 1fr;
   }
 }
+
+/* Import wizard steps (docs/08 §10). */
+.wizard-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-4);
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.wizard-steps__item {
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.wizard-steps__item--current {
+  border-color: var(--color-brand);
+  color: var(--color-text-primary);
+  font-weight: 500;
+}
+
+.template-help {
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-page-bg);
+  font-size: 13px;
+}
