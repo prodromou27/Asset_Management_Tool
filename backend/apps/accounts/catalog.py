@@ -23,6 +23,9 @@ DISCOVERY_VIEW = "discovery.view"
 RECONCILIATION_DECIDE = "reconciliation.decide"
 INTEGRATIONS_MANAGE = "integrations.manage"
 LICENSES_VIEW = "licenses.view"
+GROUPS_VIEW = "groups.view"
+GROUPS_MANAGE = "groups.manage"
+GROUPS_MEMBERS = "groups.members"
 
 PERMISSIONS: dict[str, str] = {
     USERS_VIEW: "View user accounts, role assignments and access review data",
@@ -46,6 +49,9 @@ PERMISSIONS: dict[str, str] = {
     RECONCILIATION_DECIDE: "Approve, reject or hold reconciliation candidates; unlink sources",
     INTEGRATIONS_MANAGE: "Configure integration instances and field authority",
     LICENSES_VIEW: "View license subscriptions, quantities and user license assignments",
+    GROUPS_VIEW: "View asset groups and their members in permitted sites",
+    GROUPS_MANAGE: "Create, edit and archive asset groups and dynamic group rules",
+    GROUPS_MEMBERS: "Add and remove static group members in permitted sites",
 }
 
 SYSTEM_ADMIN = "system_admin"
@@ -73,25 +79,28 @@ ROLES: list[tuple[str, str, str, list[str]]] = [
             DISCOVERY_VIEW,
             RECONCILIATION_DECIDE,
             LICENSES_VIEW,
+            GROUPS_VIEW,
+            GROUPS_MANAGE,
+            GROUPS_MEMBERS,
         ],
     ),
     (
         "infrastructure_engineer",
         "Infrastructure Engineer",
         "Technical comments, match proposals and source diagnostics.",
-        [ASSETS_VIEW, ASSETS_EDIT_TECHNICAL, DISCOVERY_VIEW],
+        [ASSETS_VIEW, ASSETS_EDIT_TECHNICAL, DISCOVERY_VIEW, GROUPS_VIEW, GROUPS_MEMBERS],
     ),
     (
         "security_analyst",
         "Security Analyst",
         "Read and investigate assets; flag high-risk lifecycle findings.",
-        [ASSETS_VIEW, DISCOVERY_VIEW],
+        [ASSETS_VIEW, DISCOVERY_VIEW, GROUPS_VIEW],
     ),
     (
         "asset_operator",
         "Asset Operator",
         "Maintains authorized business fields and static group membership.",
-        [ASSETS_VIEW, ASSETS_CREATE, ASSETS_EDIT],
+        [ASSETS_VIEW, ASSETS_CREATE, ASSETS_EDIT, GROUPS_VIEW, GROUPS_MEMBERS],
     ),
     (
         "auditor",
@@ -105,13 +114,14 @@ ROLES: list[tuple[str, str, str, list[str]]] = [
             ASSETS_VIEW,
             DISCOVERY_VIEW,
             LICENSES_VIEW,
+            GROUPS_VIEW,
         ],
     ),
     (
         "read_only",
         "Read Only",
         "Site-scoped read access.",
-        [ASSETS_VIEW],
+        [ASSETS_VIEW, GROUPS_VIEW],
     ),
 ]
 

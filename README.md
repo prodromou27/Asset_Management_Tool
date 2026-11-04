@@ -135,6 +135,12 @@ scripts/compose.sh dev exec api python manage.py load_observations \
 - Matching: the Entra device ID links a Defender machine to the asset of an Intune device from the **same tenant** when a hostname or MAC corroborates it and nothing conflicts (ADR-014); otherwise it is a review candidate. Hostname or IP alone never links.
 - Security facts (onboarding, sensor health, exposure, risk, tags, first/last seen, original values) are stored apart from asset fields and shown on the asset's **Security** tab (requires `discovery.view` and site access). "Last report received" is not an online status, and a machine missing from Defender's list is flagged, never treated as deleted. Sanitized fixtures: `fixtures/defender/api/README.md`.
 
+### Asset groups (Task 012)
+
+- **Groups** (sidebar): static groups (members added and removed by hand, removals with a reason) and dynamic groups (a typed AND/OR/NOT rule builder over asset fields, with a live preview of matching assets and, when editing, how many members the change would add or remove).
+- Dynamic groups re-evaluate when the rule is saved, on "Re-evaluate now" and hourly; each membership shows why it exists (added by a person, or the rule version that matched) and removed memberships stay visible as history. Rule changes are versioned with a reason.
+- Groups never grant access: lists, counts and members only include assets in your sites. Nested groups and "member of group" rules cannot form cycles. The asset page has a Groups tab.
+
 ### Reconciliation review, category reviews and data quality (Task 011)
 
 - **Discovery → Reconciliation queue**: filter by assignee, waiting time and text, sort by age or confidence, select devices and assign, put on hold or reject them in bulk with a reason (each item keeps its own version check and audit entry). Linking and creating stay one device at a time.

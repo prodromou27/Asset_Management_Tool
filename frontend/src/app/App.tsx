@@ -6,6 +6,8 @@ import { CategoriesPage } from '../features/admin-categories/CategoriesPage'
 import { IntegrationDetailPage } from '../features/admin-integrations/IntegrationDetailPage'
 import { IntegrationsPage } from '../features/admin-integrations/IntegrationsPage'
 import { CandidatePage } from '../features/discovery/CandidatePage'
+import { GroupDetailPage } from '../features/groups/GroupDetailPage'
+import { GroupsPage } from '../features/groups/GroupsPage'
 import { LicensesPage } from '../features/licenses/LicensesPage'
 import { SubscriptionPage } from '../features/licenses/SubscriptionPage'
 import { DiscoveryPage } from '../features/discovery/DiscoveryPage'
@@ -101,6 +103,22 @@ export function AppRoutes() {
         element={
           <Protected permission={PERMISSIONS.discoveryView} what="discovery">
             <CandidatePage />
+          </Protected>
+        }
+      />
+      <Route
+        path="/groups"
+        element={
+          <Protected permission={PERMISSIONS.groupsView} what="groups">
+            <GroupsPage />
+          </Protected>
+        }
+      />
+      <Route
+        path="/groups/:id"
+        element={
+          <Protected permission={PERMISSIONS.groupsView} what="groups">
+            <GroupDetailPage />
           </Protected>
         }
       />

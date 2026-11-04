@@ -44,6 +44,10 @@ export interface paths {
   "/api/v1/assets/{id}/field-locks/unlock/": {
     post: operations["assets_field_locks_unlock_create"];
   };
+  "/api/v1/assets/{id}/groups/": {
+    /** @description Groups an asset currently belongs to (only for assets the caller can see). */
+    get: operations["assets_groups_list"];
+  };
   "/api/v1/assets/{id}/history/": {
     get: operations["assets_history_list"];
   };
@@ -132,6 +136,40 @@ export interface paths {
   };
   "/api/v1/discovery/sources/": {
     get: operations["discovery_sources_list"];
+  };
+  "/api/v1/groups/": {
+    get: operations["groups_list"];
+    post: operations["groups_create"];
+  };
+  "/api/v1/groups/{id}/": {
+    get: operations["groups_retrieve"];
+    patch: operations["groups_partial_update"];
+  };
+  "/api/v1/groups/{id}/archive/": {
+    post: operations["groups_archive_create"];
+  };
+  "/api/v1/groups/{id}/assets/": {
+    get: operations["groups_assets_list"];
+  };
+  "/api/v1/groups/{id}/evaluate/": {
+    post: operations["groups_evaluate_create"];
+  };
+  "/api/v1/groups/{id}/members/": {
+    post: operations["groups_members_create"];
+  };
+  "/api/v1/groups/{id}/preview/": {
+    /** @description Preview a changed rule against a group's current members (visible assets only). */
+    post: operations["groups_preview_create"];
+  };
+  "/api/v1/groups/{id}/rule-versions/": {
+    get: operations["groups_rule_versions_list"];
+  };
+  "/api/v1/groups/fields/": {
+    get: operations["groups_fields_list"];
+  };
+  "/api/v1/groups/preview/": {
+    /** @description Preview a rule before creating a group. */
+    post: operations["groups_rule_preview"];
   };
   "/api/v1/health/live/": {
     /** @description Process is up and able to serve requests. No dependency checks. */
@@ -409,6 +447,22 @@ export interface components {
       field_evidence: components["schemas"]["FieldEvidence"][];
       links: components["schemas"]["SourceLink"][];
       merges: components["schemas"]["AssetMerge"][];
+    };
+    /**
+     * @description * `static` - Static
+     * * `dynamic` - Dynamic
+     * @enum {string}
+     */
+    AssetGroupKindEnum: "static" | "dynamic";
+    AssetGroupRef: {
+      /** Format: uuid */
+      id: string;
+      name: string;
+      kind: string;
+      source: string;
+      rule_version: number | null;
+      /** Format: date-time */
+      added_at: string;
     };
     AssetHistory: {
       /** Format: uuid */
@@ -917,6 +971,11 @@ export interface components {
         [key: string]: unknown;
       };
     };
+    EvaluateResult: {
+      added: number;
+      removed: number;
+      members: number;
+    };
     /**
      * @description * `manual` - Manual
      * * `librenms` - LibreNMS
@@ -941,6 +1000,10 @@ export interface components {
       /** Format: date-time */
       modified_at: string;
       modified_by: string | null;
+    };
+    FieldChoice: {
+      value: string;
+      label: string;
     };
     FieldConflict: {
       /** Format: uuid */
@@ -1051,9 +1114,39 @@ export interface components {
      * @enum {string}
      */
     FindingStatusEnum: "open" | "dismissed" | "resolved";
+    Group: {
+      /** Format: uuid */
+      id: string;
+      name: string;
+      description: string;
+      kind: components["schemas"]["AssetGroupKindEnum"];
+      parent: components["schemas"]["ParentGroupRef"] | null;
+      owner: components["schemas"]["UserRef"] | null;
+      rule: unknown;
+      rule_version: number;
+      member_count: number;
+      /** Format: date-time */
+      last_evaluated_at: string | null;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      modified_at: string;
+      version: number;
+    };
     GroupRef: {
       id: string;
       display_name: string | null;
+    };
+    GroupWriteRequest: {
+      name: string;
+      description?: string;
+      kind?: components["schemas"]["AssetGroupKindEnum"];
+      /** Format: uuid */
+      parent?: string | null;
+      /** Format: uuid */
+      owner?: string | null;
+      rule?: unknown;
+      reason?: string;
     };
     Hostname: {
       /** Format: uuid */
@@ -1304,6 +1397,46 @@ export interface components {
       all_sites: boolean;
       must_change_password: boolean;
     };
+    MemberAsset: {
+      /** Format: uuid */
+      id: string;
+      name: string;
+      site: components["schemas"]["SiteRef"];
+      category: string;
+      manufacturer: string;
+      model: string;
+    };
+    MemberChangeRequest: {
+      add?: string[];
+      remove?: string[];
+      /** @default */
+      reason?: string;
+    };
+    MemberChangeResult: {
+      added: number;
+      removed: number;
+    };
+    Membership: {
+      /** Format: uuid */
+      id: string;
+      asset: components["schemas"]["MemberAsset"];
+      source: components["schemas"]["MembershipSourceEnum"];
+      rule_version: number | null;
+      /** Format: date-time */
+      added_at: string;
+      added_by: string | null;
+      added_reason: string;
+      /** Format: date-time */
+      removed_at: string | null;
+      removed_by: string | null;
+      removed_reason: string;
+    };
+    /**
+     * @description * `explicit` - Added manually
+     * * `evaluated` - Matched the rule
+     * @enum {string}
+     */
+    MembershipSourceEnum: "explicit" | "evaluated";
     MergeRequestRequest: {
       /** Format: uuid */
       source_asset: string;
@@ -1457,6 +1590,12 @@ export interface components {
       previous_cursor: string | null;
       count: number;
     };
+    PaginatedMembershipList: {
+      items: components["schemas"]["Membership"][];
+      next_cursor: string | null;
+      previous_cursor: string | null;
+      count: number;
+    };
     PaginatedObservationDetailList: {
       items: components["schemas"]["ObservationDetail"][];
       next_cursor: string | null;
@@ -1480,6 +1619,11 @@ export interface components {
       next_cursor: string | null;
       previous_cursor: string | null;
       count: number;
+    };
+    ParentGroupRef: {
+      /** Format: uuid */
+      id: string;
+      name: string;
     };
     PatchedAssetCategoryWriteRequest: {
       name?: string;
@@ -1540,6 +1684,17 @@ export interface components {
       precedence?: {
         [key: string]: string[];
       };
+    };
+    PatchedGroupWriteRequest: {
+      name?: string;
+      description?: string;
+      kind?: components["schemas"]["AssetGroupKindEnum"];
+      /** Format: uuid */
+      parent?: string | null;
+      /** Format: uuid */
+      owner?: string | null;
+      rule?: unknown;
+      reason?: string;
     };
     PatchedIntegrationInstanceWriteRequest: {
       source?: string;
@@ -1608,6 +1763,21 @@ export interface components {
     Permission: {
       code: string;
       description: string;
+    };
+    Preview: {
+      count: number;
+      sample: components["schemas"]["PreviewAsset"][];
+      would_add: number | null;
+      would_remove: number | null;
+    };
+    PreviewAsset: {
+      /** Format: uuid */
+      id: string;
+      name: string;
+      site: components["schemas"]["SiteRef"];
+    };
+    PreviewRequestRequest: {
+      rule: unknown;
     };
     Provenance: {
       kind: components["schemas"]["ProvenanceKindEnum"];
@@ -1687,6 +1857,31 @@ export interface components {
      * @enum {string}
      */
     RuleEnum: "new_device" | "weak" | "corroborated" | "strong" | "conflict";
+    RuleField: {
+      field: string;
+      label: string;
+      kind: components["schemas"]["RuleFieldKindEnum"];
+      operators: string[];
+      choices: components["schemas"]["FieldChoice"][];
+      ref: string;
+      nullable: boolean;
+    };
+    /**
+     * @description * `text` - text
+     * * `enum` - enum
+     * * `ref` - ref
+     * * `date` - date
+     * @enum {string}
+     */
+    RuleFieldKindEnum: "text" | "enum" | "ref" | "date";
+    RuleVersion: {
+      number: number;
+      rule: unknown;
+      reason: string;
+      created_by: string | null;
+      /** Format: date-time */
+      created_at: string;
+    };
     SavedView: {
       /** Format: uuid */
       id: string;
@@ -2399,6 +2594,21 @@ export interface operations {
       };
     };
   };
+  /** @description Groups an asset currently belongs to (only for assets the caller can see). */
+  assets_groups_list: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["AssetGroupRef"][];
+        };
+      };
+    };
+  };
   assets_history_list: {
     parameters: {
       query?: {
@@ -2914,6 +3124,219 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["DiscoverySource"][];
+        };
+      };
+    };
+  };
+  groups_list: {
+    parameters: {
+      query?: {
+        kind?: string;
+        q?: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["Group"][];
+        };
+      };
+    };
+  };
+  groups_create: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["GroupWriteRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["GroupWriteRequest"];
+        "multipart/form-data": components["schemas"]["GroupWriteRequest"];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          "application/json": components["schemas"]["Group"];
+        };
+      };
+    };
+  };
+  groups_retrieve: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["Group"];
+        };
+      };
+    };
+  };
+  groups_partial_update: {
+    parameters: {
+      header: {
+        "If-Match": string;
+      };
+      path: {
+        id: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["PatchedGroupWriteRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["PatchedGroupWriteRequest"];
+        "multipart/form-data": components["schemas"]["PatchedGroupWriteRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["Group"];
+        };
+      };
+    };
+  };
+  groups_archive_create: {
+    parameters: {
+      header: {
+        "If-Match": string;
+      };
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ReasonRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["ReasonRequest"];
+        "multipart/form-data": components["schemas"]["ReasonRequest"];
+      };
+    };
+    responses: {
+      /** @description No response body */
+      204: {
+        content: never;
+      };
+    };
+  };
+  groups_assets_list: {
+    parameters: {
+      query?: {
+        /** @description The pagination cursor value. */
+        cursor?: string;
+        /** @description Include removed memberships */
+        history?: boolean;
+        /** @description Number of results to return per page. */
+        page_size?: number;
+        /** @description Asset name contains */
+        q?: string;
+      };
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["PaginatedMembershipList"];
+        };
+      };
+    };
+  };
+  groups_evaluate_create: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["EvaluateResult"];
+        };
+      };
+    };
+  };
+  groups_members_create: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["MemberChangeRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["MemberChangeRequest"];
+        "multipart/form-data": components["schemas"]["MemberChangeRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["MemberChangeResult"];
+        };
+      };
+    };
+  };
+  /** @description Preview a changed rule against a group's current members (visible assets only). */
+  groups_preview_create: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PreviewRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["PreviewRequestRequest"];
+        "multipart/form-data": components["schemas"]["PreviewRequestRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["Preview"];
+        };
+      };
+    };
+  };
+  groups_rule_versions_list: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["RuleVersion"][];
+        };
+      };
+    };
+  };
+  groups_fields_list: {
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["RuleField"][];
+        };
+      };
+    };
+  };
+  /** @description Preview a rule before creating a group. */
+  groups_rule_preview: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PreviewRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["PreviewRequestRequest"];
+        "multipart/form-data": components["schemas"]["PreviewRequestRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["Preview"];
         };
       };
     };

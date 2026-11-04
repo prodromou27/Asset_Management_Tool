@@ -27,6 +27,7 @@ import { EvidencePanel } from '../discovery/EvidencePanel'
 import { FieldEvidenceDrawer } from '../discovery/FieldEvidenceDrawer'
 import { NetworkEvidencePanel } from '../discovery/NetworkEvidencePanel'
 import { SecurityPanel } from '../discovery/SecurityPanel'
+import { AssetGroupsPanel } from '../groups/AssetGroupsPanel'
 import { CustomFieldInputs } from './CustomFieldInputs'
 import { toApiValues, type CustomValues } from './customValues'
 import {
@@ -165,6 +166,9 @@ export function AssetDetailPage() {
                 { id: 'evidence', label: 'Source evidence', content: <EvidencePanel asset={data} /> },
                 { id: 'security', label: 'Security', content: <SecurityPanel assetId={data.id} /> },
               ]
+            : []),
+          ...(can(PERMISSIONS.groupsView)
+            ? [{ id: 'groups', label: 'Groups', content: <AssetGroupsPanel assetId={data.id} /> }]
             : []),
           { id: 'history', label: 'History', content: <History assetId={data.id} /> },
         ]}

@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     "apps.security",
     "apps.licensing",
     "apps.quality",
+    "apps.groups",
 ]
 
 AUTH_USER_MODEL = "accounts.User"
@@ -179,6 +180,8 @@ SPECTACULAR_SETTINGS = {
         "SyncRunStatusEnum": "apps.integrations.models.SyncRun.Status",
         "CategoryReviewKindEnum": "apps.reconciliation.models.CategoryReview.Kind",
         "FindingKindEnum": "apps.quality.models.DataQualityFinding.Kind",
+        "AssetGroupKindEnum": "apps.groups.models.AssetGroup.Kind",
+        "RuleFieldKindEnum": ["text", "enum", "ref", "date"],
     },
 }
 
@@ -200,6 +203,10 @@ CELERY_BEAT_SCHEDULE = {
     },
     "refresh-quality-findings": {
         "task": "quality.refresh_findings",
+        "schedule": 3600.0,
+    },
+    "evaluate-dynamic-groups": {
+        "task": "groups.evaluate_all",
         "schedule": 3600.0,
     },
 }

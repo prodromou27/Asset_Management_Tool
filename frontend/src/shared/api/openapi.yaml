@@ -619,6 +619,31 @@ paths:
               schema:
                 $ref: '#/components/schemas/AssetEvidence'
           description: ''
+  /api/v1/assets/{id}/groups/:
+    get:
+      operationId: assets_groups_list
+      description: Groups an asset currently belongs to (only for assets the caller
+        can see).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - assets
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AssetGroupRef'
+          description: ''
   /api/v1/assets/{id}/history/:
     get:
       operationId: assets_history_list
@@ -1501,6 +1526,344 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/DiscoverySource'
+          description: ''
+  /api/v1/groups/:
+    get:
+      operationId: groups_list
+      parameters:
+      - in: query
+        name: kind
+        schema:
+          type: string
+      - in: query
+        name: q
+        schema:
+          type: string
+      tags:
+      - groups
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Group'
+          description: ''
+    post:
+      operationId: groups_create
+      tags:
+      - groups
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupWriteRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/GroupWriteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/GroupWriteRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Group'
+          description: ''
+  /api/v1/groups/{id}/:
+    get:
+      operationId: groups_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - groups
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Group'
+          description: ''
+    patch:
+      operationId: groups_partial_update
+      parameters:
+      - in: header
+        name: If-Match
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - groups
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedGroupWriteRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedGroupWriteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedGroupWriteRequest'
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Group'
+          description: ''
+  /api/v1/groups/{id}/archive/:
+    post:
+      operationId: groups_archive_create
+      parameters:
+      - in: header
+        name: If-Match
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - groups
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/groups/{id}/assets/:
+    get:
+      operationId: groups_assets_list
+      parameters:
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - in: query
+        name: history
+        schema:
+          type: boolean
+        description: Include removed memberships
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: q
+        schema:
+          type: string
+        description: Asset name contains
+      tags:
+      - groups
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedMembershipList'
+          description: ''
+  /api/v1/groups/{id}/evaluate/:
+    post:
+      operationId: groups_evaluate_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - groups
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EvaluateResult'
+          description: ''
+  /api/v1/groups/{id}/members/:
+    post:
+      operationId: groups_members_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - groups
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MemberChangeRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MemberChangeRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MemberChangeRequest'
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemberChangeResult'
+          description: ''
+  /api/v1/groups/{id}/preview/:
+    post:
+      operationId: groups_preview_create
+      description: Preview a changed rule against a group's current members (visible
+        assets only).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - groups
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PreviewRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PreviewRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PreviewRequestRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Preview'
+          description: ''
+  /api/v1/groups/{id}/rule-versions/:
+    get:
+      operationId: groups_rule_versions_list
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - groups
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RuleVersion'
+          description: ''
+  /api/v1/groups/fields/:
+    get:
+      operationId: groups_fields_list
+      tags:
+      - groups
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RuleField'
+          description: ''
+  /api/v1/groups/preview/:
+    post:
+      operationId: groups_rule_preview
+      description: Preview a rule before creating a group.
+      tags:
+      - groups
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PreviewRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PreviewRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PreviewRequestRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Preview'
           description: ''
   /api/v1/health/live/:
     get:
@@ -3379,6 +3742,39 @@ components:
       - field_evidence
       - links
       - merges
+    AssetGroupKindEnum:
+      enum:
+      - static
+      - dynamic
+      type: string
+      description: |-
+        * `static` - Static
+        * `dynamic` - Dynamic
+    AssetGroupRef:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        kind:
+          type: string
+        source:
+          type: string
+        rule_version:
+          type: integer
+          nullable: true
+        added_at:
+          type: string
+          format: date-time
+      required:
+      - added_at
+      - id
+      - kind
+      - name
+      - rule_version
+      - source
     AssetHistory:
       type: object
       properties:
@@ -4746,6 +5142,19 @@ components:
       - risk_score
       - source_last_success_at
       - tenant_id
+    EvaluateResult:
+      type: object
+      properties:
+        added:
+          type: integer
+        removed:
+          type: integer
+        members:
+          type: integer
+      required:
+      - added
+      - members
+      - removed
     EvidenceSourceEnum:
       enum:
       - manual
@@ -4802,6 +5211,16 @@ components:
       - modified_by
       - precedence
       - version
+    FieldChoice:
+      type: object
+      properties:
+        value:
+          type: string
+        label:
+          type: string
+      required:
+      - label
+      - value
     FieldConflict:
       type: object
       properties:
@@ -5076,6 +5495,72 @@ components:
         * `open` - Open
         * `dismissed` - Dismissed (accepted as is)
         * `resolved` - Resolved
+    Group:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+        description:
+          type: string
+          readOnly: true
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/AssetGroupKindEnum'
+          readOnly: true
+        parent:
+          allOf:
+          - $ref: '#/components/schemas/ParentGroupRef'
+          readOnly: true
+          nullable: true
+        owner:
+          allOf:
+          - $ref: '#/components/schemas/UserRef'
+          readOnly: true
+          nullable: true
+        rule:
+          readOnly: true
+          nullable: true
+        rule_version:
+          type: integer
+          readOnly: true
+        member_count:
+          type: integer
+          readOnly: true
+        last_evaluated_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        modified_at:
+          type: string
+          format: date-time
+          readOnly: true
+        version:
+          type: integer
+          readOnly: true
+      required:
+      - created_at
+      - description
+      - id
+      - kind
+      - last_evaluated_at
+      - member_count
+      - modified_at
+      - name
+      - owner
+      - parent
+      - rule
+      - rule_version
+      - version
     GroupRef:
       type: object
       properties:
@@ -5087,6 +5572,33 @@ components:
       required:
       - display_name
       - id
+    GroupWriteRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        description:
+          type: string
+          maxLength: 500
+        kind:
+          $ref: '#/components/schemas/AssetGroupKindEnum'
+        parent:
+          type: string
+          format: uuid
+          nullable: true
+        owner:
+          type: string
+          format: uuid
+          nullable: true
+        rule:
+          nullable: true
+        reason:
+          type: string
+          maxLength: 500
+      required:
+      - name
     Hostname:
       type: object
       properties:
@@ -5815,6 +6327,117 @@ components:
       - permissions
       - roles
       - username
+    MemberAsset:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        site:
+          $ref: '#/components/schemas/SiteRef'
+        category:
+          type: string
+        manufacturer:
+          type: string
+        model:
+          type: string
+      required:
+      - category
+      - id
+      - manufacturer
+      - model
+      - name
+      - site
+    MemberChangeRequest:
+      type: object
+      properties:
+        add:
+          type: array
+          items:
+            type: string
+            format: uuid
+        remove:
+          type: array
+          items:
+            type: string
+            format: uuid
+        reason:
+          type: string
+          default: ''
+          maxLength: 500
+    MemberChangeResult:
+      type: object
+      properties:
+        added:
+          type: integer
+        removed:
+          type: integer
+      required:
+      - added
+      - removed
+    Membership:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        asset:
+          allOf:
+          - $ref: '#/components/schemas/MemberAsset'
+          readOnly: true
+        source:
+          allOf:
+          - $ref: '#/components/schemas/MembershipSourceEnum'
+          readOnly: true
+        rule_version:
+          type: integer
+          readOnly: true
+          nullable: true
+        added_at:
+          type: string
+          format: date-time
+          readOnly: true
+        added_by:
+          type: string
+          readOnly: true
+          nullable: true
+        added_reason:
+          type: string
+          readOnly: true
+        removed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        removed_by:
+          type: string
+          readOnly: true
+          nullable: true
+        removed_reason:
+          type: string
+          readOnly: true
+      required:
+      - added_at
+      - added_by
+      - added_reason
+      - asset
+      - id
+      - removed_at
+      - removed_by
+      - removed_reason
+      - rule_version
+      - source
+    MembershipSourceEnum:
+      enum:
+      - explicit
+      - evaluated
+      type: string
+      description: |-
+        * `explicit` - Added manually
+        * `evaluated` - Matched the rule
     MergeRequestRequest:
       type: object
       properties:
@@ -6218,6 +6841,26 @@ components:
           nullable: true
         count:
           type: integer
+    PaginatedMembershipList:
+      type: object
+      required:
+      - items
+      - next_cursor
+      - previous_cursor
+      - count
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Membership'
+        next_cursor:
+          type: string
+          nullable: true
+        previous_cursor:
+          type: string
+          nullable: true
+        count:
+          type: integer
     PaginatedObservationDetailList:
       type: object
       required:
@@ -6298,6 +6941,17 @@ components:
           nullable: true
         count:
           type: integer
+    ParentGroupRef:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+      required:
+      - id
+      - name
     PatchedAssetCategoryWriteRequest:
       type: object
       properties:
@@ -6451,6 +7105,31 @@ components:
             items:
               type: string
               minLength: 1
+    PatchedGroupWriteRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        description:
+          type: string
+          maxLength: 500
+        kind:
+          $ref: '#/components/schemas/AssetGroupKindEnum'
+        parent:
+          type: string
+          format: uuid
+          nullable: true
+        owner:
+          type: string
+          format: uuid
+          nullable: true
+        rule:
+          nullable: true
+        reason:
+          type: string
+          maxLength: 500
     PatchedIntegrationInstanceWriteRequest:
       type: object
       properties:
@@ -6636,6 +7315,46 @@ components:
       required:
       - code
       - description
+    Preview:
+      type: object
+      properties:
+        count:
+          type: integer
+        sample:
+          type: array
+          items:
+            $ref: '#/components/schemas/PreviewAsset'
+        would_add:
+          type: integer
+          nullable: true
+        would_remove:
+          type: integer
+          nullable: true
+      required:
+      - count
+      - sample
+      - would_add
+      - would_remove
+    PreviewAsset:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        site:
+          $ref: '#/components/schemas/SiteRef'
+      required:
+      - id
+      - name
+      - site
+    PreviewRequestRequest:
+      type: object
+      properties:
+        rule: {}
+      required:
+      - rule
     Provenance:
       type: object
       properties:
@@ -6809,6 +7528,72 @@ components:
         * `corroborated` - Multiple corroborating identifiers
         * `strong` - Strong identifier
         * `conflict` - Conflicting identifiers
+    RuleField:
+      type: object
+      properties:
+        field:
+          type: string
+        label:
+          type: string
+        kind:
+          $ref: '#/components/schemas/RuleFieldKindEnum'
+        operators:
+          type: array
+          items:
+            type: string
+        choices:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldChoice'
+        ref:
+          type: string
+        nullable:
+          type: boolean
+      required:
+      - choices
+      - field
+      - kind
+      - label
+      - nullable
+      - operators
+      - ref
+    RuleFieldKindEnum:
+      enum:
+      - text
+      - enum
+      - ref
+      - date
+      type: string
+      description: |-
+        * `text` - text
+        * `enum` - enum
+        * `ref` - ref
+        * `date` - date
+    RuleVersion:
+      type: object
+      properties:
+        number:
+          type: integer
+          readOnly: true
+        rule:
+          readOnly: true
+        reason:
+          type: string
+          readOnly: true
+        created_by:
+          type: string
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - created_by
+      - number
+      - reason
+      - rule
     SavedView:
       type: object
       properties:

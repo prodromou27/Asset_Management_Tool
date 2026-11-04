@@ -1,131 +1,124 @@
-# Current Task: 011 | Reconciliation review and category reclassification
+# Current Task: 012 | Static/dynamic groups + editor
 
-Status: **Complete (CI run 41739915106 green)**
+Status: **Complete (workstation-verified; CI pending at the time of writing)**
 (2026-11-04, branch DEV).
 
-**Read:** AGENTS.md, docs/00, 01 (Reclassify, Reconcile discovery, dedicated queues), 03, 07,
-08, 15 (A06), 17.
+**Read:** AGENTS.md, docs/00, 01 (Make asset group), 03 (Groups, group rule representation),
+04 (Groups endpoints), 07 (GroupRuleBuilder), 08 (§8 Groups), 09 (role matrix), 11 (Groups),
+15 (A07), 17.
 
-**Previous:**
-- 010 Microsoft 365 licenses (CI run 41672076454 green).
-- Follow-up fixes for Tasks 008–010 (`5afb2a1`, CI run 41736399569 green: backend 542
-  passed, frontend 100):
-  - a per-tenant Defender rate budget shared through Redis;
-  - optional M365 group names (`GroupMember.Read.All`);
-  - licensed-users wording on the M365 integration page;
-  - a prefetch for the subscriptions list.
+**Previous:** 011 reconciliation review, category reviews and data-quality queues (CI run
+41739915106 green: backend 566 passed, frontend 109).
 
-**Scope (operator choice, 2026-11-04):**
-- Category mismatch review.
-- Queue triage.
-- Data-quality queues.
+## Scope
 
-Already present from earlier tasks and reused: asset reclassification with impact preview
-and reason (Task 003), and the candidate link/create/hold/reject decisions (Tasks 004–005).
+- Static and dynamic asset groups with a typed rule builder, live preview, versioned rules,
+  explained and historical membership, nesting without cycles, and site-scoped visibility
+  (groups never grant access).
 
-Out of scope: review metrics (not chosen); the docs/01 queues "EOL evidence missing",
-"certificate expiring" and "import errors" (Tasks 015, 017 and 013).
+Out of scope:
+- Group export and import (Tasks 014 and 013).
+- Report recipients and notification policy (Task 018).
+- Lifecycle stats and source coverage on the group page (Tasks 015 and 022).
+- Bulk "add to group" from the asset list.
 
 ## Outcome
 
-**Category review (ADR-015, ASM-44):**
-- Sources never change an asset's category.
-- After each applied observation, a source type that maps to a different category opens
-  one `CategoryReview` per asset and source, of kind `more_specific`, `different_type` or
-  `different_class`.
-- A reviewer with `assets.reclassify` either reclassifies through the existing audited
-  service or keeps the current category with a reason. A kept category is not
-  re-proposed for the same suggestion.
-- Any reclassification (review, asset page or link-time) settles open reviews through a
-  new `asset_reclassified` signal. Reviews also resolve when the source agrees again.
-- Linking a candidate can reclassify in the same transaction (`reclassify=true`); a
-  missing required template field rolls back both.
+**Backend (`apps.groups`):**
+- Models:
+  - `AssetGroup`: static or dynamic, parent, owner, current rule and version, last
+    evaluated, archived, version.
+  - `AssetGroupRuleVersion`: number, rule, reason, author.
+  - `AssetGroupMembership`: explicit or evaluated, rule version, who and why added or
+    removed. Never deleted; one active row per group and asset.
+- `rules.py`:
+  - a validated JSON tree (`and`/`or`/`not`; `eq`, `in`, `contains`, `before`, `after`)
+    over an allowlist of 21 asset fields;
+  - limits: depth 5, 50 nodes, 100 values per list, 200 characters per value;
+  - compiled to parameterised ORM `Q`/`Exists`, with category and site subtrees,
+    "not set" values, source links, last seen and `member_of`;
+  - archived assets never match.
+- `services.py`:
+  - create and update (rule changes need a reason, create a new version and re-evaluate);
+  - parent and reference cycle checks;
+  - archive, refused while the group has children or is referenced; frees the name;
+  - evaluate (adds and removes with rule-version reasons), and `evaluate_all` (referenced
+    groups first; hourly Celery beat);
+  - static member add/remove (removals need a reason; dynamic groups refuse explicit
+    members);
+  - preview (visible assets only; for an existing group, would add/remove).
+- Audit entries: `groups.create`, `groups.update`, `groups.archive`, `groups.evaluate`,
+  `groups.members`.
+- Permissions (docs/09):
+  - `groups.view`: all roles;
+  - `groups.manage`: System Admin, ITAM Manager;
+  - `groups.members`: System Admin, ITAM Manager, Infrastructure Engineer, Asset Operator.
 
-**Queue triage (ASM-45):**
-- Candidates have an `assignee` (validated: may decide, has site access).
-- New filters: site, assignee (me / none / user), `older_than_days`, `q`; ordering by
-  newest, oldest or score.
-- Bulk hold, reject or assign: at most 200 items, each with its viewed version, its own
-  transaction, audit entry and result. Linking and creating stay one at a time.
-- The assignee picker is backed by `GET /reconciliation/assignees/`.
-
-**Data-quality queues (`apps.quality`, ASM-46):**
-- `DataQualityFinding` per asset and kind:
-  - duplicate candidate: same manufacturer + serial (high) or same MAC (medium);
-  - model unknown (medium; VMs exempt);
-  - source stale (medium);
-  - owner missing (low when deployed, medium when assigned).
-- Each finding has severity, summary, evidence, assignee and status (open, dismissed,
-  resolved).
-- Findings are recomputed hourly (Celery beat `quality.refresh_findings`) or on demand.
-  They auto-resolve when the condition clears; dismissed findings stay dismissed while it
-  holds. Assets are never changed.
-
-**Migrations (all reversible; CI reverses `quality` too):**
-- `reconciliation.0002_category_review_and_triage`
-- `quality.0001_data_quality_findings`
+**Migrations (all reversible; CI reverses `groups`):**
+- `groups.0001_asset_groups`
+- `accounts.0006_group_permissions`
 
 **APIs (new):**
 
-| Area | Endpoints |
-|---|---|
-| Category reviews | `GET /discovery/category-reviews/`; `POST .../{id}/reclassify/` and `.../{id}/dismiss/` (If-Match) |
-| Triage | `POST /reconciliation/{id}/assign/` (If-Match), `POST /reconciliation/bulk/`, `GET /reconciliation/assignees/` |
-| Data quality | `GET /quality/findings/`, `GET /quality/summary/`; `POST /quality/findings/{id}/assign/`, `.../dismiss/`, `.../reopen/` (If-Match); `POST /quality/refresh/` |
-
-Changed:
-- Candidates add `assignee` and `assigned_at`.
-- The candidate list adds the new filters.
-- Approve-link accepts `reclassify`, `category` and `custom_fields`.
+| Method | Path | Notes |
+|---|---|---|
+| GET, POST | `/groups/` | List with visible member counts; create |
+| GET, PATCH | `/groups/{id}/` | PATCH needs If-Match |
+| POST | `/groups/{id}/archive/` | Needs If-Match and a reason |
+| POST | `/groups/preview/`, `/groups/{id}/preview/` | Rule preview |
+| GET | `/groups/{id}/assets/` | `history`, `q` |
+| POST | `/groups/{id}/members/` | Static add/remove |
+| POST | `/groups/{id}/evaluate/` | Re-evaluate now |
+| GET | `/groups/{id}/rule-versions/` | Rule history |
+| GET | `/groups/fields/` | Rule-builder field catalogue |
+| GET | `/assets/{id}/groups/` | Groups an asset belongs to |
 
 **UI:**
-- Discovery reconciliation queue: assignee, waiting-time and sort filters, search, row
-  selection with a bulk bar (assign to me, unassign, hold, reject) and a reason dialog
-  that reports per-item results, plus assignee and waiting-since columns.
-- New **Category reviews** tab: current versus suggested path, kind, source, a reclassify
-  dialog with template impact (it links to the asset's Change category form when
-  required fields are missing), and keep-current.
-- New **Data quality** tab: queue selector with counts, status, severity and assignee
-  filters, evidence links to the other duplicate assets, assign to me, dismiss, reopen,
-  and re-check now.
-- Candidate page: an "Also change the asset's category" option when linking.
-- Shared `ReasonDialog`; new `.segmented` and `.bulk-bar` styles.
+- **Groups** in the sidebar.
+- List: kind, rule summary, members in your sites, owner, last evaluated.
+- "New group" dialog: kind, name, description, parent, owner, and for dynamic groups the
+  rule builder (typed rows, field-specific operators, enum, reference and date pickers,
+  multi-select for `in`, Exclude, nested AND/OR groups) with a live preview of the
+  matching count and sample.
+- Group page:
+  - details, re-evaluate, edit details, archive with a reason;
+  - rule panel: edit with a preview of the membership difference, plus a reason;
+  - rule history;
+  - members table: why (manual or rule version), since, removed history, search;
+  - static: add assets by search, remove selected with a reason.
+- Asset page: **Groups** tab.
+- Shared helpers in `ruleUtils.ts`; builder styles.
 
-**Docs:** docs/17 ADR-015 and ASM-44 to ASM-46; README section.
+**Docs:** docs/17 ASM-47 and ASM-48; README section.
 
 ## Verification (workstation; SQLite test-only fallback, no Docker/PostgreSQL here)
 
-- **Backend: 560 passed, 6 skipped** (the 6 skips are PostgreSQL/Redis-only). 24 new
-  tests:
-  - `test_category_review.py` (11): open, kinds, class versus agreement, reclassify with
-    audit and same UUID, required fields, dismiss not re-proposed, reopen on a new
-    suggestion, asset-page reclassify settles, agree again resolves, link + reclassify,
-    all-or-nothing rollback, scope and permissions;
-  - `test_triage.py` (6): assign with 428 without If-Match, assignee validation and
-    picker, filters and ordering, bulk with stale versions and invisible IDs, bulk
-    assign and validation, permissions and site scope;
-  - `apps/quality/tests` (7): every rule including VM exemption and severities, stale
-    links, auto-resolve and reopen history, dismissed stays dismissed, assign, filters
-    and summary, scope and permissions, refresh with archived assets.
+- **Backend: 582 passed, 6 skipped** (the 6 skips are PostgreSQL/Redis-only). 22 new tests
+  in `apps/groups/tests/test_groups.py`:
+  - 9 invalid-rule cases; size and depth limits;
+  - rule semantics: subtrees, text, empty, enum, owner, hostname, and/or/not, archived;
+  - dates, source links, last seen and `member_of`;
+  - dynamic lifecycle via the API: preview, create, evaluate, audit, diff preview, rule
+    change with reason, history reasons, versions;
+  - re-evaluation follows asset changes;
+  - dependency-ordered evaluation; circular references and parents rejected;
+  - archive blocked while referenced, and the name is reusable;
+  - static members: idempotent adds, removal reasons, audit, asset groups endpoint,
+    dynamic refuses explicit members;
+  - **no access widening** (docs/15 A07);
+  - role permissions and site scope for members;
+  - kind immutable, static has no rule, unique names;
+  - field catalogue.
 - Ruff check and format are clean; no migration drift; the OpenAPI schema validates with
   `--fail-on-warn` and matches the committed file.
-- Frontend: typecheck, oxlint, **109 tests** (9 new) and the build all pass.
-- GitHub CI run 41739915106 on `7698c5c` (PostgreSQL 16 + Redis 7): backend **566 passed,
-  0 skipped**; migrations applied and reversed (including `quality` and `reconciliation`);
-  OpenAPI drift check; frontend 109 tests; Compose config and production image builds
-  pass.
+- Frontend: typecheck, oxlint, **116 tests** (7 new) and the build all pass.
 - Not run: Docker stack, Playwright, browser review at 1440×900 and 390×844.
 
-**Still open from earlier tasks (need decisions or outside input):**
-- Regional Defender hosts.
-- Whether excess roles should block syncs.
-- Phone and tablet categories.
-- DEC-15, DEC-16 and DEC-17.
+**Open:**
+- Evaluation runs on save, on demand and hourly, not on every asset change (ASM-48).
+- Group export, import and notifications come with Tasks 013, 014 and 018.
+- Earlier open items: DEC-15, DEC-16 and DEC-17; regional Defender hosts; whether excess
+  roles should block syncs; phone and tablet categories; ASM-46 severities.
 
-**Open in this task:**
-- Severity thresholds and the exemption list are initial (ASM-46).
-- Review metrics were not built.
-- Bulk link/create is intentionally absent.
-
-Proposed next task: **012 | Static/dynamic groups + editor** (tasks/BACKLOG.md). Do not start
-automatically.
+Proposed next task: **013 | CSV/XLSX imports with preview/guarded upsert**
+(tasks/BACKLOG.md). Do not start automatically.

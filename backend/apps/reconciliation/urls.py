@@ -1,5 +1,6 @@
 from django.urls import path
 
+from apps.groups import views as group_views
 from apps.integrations import views as integration_views
 from apps.network import views as network_views
 from apps.security import views as security_views
@@ -77,6 +78,7 @@ asset_evidence_urlpatterns = [
         network_views.AssetNetworkEvidenceView.as_view(),
         name="asset-network-evidence",
     ),
+    path("<uuid:pk>/groups/", group_views.AssetGroupsView.as_view(), name="asset-groups"),
     path(
         "<uuid:pk>/security/",
         security_views.AssetSecurityView.as_view(),

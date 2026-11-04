@@ -43,6 +43,13 @@ export type BulkResult = Schemas['BulkResult']
 export type Assignee = Schemas['Assignee']
 export type QualityFinding = Schemas['Finding']
 export type QualitySummaryRow = Schemas['SummaryRow']
+export type AssetGroup = Schemas['Group']
+export type AssetGroupWrite = Schemas['PatchedGroupWriteRequest']
+export type GroupMembership = Schemas['Membership']
+export type GroupRuleVersion = Schemas['RuleVersion']
+export type GroupPreview = Schemas['Preview']
+export type RuleField = Schemas['RuleField']
+export type AssetGroupRef = Schemas['AssetGroupRef']
 export type FieldConflict = Schemas['FieldConflict']
 export type AssetEvidence = Schemas['AssetEvidence']
 export type FieldEvidence = Schemas['FieldEvidence']
@@ -80,4 +87,7 @@ export const PERMISSIONS = {
   reconciliationDecide: 'reconciliation.decide',
   integrationsManage: 'integrations.manage',
   licensesView: 'licenses.view',
+  groupsView: 'groups.view',
+  groupsManage: 'groups.manage',
+  groupsMembers: 'groups.members',
 } as const

@@ -1393,3 +1393,75 @@ code,
 .bulk-bar p {
   margin: 0;
 }
+
+/* Group rule builder (docs/07 GroupRuleBuilder). */
+.rule-builder {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.rule-group {
+  margin: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.rule-group .rule-group {
+  background: var(--color-page-bg);
+}
+
+.rule-group__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.rule-group__head .field__control {
+  width: auto;
+}
+
+.rule-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rule-row {
+  display: grid;
+  grid-template-columns: minmax(140px, 1.2fr) minmax(110px, 0.8fr) minmax(160px, 1.5fr) auto auto;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.rule-row__not {
+  white-space: nowrap;
+}
+
+.rule-preview p {
+  margin: 0 0 var(--space-2);
+}
+
+.form-actions--start {
+  justify-content: flex-start;
+}
+
+.toolbar--inset {
+  padding: var(--space-3) var(--space-3) 0;
+}
+
+.row--muted td {
+  color: var(--color-text-secondary);
+}
+
+@media (max-width: 720px) {
+  .rule-row {
+    grid-template-columns: 1fr;
+  }
+}
