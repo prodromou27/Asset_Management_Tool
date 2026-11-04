@@ -135,6 +135,12 @@ scripts/compose.sh dev exec api python manage.py load_observations \
 - Matching: the Entra device ID links a Defender machine to the asset of an Intune device from the **same tenant** when a hostname or MAC corroborates it and nothing conflicts (ADR-014); otherwise it is a review candidate. Hostname or IP alone never links.
 - Security facts (onboarding, sensor health, exposure, risk, tags, first/last seen, original values) are stored apart from asset fields and shown on the asset's **Security** tab (requires `discovery.view` and site access). "Last report received" is not an online status, and a machine missing from Defender's list is flagged, never treated as deleted. Sanitized fixtures: `fixtures/defender/api/README.md`.
 
+### Lifecycle / EOL (Task 015)
+
+- **Lifecycle catalogue** (Administration): hardware models, OS/firmware releases and software versions with dated milestones (end of sale, maintenance, security updates, standard/extended/final support), each tied to a source (vendor page preferred; third party labelled) and verified by a reviewer. Approved aliases and vendor aliases map reported names to products; nothing is pre-loaded or guessed.
+- **Lifecycle** (Inventory): findings per asset and dimension (hardware, OS/firmware) with status, governing milestone, days left and evidence; a **review queue** for ambiguous or revision matches (approve, optionally saving an alias, or reject); and **exceptions** (reason, approver, expiry; the vendor evidence is never changed). Each asset has a **Lifecycle** tab.
+- Missing or unverified information is Unknown, never Supported. Warnings at 180 and 90 days (`ITAM_LIFECYCLE_WARNING_DAYS`); extended support is shown but not counted unless `ITAM_LIFECYCLE_COUNT_EXTENDED_SUPPORT=true`. Vendor lifecycle is not your maintenance contract or warranty. Reassessment runs after catalogue changes and hourly. Details: docs/17 ASM-53.
+
 ### Exports (Task 014)
 
 - **Export** on the Assets list (current filters or everything you can see) and **Export members** on a group page. Choose CSV, Excel (XLSX) or JSON, related data (hostnames, interfaces/MACs, IP addresses, group memberships; or group members) and columns. Related data stays in separate tables keyed by ID: a ZIP of CSV files, one sheet per table in XLSX (split across numbered sheets beyond Excel's row limit), or nested lists in a versioned JSON document (`"format": "itam.export", "version": 1`).

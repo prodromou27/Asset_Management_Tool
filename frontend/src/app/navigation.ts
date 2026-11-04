@@ -4,6 +4,8 @@ import {
   Building2,
   FileDown,
   FileUp,
+  History,
+  Library,
   KeyRound,
   LayoutList,
   PlugZap,
@@ -21,6 +23,8 @@ export interface NavItem {
   label: string
   icon: LucideIcon
   permission?: string
+  /** Active only on this exact path (not on deeper routes owned by another entry). */
+  end?: boolean
 }
 
 export interface NavSection {
@@ -36,6 +40,7 @@ export const SECTIONS: NavSection[] = [
     items: [
       { to: '/assets', label: 'Assets', icon: Boxes, permission: PERMISSIONS.assetsView },
       { to: '/groups', label: 'Groups', icon: LayoutList, permission: PERMISSIONS.groupsView },
+      { to: '/lifecycle', label: 'Lifecycle', icon: History, permission: PERMISSIONS.lifecycleView, end: true },
       { to: '/licenses', label: 'Licenses', icon: KeyRound, permission: PERMISSIONS.licensesView },
     ],
   },
@@ -55,6 +60,12 @@ export const SECTIONS: NavSection[] = [
       { to: '/admin/sites', label: 'Sites & locations', icon: Building2, permission: PERMISSIONS.sitesManage },
       { to: '/admin/categories', label: 'Categories & fields', icon: Shapes, permission: PERMISSIONS.categoriesManage },
       { to: '/admin/integrations', label: 'Integrations', icon: PlugZap, permission: PERMISSIONS.integrationsManage },
+      {
+        to: '/lifecycle/catalogue',
+        label: 'Lifecycle catalogue',
+        icon: Library,
+        permission: PERMISSIONS.lifecycleView,
+      },
       { to: '/admin/users', label: 'Users & roles', icon: Users, permission: PERMISSIONS.usersView },
       { to: '/admin/audit', label: 'Audit log', icon: ScrollText, permission: PERMISSIONS.auditView },
       { to: '/admin/security', label: 'Security policy', icon: ShieldCheck, permission: PERMISSIONS.securityView },

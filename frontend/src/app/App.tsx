@@ -7,6 +7,9 @@ import { IntegrationDetailPage } from '../features/admin-integrations/Integratio
 import { IntegrationsPage } from '../features/admin-integrations/IntegrationsPage'
 import { CandidatePage } from '../features/discovery/CandidatePage'
 import { ExportsPage } from '../features/exports/ExportsPage'
+import { CataloguePage } from '../features/lifecycle/CataloguePage'
+import { LifecyclePage } from '../features/lifecycle/LifecyclePage'
+import { ProductPage } from '../features/lifecycle/ProductPage'
 import { GroupDetailPage } from '../features/groups/GroupDetailPage'
 import { GroupsPage } from '../features/groups/GroupsPage'
 import { ImportJobPage } from '../features/imports/ImportJobPage'
@@ -122,6 +125,30 @@ export function AppRoutes() {
         element={
           <Protected permission={PERMISSIONS.groupsView} what="groups">
             <GroupDetailPage />
+          </Protected>
+        }
+      />
+      <Route
+        path="/lifecycle"
+        element={
+          <Protected permission={PERMISSIONS.lifecycleView} what="lifecycle">
+            <LifecyclePage />
+          </Protected>
+        }
+      />
+      <Route
+        path="/lifecycle/catalogue"
+        element={
+          <Protected permission={PERMISSIONS.lifecycleView} what="the lifecycle catalogue">
+            <CataloguePage />
+          </Protected>
+        }
+      />
+      <Route
+        path="/lifecycle/catalogue/:id"
+        element={
+          <Protected permission={PERMISSIONS.lifecycleView} what="the lifecycle catalogue">
+            <ProductPage />
           </Protected>
         }
       />

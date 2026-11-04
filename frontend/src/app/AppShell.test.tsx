@@ -100,3 +100,18 @@ describe('application shell', () => {
     expect(toggle).toHaveAttribute('aria-expanded', 'false')
   })
 })
+
+describe('nested navigation entries', () => {
+  it('highlights only the catalogue on catalogue pages', async () => {
+    mockApi({
+      'GET /auth/me/': { body: makeMe() },
+      'GET /lifecycle/products/': { body: page([]) },
+    })
+
+    renderApp('/lifecycle/catalogue')
+
+    const nav = await screen.findByRole('navigation', { name: 'Primary' })
+    expect(within(nav).getByRole('link', { name: 'Lifecycle catalogue' })).toHaveClass('nav-link--active')
+    expect(within(nav).getByRole('link', { name: 'Lifecycle' })).not.toHaveClass('nav-link--active')
+  })
+})

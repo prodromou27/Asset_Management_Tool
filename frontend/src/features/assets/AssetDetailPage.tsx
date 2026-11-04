@@ -1,3 +1,4 @@
+import { AssetLifecyclePanel } from '../lifecycle/AssetLifecyclePanel'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom'
@@ -169,6 +170,9 @@ export function AssetDetailPage() {
             : []),
           ...(can(PERMISSIONS.groupsView)
             ? [{ id: 'groups', label: 'Groups', content: <AssetGroupsPanel assetId={data.id} /> }]
+            : []),
+          ...(can(PERMISSIONS.lifecycleView)
+            ? [{ id: 'lifecycle', label: 'Lifecycle', content: <AssetLifecyclePanel assetId={data.id} /> }]
             : []),
           { id: 'history', label: 'History', content: <History assetId={data.id} /> },
         ]}

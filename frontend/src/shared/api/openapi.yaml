@@ -677,6 +677,101 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedAssetHistoryList'
           description: ''
+  /api/v1/assets/{id}/lifecycle/:
+    get:
+      operationId: assets_lifecycle_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - assets
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetLifecycle'
+          description: ''
+  /api/v1/assets/{id}/lifecycle/exceptions/:
+    post:
+      operationId: assets_lifecycle_exceptions_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - assets
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LifecycleExceptionWriteRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LifecycleExceptionWriteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LifecycleExceptionWriteRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LifecycleException'
+          description: ''
+  /api/v1/assets/{id}/lifecycle/reassess/:
+    get:
+      operationId: assets_lifecycle_reassess_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - assets
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetLifecycle'
+          description: ''
+    post:
+      operationId: assets_lifecycle_reassess_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - assets
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetLifecycle'
+          description: ''
   /api/v1/assets/{id}/merge/:
     post:
       operationId: assets_merge_create
@@ -2620,6 +2715,865 @@ paths:
               schema:
                 $ref: '#/components/schemas/SubscriptionDetail'
           description: ''
+  /api/v1/lifecycle/aliases/{id}/remove/:
+    post:
+      operationId: lifecycle_aliases_remove_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - lifecycle
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LifecycleProductDetail'
+          description: ''
+  /api/v1/lifecycle/exceptions/:
+    get:
+      operationId: lifecycle_exceptions_list
+      parameters:
+      - in: query
+        name: active
+        schema:
+          type: boolean
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      tags:
+      - lifecycle
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedLifecycleExceptionList'
+          description: ''
+  /api/v1/lifecycle/exceptions/{id}/revoke/:
+    post:
+      operationId: lifecycle_exceptions_revoke_create
+      parameters:
+      - in: header
+        name: If-Match
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - lifecycle
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LifecycleException'
+          description: ''
+  /api/v1/lifecycle/findings/:
+    get:
+      operationId: lifecycle_findings_list
+      parameters:
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - in: query
+        name: dimension
+        schema:
+          type: string
+      - in: query
+        name: exception
+        schema:
+          type: boolean
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: q
+        schema:
+          type: string
+        description: Asset name
+      - in: query
+        name: site
+        schema:
+          type: string
+      - in: query
+        name: status
+        schema:
+          type: string
+        description: Effective status
+      - in: query
+        name: vendor
+        schema:
+          type: string
+      tags:
+      - lifecycle
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedLifecycleAssessmentList'
+          description: ''
+  /api/v1/lifecycle/matches/:
+    get:
+      operationId: lifecycle_matches_list
+      parameters:
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - in: query
+        name: dimension
+        schema:
+          type: string
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: q
+        schema:
+          type: string
+      - in: query
+        name: state
+        schema:
+          type: string
+        description: 'Default: candidate'
+      tags:
+      - lifecycle
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedLifecycleMatchList'
+          description: ''
+  /api/v1/lifecycle/matches/{id}/approve/:
+    post:
+      operationId: lifecycle_matches_approve_create
+      parameters:
+      - in: header
+        name: If-Match
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - lifecycle
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LifecycleMatchApproveRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LifecycleMatchApproveRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LifecycleMatchApproveRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LifecycleMatch'
+          description: ''
+  /api/v1/lifecycle/matches/{id}/reject/:
+    post:
+      operationId: lifecycle_matches_reject_create
+      parameters:
+      - in: header
+        name: If-Match
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - lifecycle
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LifecycleMatchRejectRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LifecycleMatchRejectRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LifecycleMatchRejectRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LifecycleMatch'
+          description: ''
+  /api/v1/lifecycle/milestones/{id}/:
+    patch:
+      operationId: lifecycle_milestones_partial_update
+      parameters:
+      - in: header
+        name: If-Match
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - lifecycle
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedLifecycleMilestoneUpdateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedLifecycleMilestoneUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedLifecycleMilestoneUpdateRequest'
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LifecycleMilestone'
+          description: ''
+  /api/v1/lifecycle/milestones/{id}/review/:
+    post:
+      operationId: lifecycle_milestones_review_create
+      parameters:
+      - in: header
+        name: If-Match
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - lifecycle
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LifecycleMilestoneReviewRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LifecycleMilestoneReviewRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LifecycleMilestoneReviewRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LifecycleMilestone'
+          description: ''
+  /api/v1/lifecycle/policy/:
+    get:
+      operationId: lifecycle_policy_retrieve
+      tags:
+      - lifecycle
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LifecyclePolicy'
+          description: ''
+  /api/v1/lifecycle/products/:
+    get:
+      operationId: lifecycle_products_list
+      parameters:
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - in: query
+        name: kind
+        schema:
+          type: string
+      - in: query
+        name: needs_review
+        schema:
+          type: boolean
+        description: Has dates awaiting verification
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: q
+        schema:
+          type: string
+      - in: query
+        name: vendor
+        schema:
+          type: string
+      tags:
+      - lifecycle
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedLifecycleProductList'
+          description: ''
+    post:
+      operationId: lifecycle_products_create
+      tags:
+      - lifecycle
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LifecycleProductWriteRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LifecycleProductWriteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LifecycleProductWriteRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LifecycleProductDetail'
+          description: ''
+  /api/v1/lifecycle/products/{id}/:
+    get:
+      operationId: lifecycle_products_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - lifecycle
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LifecycleProductDetail'
+          description: ''
+    patch:
+      operationId: lifecycle_products_partial_update
+      parameters:
+      - in: header
+        name: If-Match
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - lifecycle
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedLifecycleProductUpdateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedLifecycleProductUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedLifecycleProductUpdateRequest'
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LifecycleProductDetail'
+          description: ''
+  /api/v1/lifecycle/products/{id}/aliases/:
+    post:
+      operationId: lifecycle_products_aliases_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - lifecycle
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LifecycleAliasRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LifecycleAliasRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LifecycleAliasRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LifecycleProductDetail'
+          description: ''
+  /api/v1/lifecycle/products/{id}/assets/:
+    get:
+      operationId: lifecycle_products_assets_list
+      description: Assessments of assets matched to this product, in the caller's
+        sites only.
+      parameters:
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      tags:
+      - lifecycle
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedLifecycleAssessmentList'
+          description: ''
+  /api/v1/lifecycle/products/{id}/milestones/:
+    post:
+      operationId: lifecycle_products_milestones_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - lifecycle
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LifecycleMilestoneWriteRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LifecycleMilestoneWriteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LifecycleMilestoneWriteRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LifecycleProductDetail'
+          description: ''
+  /api/v1/lifecycle/products/{id}/reassess/:
+    post:
+      operationId: lifecycle_products_reassess_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - lifecycle
+      security:
+      - sessionAuth: []
+      responses:
+        '202':
+          description: No response body
+  /api/v1/lifecycle/products/{id}/revisions/:
+    get:
+      operationId: lifecycle_products_revisions_list
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - lifecycle
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LifecycleRevision'
+          description: ''
+  /api/v1/lifecycle/products/{id}/statement/:
+    post:
+      operationId: lifecycle_products_statement_create
+      parameters:
+      - in: header
+        name: If-Match
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - lifecycle
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LifecycleStatementRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LifecycleStatementRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LifecycleStatementRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LifecycleProductDetail'
+          description: ''
+  /api/v1/lifecycle/reassess/:
+    post:
+      operationId: lifecycle_reassess_create
+      tags:
+      - lifecycle
+      security:
+      - sessionAuth: []
+      responses:
+        '202':
+          description: No response body
+  /api/v1/lifecycle/sources/:
+    get:
+      operationId: lifecycle_sources_list
+      tags:
+      - lifecycle
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LifecycleSource'
+          description: ''
+    post:
+      operationId: lifecycle_sources_create
+      tags:
+      - lifecycle
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LifecycleSourceRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LifecycleSourceRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LifecycleSourceRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LifecycleSource'
+          description: ''
+  /api/v1/lifecycle/sources/{id}/:
+    get:
+      operationId: lifecycle_sources_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - lifecycle
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LifecycleSource'
+          description: ''
+    patch:
+      operationId: lifecycle_sources_partial_update
+      parameters:
+      - in: header
+        name: If-Match
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - lifecycle
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedLifecycleSourceRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedLifecycleSourceRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedLifecycleSourceRequest'
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LifecycleSource'
+          description: ''
+  /api/v1/lifecycle/summary/:
+    get:
+      operationId: lifecycle_summary_list
+      tags:
+      - lifecycle
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LifecycleSummaryRow'
+          description: ''
+  /api/v1/lifecycle/vendor-aliases/:
+    get:
+      operationId: lifecycle_vendor_aliases_list
+      tags:
+      - lifecycle
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/VendorAlias'
+          description: ''
+    post:
+      operationId: lifecycle_vendor_aliases_create
+      tags:
+      - lifecycle
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VendorAliasRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/VendorAliasRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/VendorAliasRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VendorAlias'
+          description: ''
+  /api/v1/lifecycle/vendor-aliases/{id}/remove/:
+    post:
+      operationId: lifecycle_vendor_aliases_remove_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - lifecycle
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '204':
+          description: No response body
   /api/v1/locations/:
     get:
       operationId: locations_list
@@ -3786,7 +4740,7 @@ components:
           readOnly: true
         state:
           allOf:
-          - $ref: '#/components/schemas/StateEnum'
+          - $ref: '#/components/schemas/AllocationStateEnum'
           readOnly: true
         paths:
           type: array
@@ -3835,6 +4789,20 @@ components:
         * `direct` - direct
         * `group` - group
         * `direct_and_group` - direct_and_group
+    AllocationStateEnum:
+      enum:
+      - Active
+      - ActiveWithError
+      - Disabled
+      - Error
+      - Unknown
+      type: string
+      description: |-
+        * `Active` - Active
+        * `ActiveWithError` - Active with error
+        * `Disabled` - Disabled
+        * `Error` - Error
+        * `Unknown` - Unknown
     ApproveActionEnum:
       enum:
       - link
@@ -4229,6 +5197,35 @@ components:
       - reason
       - request_id
       - version
+    AssetLifecycle:
+      type: object
+      properties:
+        assessments:
+          type: array
+          items:
+            $ref: '#/components/schemas/LifecycleAssessment'
+        matches:
+          type: array
+          items:
+            $ref: '#/components/schemas/LifecycleMatch'
+        exceptions:
+          type: array
+          items:
+            $ref: '#/components/schemas/LifecycleException'
+        history:
+          type: array
+          items:
+            $ref: '#/components/schemas/LifecycleAssessmentHistory'
+        evidence:
+          type: array
+          items:
+            $ref: '#/components/schemas/LifecycleMilestone'
+      required:
+      - assessments
+      - evidence
+      - exceptions
+      - history
+      - matches
     AssetList:
       type: object
       properties:
@@ -5314,6 +6311,14 @@ components:
       - required
       - sort_order
       - version
+    DecisionEnum:
+      enum:
+      - verified
+      - rejected
+      type: string
+      description: |-
+        * `verified` - verified
+        * `rejected` - rejected
     Department:
       type: object
       properties:
@@ -5590,6 +6595,17 @@ components:
       - added
       - members
       - removed
+    EvidenceQualityEnum:
+      enum:
+      - vendor
+      - manual
+      - third_party
+      type: string
+      description: |-
+        * `` - No evidence
+        * `vendor` - Official vendor
+        * `manual` - Manual record
+        * `third_party` - Third party only
     EvidenceSourceEnum:
       enum:
       - manual
@@ -7099,6 +8115,1130 @@ components:
       - last_success_at
       - name
       - stale_after_hours
+    LifecycleAlias:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        kind:
+          $ref: '#/components/schemas/LifecycleAliasKindEnum'
+        value:
+          type: string
+          maxLength: 200
+        release:
+          type: string
+          maxLength: 100
+        note:
+          type: string
+          maxLength: 300
+        created_by:
+          type: string
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - created_by
+      - id
+      - kind
+      - value
+    LifecycleAliasKindEnum:
+      enum:
+      - model
+      - part_number
+      - os_name
+      - product_name
+      type: string
+      description: |-
+        * `model` - Model name
+        * `part_number` - Part number / SKU
+        * `os_name` - OS or firmware name
+        * `product_name` - Software product name
+    LifecycleAliasRequest:
+      type: object
+      properties:
+        kind:
+          $ref: '#/components/schemas/LifecycleAliasKindEnum'
+        value:
+          type: string
+          minLength: 1
+          maxLength: 200
+        release:
+          type: string
+          maxLength: 100
+        note:
+          type: string
+          maxLength: 300
+      required:
+      - kind
+      - value
+    LifecycleAssessment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        asset:
+          allOf:
+          - $ref: '#/components/schemas/LifecycleAssetRef'
+          readOnly: true
+        dimension:
+          allOf:
+          - $ref: '#/components/schemas/LifecycleDimensionEnum'
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/LifecycleStatusEnum'
+          readOnly: true
+        effective_status:
+          allOf:
+          - $ref: '#/components/schemas/LifecycleStatusEnum'
+          readOnly: true
+        product:
+          allOf:
+          - $ref: '#/components/schemas/LifecycleProductRef'
+          readOnly: true
+          nullable: true
+        support_level:
+          readOnly: true
+          oneOf:
+          - $ref: '#/components/schemas/SupportLevelEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        milestone_type:
+          readOnly: true
+          oneOf:
+          - $ref: '#/components/schemas/MilestoneTypeEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        milestone_date:
+          type: string
+          format: date
+          readOnly: true
+          nullable: true
+        days_remaining:
+          type: integer
+          readOnly: true
+          nullable: true
+        threshold_days:
+          type: integer
+          readOnly: true
+          nullable: true
+        evidence_quality:
+          readOnly: true
+          oneOf:
+          - $ref: '#/components/schemas/EvidenceQualityEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        milestone_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          readOnly: true
+        reasons:
+          type: array
+          items:
+            type: string
+          readOnly: true
+        exception:
+          allOf:
+          - $ref: '#/components/schemas/LifecycleExceptionRef'
+          readOnly: true
+          nullable: true
+        assessed_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - assessed_at
+      - asset
+      - days_remaining
+      - dimension
+      - effective_status
+      - evidence_quality
+      - exception
+      - id
+      - milestone_date
+      - milestone_ids
+      - milestone_type
+      - product
+      - reasons
+      - status
+      - support_level
+      - threshold_days
+    LifecycleAssessmentHistory:
+      type: object
+      properties:
+        dimension:
+          allOf:
+          - $ref: '#/components/schemas/LifecycleDimensionEnum'
+          readOnly: true
+        status:
+          type: string
+          readOnly: true
+        effective_status:
+          type: string
+          readOnly: true
+        product_label:
+          type: string
+          readOnly: true
+        milestone_type:
+          type: string
+          readOnly: true
+        milestone_date:
+          type: string
+          format: date
+          readOnly: true
+          nullable: true
+        reasons:
+          type: array
+          items:
+            type: string
+          readOnly: true
+        recorded_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - dimension
+      - effective_status
+      - milestone_date
+      - milestone_type
+      - product_label
+      - reasons
+      - recorded_at
+      - status
+    LifecycleAssetRef:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        site:
+          $ref: '#/components/schemas/SiteRef'
+        manufacturer:
+          type: string
+        model:
+          type: string
+        os_name:
+          type: string
+        os_version:
+          type: string
+        firmware_version:
+          type: string
+      required:
+      - firmware_version
+      - id
+      - manufacturer
+      - model
+      - name
+      - os_name
+      - os_version
+      - site
+    LifecycleCandidate:
+      type: object
+      properties:
+        product_id:
+          type: string
+          format: uuid
+        label:
+          type: string
+        reason:
+          type: string
+      required:
+      - label
+      - product_id
+      - reason
+    LifecycleDimensionEnum:
+      enum:
+      - hardware
+      - os
+      - software
+      type: string
+      description: |-
+        * `hardware` - Hardware
+        * `os` - Operating system / firmware
+        * `software` - Software
+    LifecycleException:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        asset:
+          allOf:
+          - $ref: '#/components/schemas/LifecycleAssetRef'
+          readOnly: true
+        dimension:
+          allOf:
+          - $ref: '#/components/schemas/LifecycleDimensionEnum'
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/LifecycleStatusEnum'
+          readOnly: true
+        reason:
+          type: string
+          readOnly: true
+        compensating_controls:
+          type: string
+          readOnly: true
+        expires_on:
+          type: string
+          format: date
+          readOnly: true
+        approved_by:
+          type: string
+          readOnly: true
+        approved_at:
+          type: string
+          format: date-time
+          readOnly: true
+        revoked_by:
+          type: string
+          readOnly: true
+          nullable: true
+        revoked_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        revoke_reason:
+          type: string
+          readOnly: true
+        active:
+          type: boolean
+          readOnly: true
+        version:
+          type: integer
+          readOnly: true
+      required:
+      - active
+      - approved_at
+      - approved_by
+      - asset
+      - compensating_controls
+      - dimension
+      - expires_on
+      - id
+      - reason
+      - revoke_reason
+      - revoked_at
+      - revoked_by
+      - status
+      - version
+    LifecycleExceptionRef:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/LifecycleStatusEnum'
+          readOnly: true
+        expires_on:
+          type: string
+          format: date
+          readOnly: true
+        approved_by:
+          type: string
+          readOnly: true
+      required:
+      - approved_by
+      - expires_on
+      - id
+      - status
+    LifecycleExceptionWriteDimensionEnum:
+      enum:
+      - hardware
+      - os
+      type: string
+      description: |-
+        * `hardware` - hardware
+        * `os` - os
+    LifecycleExceptionWriteRequest:
+      type: object
+      properties:
+        dimension:
+          $ref: '#/components/schemas/LifecycleExceptionWriteDimensionEnum'
+        status:
+          $ref: '#/components/schemas/LifecycleExceptionWriteStatusEnum'
+        reason:
+          type: string
+          minLength: 10
+          maxLength: 1000
+        compensating_controls:
+          type: string
+          default: ''
+          maxLength: 1000
+        expires_on:
+          type: string
+          format: date
+      required:
+      - dimension
+      - expires_on
+      - reason
+      - status
+    LifecycleExceptionWriteStatusEnum:
+      enum:
+      - supported
+      - eol_announced
+      - expiring
+      - security_maintenance_ended
+      - eos
+      - not_announced
+      - unknown
+      type: string
+      description: |-
+        * `supported` - Supported
+        * `eol_announced` - EOL announced
+        * `expiring` - Approaching end of support
+        * `security_maintenance_ended` - Security updates ended
+        * `eos` - End of support
+        * `not_announced` - Not announced
+        * `unknown` - Unknown
+    LifecycleMatch:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        asset:
+          allOf:
+          - $ref: '#/components/schemas/LifecycleAssetRef'
+          readOnly: true
+        dimension:
+          allOf:
+          - $ref: '#/components/schemas/LifecycleDimensionEnum'
+          readOnly: true
+        state:
+          allOf:
+          - $ref: '#/components/schemas/LifecycleMatchStateEnum'
+          readOnly: true
+        method:
+          allOf:
+          - $ref: '#/components/schemas/LifecycleMatchMethodEnum'
+          readOnly: true
+        product:
+          allOf:
+          - $ref: '#/components/schemas/LifecycleProductRef'
+          readOnly: true
+          nullable: true
+        observed:
+          type: object
+          additionalProperties: {}
+          readOnly: true
+        candidates:
+          type: array
+          items:
+            $ref: '#/components/schemas/LifecycleCandidate'
+          readOnly: true
+        reason:
+          type: string
+          readOnly: true
+        rejected_products:
+          type: array
+          items:
+            type: string
+            format: uuid
+          readOnly: true
+        reviewed_by:
+          type: string
+          nullable: true
+          readOnly: true
+        reviewed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        review_note:
+          type: string
+          readOnly: true
+        modified_at:
+          type: string
+          format: date-time
+          readOnly: true
+        version:
+          type: integer
+          readOnly: true
+      required:
+      - asset
+      - candidates
+      - dimension
+      - id
+      - method
+      - modified_at
+      - observed
+      - product
+      - reason
+      - rejected_products
+      - review_note
+      - reviewed_at
+      - reviewed_by
+      - state
+      - version
+    LifecycleMatchApproveRequest:
+      type: object
+      properties:
+        product:
+          type: string
+          format: uuid
+        remember_alias:
+          type: boolean
+          default: false
+        note:
+          type: string
+          default: ''
+          maxLength: 500
+      required:
+      - product
+    LifecycleMatchMethodEnum:
+      enum:
+      - exact
+      - alias
+      - manual
+      - none
+      type: string
+      description: |-
+        * `exact` - Exact match
+        * `alias` - Approved alias
+        * `manual` - Approved by reviewer
+        * `none` - No match
+    LifecycleMatchRejectRequest:
+      type: object
+      properties:
+        products:
+          type: array
+          items:
+            type: string
+            format: uuid
+        note:
+          type: string
+          minLength: 5
+          maxLength: 500
+      required:
+      - note
+    LifecycleMatchStateEnum:
+      enum:
+      - matched
+      - candidate
+      - no_match
+      - not_applicable
+      type: string
+      description: |-
+        * `matched` - Matched
+        * `candidate` - Needs review
+        * `no_match` - No match
+        * `not_applicable` - Not applicable
+    LifecycleMilestone:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        milestone_type:
+          allOf:
+          - $ref: '#/components/schemas/MilestoneTypeEnum'
+          readOnly: true
+        date:
+          type: string
+          format: date
+          readOnly: true
+        source:
+          allOf:
+          - $ref: '#/components/schemas/LifecycleSourceRef'
+          readOnly: true
+        verification:
+          allOf:
+          - $ref: '#/components/schemas/MilestoneVerificationEnum'
+          readOnly: true
+        reviewed_by:
+          type: string
+          nullable: true
+          readOnly: true
+        reviewed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        notes:
+          type: string
+          readOnly: true
+        created_by:
+          type: string
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        version:
+          type: integer
+          readOnly: true
+      required:
+      - created_at
+      - created_by
+      - date
+      - id
+      - milestone_type
+      - notes
+      - reviewed_at
+      - reviewed_by
+      - source
+      - verification
+      - version
+    LifecycleMilestoneReviewRequest:
+      type: object
+      properties:
+        decision:
+          $ref: '#/components/schemas/DecisionEnum'
+        note:
+          type: string
+          default: ''
+          maxLength: 500
+      required:
+      - decision
+    LifecycleMilestoneWriteRequest:
+      type: object
+      properties:
+        milestone_type:
+          $ref: '#/components/schemas/MilestoneTypeEnum'
+        date:
+          type: string
+          format: date
+        source:
+          type: string
+          format: uuid
+        notes:
+          type: string
+          default: ''
+          maxLength: 1000
+      required:
+      - date
+      - milestone_type
+      - source
+    LifecyclePolicy:
+      type: object
+      properties:
+        warning_days:
+          type: array
+          items:
+            type: integer
+        count_extended_support:
+          type: boolean
+        max_exception_days:
+          type: integer
+        today:
+          type: string
+          format: date
+      required:
+      - count_extended_support
+      - max_exception_days
+      - today
+      - warning_days
+    LifecycleProduct:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        kind:
+          $ref: '#/components/schemas/LifecycleProductKindEnum'
+        dimension:
+          allOf:
+          - $ref: '#/components/schemas/LifecycleDimensionEnum'
+          readOnly: true
+        vendor:
+          type: string
+          maxLength: 150
+        name:
+          type: string
+          maxLength: 200
+        release:
+          type: string
+          maxLength: 100
+        family:
+          type: string
+          maxLength: 150
+        description:
+          type: string
+          maxLength: 500
+        support_statement:
+          readOnly: true
+          oneOf:
+          - $ref: '#/components/schemas/SupportStatementEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        is_active:
+          type: boolean
+        milestones_verified:
+          type: integer
+          readOnly: true
+          default: 0
+        milestones_pending:
+          type: integer
+          readOnly: true
+          default: 0
+        alias_count:
+          type: integer
+          readOnly: true
+          default: 0
+        matched_assets:
+          type: integer
+          readOnly: true
+          default: 0
+        modified_at:
+          type: string
+          format: date-time
+          readOnly: true
+        version:
+          type: integer
+          readOnly: true
+      required:
+      - alias_count
+      - dimension
+      - id
+      - kind
+      - matched_assets
+      - milestones_pending
+      - milestones_verified
+      - modified_at
+      - name
+      - support_statement
+      - vendor
+      - version
+    LifecycleProductDetail:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/LifecycleProductKindEnum'
+          readOnly: true
+        dimension:
+          allOf:
+          - $ref: '#/components/schemas/LifecycleDimensionEnum'
+          readOnly: true
+        vendor:
+          type: string
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+        release:
+          type: string
+          readOnly: true
+        family:
+          type: string
+          readOnly: true
+        description:
+          type: string
+          readOnly: true
+        support_statement:
+          readOnly: true
+          oneOf:
+          - $ref: '#/components/schemas/SupportStatementEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        is_active:
+          type: boolean
+          readOnly: true
+        milestones_verified:
+          type: integer
+          readOnly: true
+          default: 0
+        milestones_pending:
+          type: integer
+          readOnly: true
+          default: 0
+        alias_count:
+          type: integer
+          readOnly: true
+          default: 0
+        matched_assets:
+          type: integer
+          readOnly: true
+          default: 0
+        modified_at:
+          type: string
+          format: date-time
+          readOnly: true
+        version:
+          type: integer
+          readOnly: true
+        statement_source:
+          allOf:
+          - $ref: '#/components/schemas/LifecycleSourceRef'
+          readOnly: true
+          nullable: true
+        statement_verified_by:
+          type: string
+          nullable: true
+          readOnly: true
+        statement_verified_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        aliases:
+          type: array
+          items:
+            $ref: '#/components/schemas/LifecycleAlias'
+          readOnly: true
+        milestones:
+          type: array
+          items:
+            $ref: '#/components/schemas/LifecycleMilestone'
+          readOnly: true
+        created_by:
+          type: string
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        modified_by:
+          type: string
+          readOnly: true
+          nullable: true
+      required:
+      - alias_count
+      - aliases
+      - created_at
+      - created_by
+      - description
+      - dimension
+      - family
+      - id
+      - is_active
+      - kind
+      - matched_assets
+      - milestones
+      - milestones_pending
+      - milestones_verified
+      - modified_at
+      - modified_by
+      - name
+      - release
+      - statement_source
+      - statement_verified_at
+      - statement_verified_by
+      - support_statement
+      - vendor
+      - version
+    LifecycleProductKindEnum:
+      enum:
+      - hardware
+      - operating_system
+      - firmware
+      - software
+      type: string
+      description: |-
+        * `hardware` - Hardware model
+        * `operating_system` - Operating system
+        * `firmware` - Firmware / network OS
+        * `software` - Software
+    LifecycleProductRef:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/LifecycleProductKindEnum'
+          readOnly: true
+        vendor:
+          type: string
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+        release:
+          type: string
+          readOnly: true
+        label:
+          type: string
+          readOnly: true
+      required:
+      - id
+      - kind
+      - label
+      - name
+      - release
+      - vendor
+    LifecycleProductWriteRequest:
+      type: object
+      properties:
+        kind:
+          $ref: '#/components/schemas/LifecycleProductKindEnum'
+        vendor:
+          type: string
+          minLength: 1
+          maxLength: 150
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        release:
+          type: string
+          default: ''
+          maxLength: 100
+        family:
+          type: string
+          default: ''
+          maxLength: 150
+        description:
+          type: string
+          default: ''
+          maxLength: 500
+      required:
+      - kind
+      - name
+      - vendor
+    LifecycleRevision:
+      type: object
+      properties:
+        number:
+          type: integer
+          readOnly: true
+        action:
+          type: string
+          readOnly: true
+        summary:
+          type: string
+          readOnly: true
+        snapshot:
+          type: object
+          additionalProperties: {}
+          readOnly: true
+        actor:
+          type: string
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - action
+      - actor
+      - created_at
+      - number
+      - snapshot
+      - summary
+    LifecycleSource:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        publisher:
+          type: string
+          maxLength: 150
+        title:
+          type: string
+          maxLength: 300
+        url:
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 1000
+          - type: string
+            maxLength: 0
+        source_type:
+          $ref: '#/components/schemas/LifecycleSourceTypeEnum'
+        document_ref:
+          type: string
+          maxLength: 200
+        collected_on:
+          type: string
+          format: date
+        last_verified_on:
+          type: string
+          format: date
+          nullable: true
+        notes:
+          type: string
+          maxLength: 2000
+        created_by:
+          type: string
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        modified_at:
+          type: string
+          format: date-time
+          readOnly: true
+        version:
+          type: integer
+          readOnly: true
+      required:
+      - collected_on
+      - created_at
+      - created_by
+      - id
+      - modified_at
+      - publisher
+      - source_type
+      - title
+      - version
+    LifecycleSourceRef:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        publisher:
+          type: string
+          readOnly: true
+        title:
+          type: string
+          readOnly: true
+        url:
+          type: string
+          format: uri
+          readOnly: true
+        source_type:
+          allOf:
+          - $ref: '#/components/schemas/LifecycleSourceTypeEnum'
+          readOnly: true
+        collected_on:
+          type: string
+          format: date
+          readOnly: true
+        last_verified_on:
+          type: string
+          format: date
+          readOnly: true
+          nullable: true
+      required:
+      - collected_on
+      - id
+      - last_verified_on
+      - publisher
+      - source_type
+      - title
+      - url
+    LifecycleSourceRequest:
+      type: object
+      properties:
+        publisher:
+          type: string
+          minLength: 1
+          maxLength: 150
+        title:
+          type: string
+          minLength: 1
+          maxLength: 300
+        url:
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 1000
+          - type: string
+            maxLength: 0
+        source_type:
+          $ref: '#/components/schemas/LifecycleSourceTypeEnum'
+        document_ref:
+          type: string
+          maxLength: 200
+        collected_on:
+          type: string
+          format: date
+        last_verified_on:
+          type: string
+          format: date
+          nullable: true
+        notes:
+          type: string
+          maxLength: 2000
+      required:
+      - collected_on
+      - publisher
+      - source_type
+      - title
+    LifecycleSourceTypeEnum:
+      enum:
+      - vendor
+      - manual
+      - third_party
+      type: string
+      description: |-
+        * `vendor` - Official vendor documentation
+        * `manual` - Manual record (vendor correspondence, contract)
+        * `third_party` - Third party (supporting only)
+    LifecycleStatementRequest:
+      type: object
+      properties:
+        support_statement:
+          oneOf:
+          - $ref: '#/components/schemas/SupportStatementEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        statement_source:
+          type: string
+          format: uuid
+          nullable: true
+        verify:
+          type: boolean
+          default: false
+      required:
+      - support_statement
+    LifecycleStatusEnum:
+      enum:
+      - supported
+      - eol_announced
+      - expiring
+      - security_maintenance_ended
+      - eos
+      - not_announced
+      - unknown
+      - unverified
+      - not_applicable
+      type: string
+      description: |-
+        * `supported` - Supported
+        * `eol_announced` - EOL announced
+        * `expiring` - Approaching end of support
+        * `security_maintenance_ended` - Security updates ended
+        * `eos` - End of support
+        * `not_announced` - Not announced
+        * `unknown` - Unknown
+        * `unverified` - Unverified
+        * `not_applicable` - Not applicable
+    LifecycleSummaryRow:
+      type: object
+      properties:
+        dimension:
+          $ref: '#/components/schemas/LifecycleDimensionEnum'
+        effective_status:
+          $ref: '#/components/schemas/LifecycleStatusEnum'
+        count:
+          type: integer
+      required:
+      - count
+      - dimension
+      - effective_status
     LiveAccessRequest:
       type: object
       properties:
@@ -7451,6 +9591,34 @@ components:
       required:
       - reason
       - source_asset
+    MilestoneTypeEnum:
+      enum:
+      - announcement
+      - end_of_sale
+      - end_of_maintenance
+      - end_of_security_updates
+      - end_of_standard_support
+      - end_of_extended_support
+      - end_of_support
+      type: string
+      description: |-
+        * `announcement` - End-of-life announcement
+        * `end_of_sale` - End of sale
+        * `end_of_maintenance` - End of maintenance (bug fixes)
+        * `end_of_security_updates` - End of security updates
+        * `end_of_standard_support` - End of standard support
+        * `end_of_extended_support` - End of extended support
+        * `end_of_support` - Final end of support
+    MilestoneVerificationEnum:
+      enum:
+      - pending
+      - verified
+      - rejected
+      type: string
+      description: |-
+        * `pending` - Awaiting verification
+        * `verified` - Verified
+        * `rejected` - Rejected
     NeighborEvidence:
       type: object
       properties:
@@ -7873,6 +10041,86 @@ components:
           nullable: true
         count:
           type: integer
+    PaginatedLifecycleAssessmentList:
+      type: object
+      required:
+      - items
+      - next_cursor
+      - previous_cursor
+      - count
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/LifecycleAssessment'
+        next_cursor:
+          type: string
+          nullable: true
+        previous_cursor:
+          type: string
+          nullable: true
+        count:
+          type: integer
+    PaginatedLifecycleExceptionList:
+      type: object
+      required:
+      - items
+      - next_cursor
+      - previous_cursor
+      - count
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/LifecycleException'
+        next_cursor:
+          type: string
+          nullable: true
+        previous_cursor:
+          type: string
+          nullable: true
+        count:
+          type: integer
+    PaginatedLifecycleMatchList:
+      type: object
+      required:
+      - items
+      - next_cursor
+      - previous_cursor
+      - count
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/LifecycleMatch'
+        next_cursor:
+          type: string
+          nullable: true
+        previous_cursor:
+          type: string
+          nullable: true
+        count:
+          type: integer
+    PaginatedLifecycleProductList:
+      type: object
+      required:
+      - items
+      - next_cursor
+      - previous_cursor
+      - count
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/LifecycleProduct'
+        next_cursor:
+          type: string
+          nullable: true
+        previous_cursor:
+          type: string
+          nullable: true
+        count:
+          type: integer
     PaginatedMembershipList:
       type: object
       required:
@@ -8262,6 +10510,85 @@ components:
             type: string
         mode:
           $ref: '#/components/schemas/ImportModeEnum'
+    PatchedLifecycleMilestoneUpdateRequest:
+      type: object
+      properties:
+        milestone_type:
+          $ref: '#/components/schemas/MilestoneTypeEnum'
+        date:
+          type: string
+          format: date
+        source:
+          type: string
+          format: uuid
+        notes:
+          type: string
+          maxLength: 1000
+        reason:
+          type: string
+          minLength: 5
+          maxLength: 500
+    PatchedLifecycleProductUpdateRequest:
+      type: object
+      properties:
+        kind:
+          $ref: '#/components/schemas/LifecycleProductKindEnum'
+        vendor:
+          type: string
+          minLength: 1
+          maxLength: 150
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        release:
+          type: string
+          maxLength: 100
+        family:
+          type: string
+          maxLength: 150
+        description:
+          type: string
+          maxLength: 500
+        is_active:
+          type: boolean
+        reason:
+          type: string
+          minLength: 5
+          maxLength: 500
+    PatchedLifecycleSourceRequest:
+      type: object
+      properties:
+        publisher:
+          type: string
+          minLength: 1
+          maxLength: 150
+        title:
+          type: string
+          minLength: 1
+          maxLength: 300
+        url:
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 1000
+          - type: string
+            maxLength: 0
+        source_type:
+          $ref: '#/components/schemas/LifecycleSourceTypeEnum'
+        document_ref:
+          type: string
+          maxLength: 200
+        collected_on:
+          type: string
+          format: date
+        last_verified_on:
+          type: string
+          format: date
+          nullable: true
+        notes:
+          type: string
+          maxLength: 2000
     PatchedLocationWriteRequest:
       type: object
       properties:
@@ -9190,20 +11517,6 @@ components:
       - link_status
       - observed_at
       - value
-    StateEnum:
-      enum:
-      - Active
-      - ActiveWithError
-      - Disabled
-      - Error
-      - Unknown
-      type: string
-      description: |-
-        * `Active` - Active
-        * `ActiveWithError` - Active with error
-        * `Disabled` - Disabled
-        * `Error` - Error
-        * `Unknown` - Unknown
     StrengthEnum:
       enum:
       - strong
@@ -9373,6 +11686,26 @@ components:
       - high
       - kind
       - open
+    SupportLevelEnum:
+      enum:
+      - standard
+      - extended
+      - ended
+      type: string
+      description: |-
+        * `` - Not determined
+        * `standard` - Standard support
+        * `extended` - Extended support
+        * `ended` - Support ended
+    SupportStatementEnum:
+      enum:
+      - supported
+      - not_announced
+      type: string
+      description: |-
+        * `` - No statement recorded
+        * `supported` - Vendor states the product is supported
+        * `not_announced` - Vendor has not announced end of life
     SupportStatusEnum:
       enum:
       - supported
@@ -9834,6 +12167,47 @@ components:
       - display_name
       - id
       - username
+    VendorAlias:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        alias:
+          type: string
+          maxLength: 150
+        vendor:
+          type: string
+          maxLength: 150
+        created_by:
+          type: string
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - alias
+      - created_at
+      - created_by
+      - id
+      - vendor
+    VendorAliasRequest:
+      type: object
+      properties:
+        alias:
+          type: string
+          minLength: 1
+          maxLength: 150
+        vendor:
+          type: string
+          minLength: 1
+          maxLength: 150
+      required:
+      - alias
+      - vendor
   securitySchemes:
     sessionAuth:
       type: apiKey

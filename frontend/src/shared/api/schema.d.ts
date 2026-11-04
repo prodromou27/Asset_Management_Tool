@@ -51,6 +51,16 @@ export interface paths {
   "/api/v1/assets/{id}/history/": {
     get: operations["assets_history_list"];
   };
+  "/api/v1/assets/{id}/lifecycle/": {
+    get: operations["assets_lifecycle_retrieve"];
+  };
+  "/api/v1/assets/{id}/lifecycle/exceptions/": {
+    post: operations["assets_lifecycle_exceptions_create"];
+  };
+  "/api/v1/assets/{id}/lifecycle/reassess/": {
+    get: operations["assets_lifecycle_reassess_retrieve"];
+    post: operations["assets_lifecycle_reassess_create"];
+  };
   "/api/v1/assets/{id}/merge/": {
     post: operations["assets_merge_create"];
   };
@@ -256,6 +266,84 @@ export interface paths {
   "/api/v1/licenses/subscriptions/{id}/": {
     get: operations["licenses_subscriptions_retrieve"];
   };
+  "/api/v1/lifecycle/aliases/{id}/remove/": {
+    post: operations["lifecycle_aliases_remove_create"];
+  };
+  "/api/v1/lifecycle/exceptions/": {
+    get: operations["lifecycle_exceptions_list"];
+  };
+  "/api/v1/lifecycle/exceptions/{id}/revoke/": {
+    post: operations["lifecycle_exceptions_revoke_create"];
+  };
+  "/api/v1/lifecycle/findings/": {
+    get: operations["lifecycle_findings_list"];
+  };
+  "/api/v1/lifecycle/matches/": {
+    get: operations["lifecycle_matches_list"];
+  };
+  "/api/v1/lifecycle/matches/{id}/approve/": {
+    post: operations["lifecycle_matches_approve_create"];
+  };
+  "/api/v1/lifecycle/matches/{id}/reject/": {
+    post: operations["lifecycle_matches_reject_create"];
+  };
+  "/api/v1/lifecycle/milestones/{id}/": {
+    patch: operations["lifecycle_milestones_partial_update"];
+  };
+  "/api/v1/lifecycle/milestones/{id}/review/": {
+    post: operations["lifecycle_milestones_review_create"];
+  };
+  "/api/v1/lifecycle/policy/": {
+    get: operations["lifecycle_policy_retrieve"];
+  };
+  "/api/v1/lifecycle/products/": {
+    get: operations["lifecycle_products_list"];
+    post: operations["lifecycle_products_create"];
+  };
+  "/api/v1/lifecycle/products/{id}/": {
+    get: operations["lifecycle_products_retrieve"];
+    patch: operations["lifecycle_products_partial_update"];
+  };
+  "/api/v1/lifecycle/products/{id}/aliases/": {
+    post: operations["lifecycle_products_aliases_create"];
+  };
+  "/api/v1/lifecycle/products/{id}/assets/": {
+    /** @description Assessments of assets matched to this product, in the caller's sites only. */
+    get: operations["lifecycle_products_assets_list"];
+  };
+  "/api/v1/lifecycle/products/{id}/milestones/": {
+    post: operations["lifecycle_products_milestones_create"];
+  };
+  "/api/v1/lifecycle/products/{id}/reassess/": {
+    post: operations["lifecycle_products_reassess_create"];
+  };
+  "/api/v1/lifecycle/products/{id}/revisions/": {
+    get: operations["lifecycle_products_revisions_list"];
+  };
+  "/api/v1/lifecycle/products/{id}/statement/": {
+    post: operations["lifecycle_products_statement_create"];
+  };
+  "/api/v1/lifecycle/reassess/": {
+    post: operations["lifecycle_reassess_create"];
+  };
+  "/api/v1/lifecycle/sources/": {
+    get: operations["lifecycle_sources_list"];
+    post: operations["lifecycle_sources_create"];
+  };
+  "/api/v1/lifecycle/sources/{id}/": {
+    get: operations["lifecycle_sources_retrieve"];
+    patch: operations["lifecycle_sources_partial_update"];
+  };
+  "/api/v1/lifecycle/summary/": {
+    get: operations["lifecycle_summary_list"];
+  };
+  "/api/v1/lifecycle/vendor-aliases/": {
+    get: operations["lifecycle_vendor_aliases_list"];
+    post: operations["lifecycle_vendor_aliases_create"];
+  };
+  "/api/v1/lifecycle/vendor-aliases/{id}/remove/": {
+    post: operations["lifecycle_vendor_aliases_remove_create"];
+  };
   "/api/v1/locations/": {
     get: operations["locations_list"];
     post: operations["locations_create"];
@@ -374,7 +462,7 @@ export interface components {
       assigned_directly: boolean;
       group_ids: readonly string[];
       groups: readonly components["schemas"]["GroupRef"][];
-      state: components["schemas"]["StateEnum"];
+      state: components["schemas"]["AllocationStateEnum"];
       paths: readonly {
           [key: string]: unknown;
         }[];
@@ -394,6 +482,15 @@ export interface components {
      * @enum {string}
      */
     AllocationMethodEnum: "direct" | "group" | "direct_and_group";
+    /**
+     * @description * `Active` - Active
+     * * `ActiveWithError` - Active with error
+     * * `Disabled` - Disabled
+     * * `Error` - Error
+     * * `Unknown` - Unknown
+     * @enum {string}
+     */
+    AllocationStateEnum: "Active" | "ActiveWithError" | "Disabled" | "Error" | "Unknown";
     /**
      * @description * `link` - link
      * * `create` - create
@@ -520,6 +617,13 @@ export interface components {
       reason: string;
       version: number;
       request_id: string;
+    };
+    AssetLifecycle: {
+      assessments: components["schemas"]["LifecycleAssessment"][];
+      matches: components["schemas"]["LifecycleMatch"][];
+      exceptions: components["schemas"]["LifecycleException"][];
+      history: components["schemas"]["LifecycleAssessmentHistory"][];
+      evidence: components["schemas"]["LifecycleMilestone"][];
     };
     AssetList: {
       /** Format: uuid */
@@ -925,6 +1029,12 @@ export interface components {
       is_active: boolean;
       version: number;
     };
+    /**
+     * @description * `verified` - verified
+     * * `rejected` - rejected
+     * @enum {string}
+     */
+    DecisionEnum: "verified" | "rejected";
     Department: {
       /** Format: uuid */
       id: string;
@@ -1026,6 +1136,14 @@ export interface components {
       removed: number;
       members: number;
     };
+    /**
+     * @description * `` - No evidence
+     * * `vendor` - Official vendor
+     * * `manual` - Manual record
+     * * `third_party` - Third party only
+     * @enum {string}
+     */
+    EvidenceQualityEnum: "vendor" | "manual" | "third_party";
     /**
      * @description * `manual` - Manual
      * * `librenms` - LibreNMS
@@ -1556,6 +1674,404 @@ export interface components {
       last_success_at: string | null;
       stale_after_hours: number;
     };
+    LifecycleAlias: {
+      /** Format: uuid */
+      id: string;
+      kind: components["schemas"]["LifecycleAliasKindEnum"];
+      value: string;
+      release?: string;
+      note?: string;
+      created_by: string | null;
+      /** Format: date-time */
+      created_at: string;
+    };
+    /**
+     * @description * `model` - Model name
+     * * `part_number` - Part number / SKU
+     * * `os_name` - OS or firmware name
+     * * `product_name` - Software product name
+     * @enum {string}
+     */
+    LifecycleAliasKindEnum: "model" | "part_number" | "os_name" | "product_name";
+    LifecycleAliasRequest: {
+      kind: components["schemas"]["LifecycleAliasKindEnum"];
+      value: string;
+      release?: string;
+      note?: string;
+    };
+    LifecycleAssessment: {
+      /** Format: uuid */
+      id: string;
+      asset: components["schemas"]["LifecycleAssetRef"];
+      dimension: components["schemas"]["LifecycleDimensionEnum"];
+      status: components["schemas"]["LifecycleStatusEnum"];
+      effective_status: components["schemas"]["LifecycleStatusEnum"];
+      product: components["schemas"]["LifecycleProductRef"] | null;
+      support_level: components["schemas"]["SupportLevelEnum"] | components["schemas"]["BlankEnum"];
+      milestone_type: components["schemas"]["MilestoneTypeEnum"] | components["schemas"]["BlankEnum"];
+      /** Format: date */
+      milestone_date: string | null;
+      days_remaining: number | null;
+      threshold_days: number | null;
+      evidence_quality: components["schemas"]["EvidenceQualityEnum"] | components["schemas"]["BlankEnum"];
+      milestone_ids: readonly string[];
+      reasons: readonly string[];
+      exception: components["schemas"]["LifecycleExceptionRef"] | null;
+      /** Format: date-time */
+      assessed_at: string;
+    };
+    LifecycleAssessmentHistory: {
+      dimension: components["schemas"]["LifecycleDimensionEnum"];
+      status: string;
+      effective_status: string;
+      product_label: string;
+      milestone_type: string;
+      /** Format: date */
+      milestone_date: string | null;
+      reasons: readonly string[];
+      /** Format: date-time */
+      recorded_at: string;
+    };
+    LifecycleAssetRef: {
+      /** Format: uuid */
+      id: string;
+      name: string;
+      site: components["schemas"]["SiteRef"];
+      manufacturer: string;
+      model: string;
+      os_name: string;
+      os_version: string;
+      firmware_version: string;
+    };
+    LifecycleCandidate: {
+      /** Format: uuid */
+      product_id: string;
+      label: string;
+      reason: string;
+    };
+    /**
+     * @description * `hardware` - Hardware
+     * * `os` - Operating system / firmware
+     * * `software` - Software
+     * @enum {string}
+     */
+    LifecycleDimensionEnum: "hardware" | "os" | "software";
+    LifecycleException: {
+      /** Format: uuid */
+      id: string;
+      asset: components["schemas"]["LifecycleAssetRef"];
+      dimension: components["schemas"]["LifecycleDimensionEnum"];
+      status: components["schemas"]["LifecycleStatusEnum"];
+      reason: string;
+      compensating_controls: string;
+      /** Format: date */
+      expires_on: string;
+      approved_by: string;
+      /** Format: date-time */
+      approved_at: string;
+      revoked_by: string | null;
+      /** Format: date-time */
+      revoked_at: string | null;
+      revoke_reason: string;
+      active: boolean;
+      version: number;
+    };
+    LifecycleExceptionRef: {
+      /** Format: uuid */
+      id: string;
+      status: components["schemas"]["LifecycleStatusEnum"];
+      /** Format: date */
+      expires_on: string;
+      approved_by: string;
+    };
+    /**
+     * @description * `hardware` - hardware
+     * * `os` - os
+     * @enum {string}
+     */
+    LifecycleExceptionWriteDimensionEnum: "hardware" | "os";
+    LifecycleExceptionWriteRequest: {
+      dimension: components["schemas"]["LifecycleExceptionWriteDimensionEnum"];
+      status: components["schemas"]["LifecycleExceptionWriteStatusEnum"];
+      reason: string;
+      /** @default */
+      compensating_controls?: string;
+      /** Format: date */
+      expires_on: string;
+    };
+    /**
+     * @description * `supported` - Supported
+     * * `eol_announced` - EOL announced
+     * * `expiring` - Approaching end of support
+     * * `security_maintenance_ended` - Security updates ended
+     * * `eos` - End of support
+     * * `not_announced` - Not announced
+     * * `unknown` - Unknown
+     * @enum {string}
+     */
+    LifecycleExceptionWriteStatusEnum: "supported" | "eol_announced" | "expiring" | "security_maintenance_ended" | "eos" | "not_announced" | "unknown";
+    LifecycleMatch: {
+      /** Format: uuid */
+      id: string;
+      asset: components["schemas"]["LifecycleAssetRef"];
+      dimension: components["schemas"]["LifecycleDimensionEnum"];
+      state: components["schemas"]["LifecycleMatchStateEnum"];
+      method: components["schemas"]["LifecycleMatchMethodEnum"];
+      product: components["schemas"]["LifecycleProductRef"] | null;
+      observed: {
+        [key: string]: unknown;
+      };
+      candidates: readonly components["schemas"]["LifecycleCandidate"][];
+      reason: string;
+      rejected_products: readonly string[];
+      reviewed_by: string | null;
+      /** Format: date-time */
+      reviewed_at: string | null;
+      review_note: string;
+      /** Format: date-time */
+      modified_at: string;
+      version: number;
+    };
+    LifecycleMatchApproveRequest: {
+      /** Format: uuid */
+      product: string;
+      /** @default false */
+      remember_alias?: boolean;
+      /** @default */
+      note?: string;
+    };
+    /**
+     * @description * `exact` - Exact match
+     * * `alias` - Approved alias
+     * * `manual` - Approved by reviewer
+     * * `none` - No match
+     * @enum {string}
+     */
+    LifecycleMatchMethodEnum: "exact" | "alias" | "manual" | "none";
+    LifecycleMatchRejectRequest: {
+      products?: string[];
+      note: string;
+    };
+    /**
+     * @description * `matched` - Matched
+     * * `candidate` - Needs review
+     * * `no_match` - No match
+     * * `not_applicable` - Not applicable
+     * @enum {string}
+     */
+    LifecycleMatchStateEnum: "matched" | "candidate" | "no_match" | "not_applicable";
+    LifecycleMilestone: {
+      /** Format: uuid */
+      id: string;
+      milestone_type: components["schemas"]["MilestoneTypeEnum"];
+      /** Format: date */
+      date: string;
+      source: components["schemas"]["LifecycleSourceRef"];
+      verification: components["schemas"]["MilestoneVerificationEnum"];
+      reviewed_by: string | null;
+      /** Format: date-time */
+      reviewed_at: string | null;
+      notes: string;
+      created_by: string | null;
+      /** Format: date-time */
+      created_at: string;
+      version: number;
+    };
+    LifecycleMilestoneReviewRequest: {
+      decision: components["schemas"]["DecisionEnum"];
+      /** @default */
+      note?: string;
+    };
+    LifecycleMilestoneWriteRequest: {
+      milestone_type: components["schemas"]["MilestoneTypeEnum"];
+      /** Format: date */
+      date: string;
+      /** Format: uuid */
+      source: string;
+      /** @default */
+      notes?: string;
+    };
+    LifecyclePolicy: {
+      warning_days: number[];
+      count_extended_support: boolean;
+      max_exception_days: number;
+      /** Format: date */
+      today: string;
+    };
+    LifecycleProduct: {
+      /** Format: uuid */
+      id: string;
+      kind: components["schemas"]["LifecycleProductKindEnum"];
+      dimension: components["schemas"]["LifecycleDimensionEnum"];
+      vendor: string;
+      name: string;
+      release?: string;
+      family?: string;
+      description?: string;
+      support_statement: components["schemas"]["SupportStatementEnum"] | components["schemas"]["BlankEnum"];
+      is_active?: boolean;
+      /** @default 0 */
+      milestones_verified: number;
+      /** @default 0 */
+      milestones_pending: number;
+      /** @default 0 */
+      alias_count: number;
+      /** @default 0 */
+      matched_assets: number;
+      /** Format: date-time */
+      modified_at: string;
+      version: number;
+    };
+    LifecycleProductDetail: {
+      /** Format: uuid */
+      id: string;
+      kind: components["schemas"]["LifecycleProductKindEnum"];
+      dimension: components["schemas"]["LifecycleDimensionEnum"];
+      vendor: string;
+      name: string;
+      release: string;
+      family: string;
+      description: string;
+      support_statement: components["schemas"]["SupportStatementEnum"] | components["schemas"]["BlankEnum"];
+      is_active: boolean;
+      /** @default 0 */
+      milestones_verified: number;
+      /** @default 0 */
+      milestones_pending: number;
+      /** @default 0 */
+      alias_count: number;
+      /** @default 0 */
+      matched_assets: number;
+      /** Format: date-time */
+      modified_at: string;
+      version: number;
+      statement_source: components["schemas"]["LifecycleSourceRef"] | null;
+      statement_verified_by: string | null;
+      /** Format: date-time */
+      statement_verified_at: string | null;
+      aliases: readonly components["schemas"]["LifecycleAlias"][];
+      milestones: readonly components["schemas"]["LifecycleMilestone"][];
+      created_by: string | null;
+      /** Format: date-time */
+      created_at: string;
+      modified_by: string | null;
+    };
+    /**
+     * @description * `hardware` - Hardware model
+     * * `operating_system` - Operating system
+     * * `firmware` - Firmware / network OS
+     * * `software` - Software
+     * @enum {string}
+     */
+    LifecycleProductKindEnum: "hardware" | "operating_system" | "firmware" | "software";
+    LifecycleProductRef: {
+      /** Format: uuid */
+      id: string;
+      kind: components["schemas"]["LifecycleProductKindEnum"];
+      vendor: string;
+      name: string;
+      release: string;
+      label: string;
+    };
+    LifecycleProductWriteRequest: {
+      kind: components["schemas"]["LifecycleProductKindEnum"];
+      vendor: string;
+      name: string;
+      /** @default */
+      release?: string;
+      /** @default */
+      family?: string;
+      /** @default */
+      description?: string;
+    };
+    LifecycleRevision: {
+      number: number;
+      action: string;
+      summary: string;
+      snapshot: {
+        [key: string]: unknown;
+      };
+      actor: string | null;
+      /** Format: date-time */
+      created_at: string;
+    };
+    LifecycleSource: {
+      /** Format: uuid */
+      id: string;
+      publisher: string;
+      title: string;
+      url?: string;
+      source_type: components["schemas"]["LifecycleSourceTypeEnum"];
+      document_ref?: string;
+      /** Format: date */
+      collected_on: string;
+      /** Format: date */
+      last_verified_on?: string | null;
+      notes?: string;
+      created_by: string | null;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      modified_at: string;
+      version: number;
+    };
+    LifecycleSourceRef: {
+      /** Format: uuid */
+      id: string;
+      publisher: string;
+      title: string;
+      /** Format: uri */
+      url: string;
+      source_type: components["schemas"]["LifecycleSourceTypeEnum"];
+      /** Format: date */
+      collected_on: string;
+      /** Format: date */
+      last_verified_on: string | null;
+    };
+    LifecycleSourceRequest: {
+      publisher: string;
+      title: string;
+      url?: string;
+      source_type: components["schemas"]["LifecycleSourceTypeEnum"];
+      document_ref?: string;
+      /** Format: date */
+      collected_on: string;
+      /** Format: date */
+      last_verified_on?: string | null;
+      notes?: string;
+    };
+    /**
+     * @description * `vendor` - Official vendor documentation
+     * * `manual` - Manual record (vendor correspondence, contract)
+     * * `third_party` - Third party (supporting only)
+     * @enum {string}
+     */
+    LifecycleSourceTypeEnum: "vendor" | "manual" | "third_party";
+    LifecycleStatementRequest: {
+      support_statement: components["schemas"]["SupportStatementEnum"] | components["schemas"]["BlankEnum"];
+      /** Format: uuid */
+      statement_source?: string | null;
+      /** @default false */
+      verify?: boolean;
+    };
+    /**
+     * @description * `supported` - Supported
+     * * `eol_announced` - EOL announced
+     * * `expiring` - Approaching end of support
+     * * `security_maintenance_ended` - Security updates ended
+     * * `eos` - End of support
+     * * `not_announced` - Not announced
+     * * `unknown` - Unknown
+     * * `unverified` - Unverified
+     * * `not_applicable` - Not applicable
+     * @enum {string}
+     */
+    LifecycleStatusEnum: "supported" | "eol_announced" | "expiring" | "security_maintenance_ended" | "eos" | "not_announced" | "unknown" | "unverified" | "not_applicable";
+    LifecycleSummaryRow: {
+      dimension: components["schemas"]["LifecycleDimensionEnum"];
+      effective_status: components["schemas"]["LifecycleStatusEnum"];
+      count: number;
+    };
     LiveAccessRequest: {
       approved: boolean;
       reason: string;
@@ -1687,6 +2203,24 @@ export interface components {
       source_asset: string;
       reason: string;
     };
+    /**
+     * @description * `announcement` - End-of-life announcement
+     * * `end_of_sale` - End of sale
+     * * `end_of_maintenance` - End of maintenance (bug fixes)
+     * * `end_of_security_updates` - End of security updates
+     * * `end_of_standard_support` - End of standard support
+     * * `end_of_extended_support` - End of extended support
+     * * `end_of_support` - Final end of support
+     * @enum {string}
+     */
+    MilestoneTypeEnum: "announcement" | "end_of_sale" | "end_of_maintenance" | "end_of_security_updates" | "end_of_standard_support" | "end_of_extended_support" | "end_of_support";
+    /**
+     * @description * `pending` - Awaiting verification
+     * * `verified` - Verified
+     * * `rejected` - Rejected
+     * @enum {string}
+     */
+    MilestoneVerificationEnum: "pending" | "verified" | "rejected";
     NeighborEvidence: {
       /** Format: uuid */
       id: string;
@@ -1841,6 +2375,30 @@ export interface components {
       previous_cursor: string | null;
       count: number;
     };
+    PaginatedLifecycleAssessmentList: {
+      items: components["schemas"]["LifecycleAssessment"][];
+      next_cursor: string | null;
+      previous_cursor: string | null;
+      count: number;
+    };
+    PaginatedLifecycleExceptionList: {
+      items: components["schemas"]["LifecycleException"][];
+      next_cursor: string | null;
+      previous_cursor: string | null;
+      count: number;
+    };
+    PaginatedLifecycleMatchList: {
+      items: components["schemas"]["LifecycleMatch"][];
+      next_cursor: string | null;
+      previous_cursor: string | null;
+      count: number;
+    };
+    PaginatedLifecycleProductList: {
+      items: components["schemas"]["LifecycleProduct"][];
+      next_cursor: string | null;
+      previous_cursor: string | null;
+      count: number;
+    };
     PaginatedMembershipList: {
       items: components["schemas"]["Membership"][];
       next_cursor: string | null;
@@ -1982,6 +2540,37 @@ export interface components {
         [key: string]: string;
       };
       mode?: components["schemas"]["ImportModeEnum"];
+    };
+    PatchedLifecycleMilestoneUpdateRequest: {
+      milestone_type?: components["schemas"]["MilestoneTypeEnum"];
+      /** Format: date */
+      date?: string;
+      /** Format: uuid */
+      source?: string;
+      notes?: string;
+      reason?: string;
+    };
+    PatchedLifecycleProductUpdateRequest: {
+      kind?: components["schemas"]["LifecycleProductKindEnum"];
+      vendor?: string;
+      name?: string;
+      release?: string;
+      family?: string;
+      description?: string;
+      is_active?: boolean;
+      reason?: string;
+    };
+    PatchedLifecycleSourceRequest: {
+      publisher?: string;
+      title?: string;
+      url?: string;
+      source_type?: components["schemas"]["LifecycleSourceTypeEnum"];
+      document_ref?: string;
+      /** Format: date */
+      collected_on?: string;
+      /** Format: date */
+      last_verified_on?: string | null;
+      notes?: string;
     };
     PatchedLocationWriteRequest: {
       /** Format: uuid */
@@ -2346,15 +2935,6 @@ export interface components {
       differs: boolean;
     };
     /**
-     * @description * `Active` - Active
-     * * `ActiveWithError` - Active with error
-     * * `Disabled` - Disabled
-     * * `Error` - Error
-     * * `Unknown` - Unknown
-     * @enum {string}
-     */
-    StateEnum: "Active" | "ActiveWithError" | "Disabled" | "Error" | "Unknown";
-    /**
      * @description * `strong` - strong
      * * `corroborating` - corroborating
      * * `conflicting` - conflicting
@@ -2414,6 +2994,21 @@ export interface components {
       open: number;
       high: number;
     };
+    /**
+     * @description * `` - Not determined
+     * * `standard` - Standard support
+     * * `extended` - Extended support
+     * * `ended` - Support ended
+     * @enum {string}
+     */
+    SupportLevelEnum: "standard" | "extended" | "ended";
+    /**
+     * @description * `` - No statement recorded
+     * * `supported` - Vendor states the product is supported
+     * * `not_announced` - Vendor has not announced end of life
+     * @enum {string}
+     */
+    SupportStatementEnum: "supported" | "not_announced";
     /**
      * @description * `supported` - Supported
      * * `eol_announced` - EOL announced
@@ -2571,6 +3166,19 @@ export interface components {
       id: string;
       username: string;
       display_name: string;
+    };
+    VendorAlias: {
+      /** Format: uuid */
+      id: string;
+      alias: string;
+      vendor: string;
+      created_by: string | null;
+      /** Format: date-time */
+      created_at: string;
+    };
+    VendorAliasRequest: {
+      alias: string;
+      vendor: string;
     };
   };
   responses: never;
@@ -2960,6 +3568,69 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["PaginatedAssetHistoryList"];
+        };
+      };
+    };
+  };
+  assets_lifecycle_retrieve: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["AssetLifecycle"];
+        };
+      };
+    };
+  };
+  assets_lifecycle_exceptions_create: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LifecycleExceptionWriteRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["LifecycleExceptionWriteRequest"];
+        "multipart/form-data": components["schemas"]["LifecycleExceptionWriteRequest"];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          "application/json": components["schemas"]["LifecycleException"];
+        };
+      };
+    };
+  };
+  assets_lifecycle_reassess_retrieve: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["AssetLifecycle"];
+        };
+      };
+    };
+  };
+  assets_lifecycle_reassess_create: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["AssetLifecycle"];
         };
       };
     };
@@ -4142,6 +4813,535 @@ export interface operations {
         content: {
           "application/json": components["schemas"]["SubscriptionDetail"];
         };
+      };
+    };
+  };
+  lifecycle_aliases_remove_create: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ReasonRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["ReasonRequest"];
+        "multipart/form-data": components["schemas"]["ReasonRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["LifecycleProductDetail"];
+        };
+      };
+    };
+  };
+  lifecycle_exceptions_list: {
+    parameters: {
+      query?: {
+        active?: boolean;
+        /** @description The pagination cursor value. */
+        cursor?: string;
+        /** @description Number of results to return per page. */
+        page_size?: number;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["PaginatedLifecycleExceptionList"];
+        };
+      };
+    };
+  };
+  lifecycle_exceptions_revoke_create: {
+    parameters: {
+      header: {
+        "If-Match": string;
+      };
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ReasonRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["ReasonRequest"];
+        "multipart/form-data": components["schemas"]["ReasonRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["LifecycleException"];
+        };
+      };
+    };
+  };
+  lifecycle_findings_list: {
+    parameters: {
+      query?: {
+        /** @description The pagination cursor value. */
+        cursor?: string;
+        dimension?: string;
+        exception?: boolean;
+        /** @description Number of results to return per page. */
+        page_size?: number;
+        /** @description Asset name */
+        q?: string;
+        site?: string;
+        /** @description Effective status */
+        status?: string;
+        vendor?: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["PaginatedLifecycleAssessmentList"];
+        };
+      };
+    };
+  };
+  lifecycle_matches_list: {
+    parameters: {
+      query?: {
+        /** @description The pagination cursor value. */
+        cursor?: string;
+        dimension?: string;
+        /** @description Number of results to return per page. */
+        page_size?: number;
+        q?: string;
+        /** @description Default: candidate */
+        state?: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["PaginatedLifecycleMatchList"];
+        };
+      };
+    };
+  };
+  lifecycle_matches_approve_create: {
+    parameters: {
+      header: {
+        "If-Match": string;
+      };
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LifecycleMatchApproveRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["LifecycleMatchApproveRequest"];
+        "multipart/form-data": components["schemas"]["LifecycleMatchApproveRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["LifecycleMatch"];
+        };
+      };
+    };
+  };
+  lifecycle_matches_reject_create: {
+    parameters: {
+      header: {
+        "If-Match": string;
+      };
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LifecycleMatchRejectRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["LifecycleMatchRejectRequest"];
+        "multipart/form-data": components["schemas"]["LifecycleMatchRejectRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["LifecycleMatch"];
+        };
+      };
+    };
+  };
+  lifecycle_milestones_partial_update: {
+    parameters: {
+      header: {
+        "If-Match": string;
+      };
+      path: {
+        id: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["PatchedLifecycleMilestoneUpdateRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["PatchedLifecycleMilestoneUpdateRequest"];
+        "multipart/form-data": components["schemas"]["PatchedLifecycleMilestoneUpdateRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["LifecycleMilestone"];
+        };
+      };
+    };
+  };
+  lifecycle_milestones_review_create: {
+    parameters: {
+      header: {
+        "If-Match": string;
+      };
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LifecycleMilestoneReviewRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["LifecycleMilestoneReviewRequest"];
+        "multipart/form-data": components["schemas"]["LifecycleMilestoneReviewRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["LifecycleMilestone"];
+        };
+      };
+    };
+  };
+  lifecycle_policy_retrieve: {
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["LifecyclePolicy"];
+        };
+      };
+    };
+  };
+  lifecycle_products_list: {
+    parameters: {
+      query?: {
+        /** @description The pagination cursor value. */
+        cursor?: string;
+        kind?: string;
+        /** @description Has dates awaiting verification */
+        needs_review?: boolean;
+        /** @description Number of results to return per page. */
+        page_size?: number;
+        q?: string;
+        vendor?: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["PaginatedLifecycleProductList"];
+        };
+      };
+    };
+  };
+  lifecycle_products_create: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LifecycleProductWriteRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["LifecycleProductWriteRequest"];
+        "multipart/form-data": components["schemas"]["LifecycleProductWriteRequest"];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          "application/json": components["schemas"]["LifecycleProductDetail"];
+        };
+      };
+    };
+  };
+  lifecycle_products_retrieve: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["LifecycleProductDetail"];
+        };
+      };
+    };
+  };
+  lifecycle_products_partial_update: {
+    parameters: {
+      header: {
+        "If-Match": string;
+      };
+      path: {
+        id: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["PatchedLifecycleProductUpdateRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["PatchedLifecycleProductUpdateRequest"];
+        "multipart/form-data": components["schemas"]["PatchedLifecycleProductUpdateRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["LifecycleProductDetail"];
+        };
+      };
+    };
+  };
+  lifecycle_products_aliases_create: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LifecycleAliasRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["LifecycleAliasRequest"];
+        "multipart/form-data": components["schemas"]["LifecycleAliasRequest"];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          "application/json": components["schemas"]["LifecycleProductDetail"];
+        };
+      };
+    };
+  };
+  /** @description Assessments of assets matched to this product, in the caller's sites only. */
+  lifecycle_products_assets_list: {
+    parameters: {
+      query?: {
+        /** @description The pagination cursor value. */
+        cursor?: string;
+        /** @description Number of results to return per page. */
+        page_size?: number;
+      };
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["PaginatedLifecycleAssessmentList"];
+        };
+      };
+    };
+  };
+  lifecycle_products_milestones_create: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LifecycleMilestoneWriteRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["LifecycleMilestoneWriteRequest"];
+        "multipart/form-data": components["schemas"]["LifecycleMilestoneWriteRequest"];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          "application/json": components["schemas"]["LifecycleProductDetail"];
+        };
+      };
+    };
+  };
+  lifecycle_products_reassess_create: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description No response body */
+      202: {
+        content: never;
+      };
+    };
+  };
+  lifecycle_products_revisions_list: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["LifecycleRevision"][];
+        };
+      };
+    };
+  };
+  lifecycle_products_statement_create: {
+    parameters: {
+      header: {
+        "If-Match": string;
+      };
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LifecycleStatementRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["LifecycleStatementRequest"];
+        "multipart/form-data": components["schemas"]["LifecycleStatementRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["LifecycleProductDetail"];
+        };
+      };
+    };
+  };
+  lifecycle_reassess_create: {
+    responses: {
+      /** @description No response body */
+      202: {
+        content: never;
+      };
+    };
+  };
+  lifecycle_sources_list: {
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["LifecycleSource"][];
+        };
+      };
+    };
+  };
+  lifecycle_sources_create: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LifecycleSourceRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["LifecycleSourceRequest"];
+        "multipart/form-data": components["schemas"]["LifecycleSourceRequest"];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          "application/json": components["schemas"]["LifecycleSource"];
+        };
+      };
+    };
+  };
+  lifecycle_sources_retrieve: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["LifecycleSource"];
+        };
+      };
+    };
+  };
+  lifecycle_sources_partial_update: {
+    parameters: {
+      header: {
+        "If-Match": string;
+      };
+      path: {
+        id: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["PatchedLifecycleSourceRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["PatchedLifecycleSourceRequest"];
+        "multipart/form-data": components["schemas"]["PatchedLifecycleSourceRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["LifecycleSource"];
+        };
+      };
+    };
+  };
+  lifecycle_summary_list: {
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["LifecycleSummaryRow"][];
+        };
+      };
+    };
+  };
+  lifecycle_vendor_aliases_list: {
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["VendorAlias"][];
+        };
+      };
+    };
+  };
+  lifecycle_vendor_aliases_create: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["VendorAliasRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["VendorAliasRequest"];
+        "multipart/form-data": components["schemas"]["VendorAliasRequest"];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          "application/json": components["schemas"]["VendorAlias"];
+        };
+      };
+    };
+  };
+  lifecycle_vendor_aliases_remove_create: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ReasonRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["ReasonRequest"];
+        "multipart/form-data": components["schemas"]["ReasonRequest"];
+      };
+    };
+    responses: {
+      /** @description No response body */
+      204: {
+        content: never;
       };
     };
   };

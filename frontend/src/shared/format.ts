@@ -29,3 +29,24 @@ export function formatRelative(iso: string, now: number = Date.now()): string {
   if (abs < 86400 * 60) return relative.format(Math.round(seconds / 86400), 'day')
   return relative.format(Math.round(seconds / (86400 * 30)), 'month')
 }
+
+const calendarFormat = new Intl.DateTimeFormat('en-GB', {
+  timeZone: 'UTC',
+  year: 'numeric',
+  month: 'short',
+  day: '2-digit',
+})
+const instantDateFormat = new Intl.DateTimeFormat('en-GB', {
+  timeZone: DISPLAY_TIMEZONE,
+  year: 'numeric',
+  month: 'short',
+  day: '2-digit',
+})
+
+/** Calendar dates ("2026-12-31") are shown as that exact day, never shifted by timezone;
+ * full timestamps are shown as the day in the organization timezone. */
+export function formatDate(value: string | null | undefined, empty = '–'): string {
+  if (!value) return empty
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return calendarFormat.format(new Date(`${value}T00:00:00Z`))
+  return instantDateFormat.format(new Date(value))
+}

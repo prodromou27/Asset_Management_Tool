@@ -57,6 +57,25 @@ export type ImportTemplate = Schemas['Template']
 export type ExportJob = Schemas['ExportJob']
 export type ExportFamily = Schemas['ExportFamily']
 export type ExportCreate = Schemas['ExportCreateRequest']
+export type LifecycleProduct = Schemas['LifecycleProduct']
+export type LifecycleProductDetail = Schemas['LifecycleProductDetail']
+export type LifecycleProductWrite = Schemas['LifecycleProductWriteRequest']
+export type LifecycleMilestone = Schemas['LifecycleMilestone']
+export type LifecycleMilestoneWrite = Schemas['LifecycleMilestoneWriteRequest']
+export type LifecycleSource = Schemas['LifecycleSource']
+export type LifecycleSourceWrite = Schemas['LifecycleSourceRequest']
+export type LifecycleAlias = Schemas['LifecycleAlias']
+export type LifecycleRevision = Schemas['LifecycleRevision']
+export type LifecycleMatch = Schemas['LifecycleMatch']
+export type LifecycleAssessment = Schemas['LifecycleAssessment']
+export type LifecycleException = Schemas['LifecycleException']
+export type LifecycleExceptionWrite = Schemas['LifecycleExceptionWriteRequest']
+export type LifecycleSummaryRow = Schemas['LifecycleSummaryRow']
+export type LifecyclePolicy = Schemas['LifecyclePolicy']
+export type AssetLifecycle = Schemas['AssetLifecycle']
+export type VendorAlias = Schemas['VendorAlias']
+export type LifecycleStatus = Schemas['LifecycleStatusEnum']
+export type MilestoneType = Schemas['MilestoneTypeEnum']
 export type FieldConflict = Schemas['FieldConflict']
 export type AssetEvidence = Schemas['AssetEvidence']
 export type FieldEvidence = Schemas['FieldEvidence']
@@ -100,4 +119,7 @@ export const PERMISSIONS = {
   importsRun: 'imports.run',
   exportsRun: 'exports.run',
   exportsPersonal: 'exports.personal',
+  lifecycleView: 'lifecycle.view',
+  lifecycleManage: 'lifecycle.manage',
+  lifecycleApprove: 'lifecycle.approve',
 } as const

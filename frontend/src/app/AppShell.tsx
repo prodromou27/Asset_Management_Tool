@@ -16,11 +16,11 @@ function initials(name: string): string {
 function NavList({ items, onNavigate }: { items: NavItem[]; onNavigate: () => void }) {
   return (
     <ul className="nav-list">
-      {items.map(({ to, label, icon: Icon }) => (
+      {items.map(({ to, label, icon: Icon, end }) => (
         <li key={to}>
           <NavLink
             to={to}
-            end={to === '/'}
+            end={end || to === '/'}
             onClick={onNavigate}
             className={({ isActive }) => `nav-link${isActive ? ' nav-link--active' : ''}`}
           >

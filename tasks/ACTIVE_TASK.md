@@ -1,6 +1,93 @@
-# Current Task: 014 | CSV/XLSX/JSON exports with RBAC and async jobs
+# Current Task: 015 | EOL catalogue, evidence and assessment
 
 Status: **Complete locally; awaiting CI** (2026-11-04, branch DEV).
+
+**Read:** AGENTS.md, docs/00, 01 (support states, Review EOL), 03 (lifecycle tables), 04 (EOL
+endpoints, asset lifecycle), 06 (whole), 07, 08 (sections 3 and 5), 09 (EOL approval column),
+14, 15 (A05, G4), 17 (ADR-009, DEC-12, ASM-11), 20 (Lifecycle, alert thresholds).
+
+**Previous:** 014 exports (CI run 41822280216 green).
+
+## Scope
+
+Vendor lifecycle catalogue with evidence, per-asset matching for hardware and OS/firmware,
+assessment, review queue, exceptions, UI and API. No lifecycle data is seeded, no external
+source is contacted, no adapter is enabled. Software assessments wait for software
+installations (Task 016); the catalogue already accepts software products.
+
+## Outcome (ASM-53)
+
+- **App `apps.lifecycle`** (migration `lifecycle.0001_lifecycle_catalogue`): products,
+  vendor aliases, product aliases, sources, milestones, revisions, matches, assessments,
+  assessment history, exceptions. `accounts.0009_lifecycle_permissions`.
+- **Matching** (`matching.py`, pure): exact / approved alias / candidate / no match /
+  not applicable; ambiguity, revisions, family names, builds and firmware-only always go
+  to review; hostnames never used; observed values stored with their provenance.
+- **Assessment** (`assessment.py`, pure): verified evidence only, source precedence,
+  conflicts, standard vs extended support, thresholds 180/90, UTC calendar rule, vendor
+  statements for Supported/Not announced; Unknown otherwise. Asset `support_status` =
+  worst applicable dimension (no other asset data changes).
+- **Review and audit:** entry by `lifecycle.manage` stays unverified; `lifecycle.approve`
+  verifies/rejects dates, approves/rejects matches (optional alias), grants and revokes
+  exceptions. Every change audited; product revisions numbered with snapshots; If-Match
+  on products, milestones, sources, matches and exceptions.
+- **Reassessment:** on commit after catalogue changes, on demand (asset, product, all),
+  hourly beat `lifecycle.reassess_all`.
+- **API** (`/api/v1/lifecycle/`): `products/` (GET, POST), `products/{id}/` (GET, PATCH),
+  `products/{id}/statement|aliases|milestones|revisions|assets|reassess/`,
+  `aliases/{id}/remove/`, `milestones/{id}/` (PATCH), `milestones/{id}/review/`,
+  `sources/` (GET, POST), `sources/{id}/` (GET, PATCH), `vendor-aliases/` (GET, POST),
+  `vendor-aliases/{id}/remove/`, `findings/`, `summary/`, `policy/`, `matches/`,
+  `matches/{id}/approve|reject/`, `exceptions/`, `exceptions/{id}/revoke/`, `reassess/`;
+  `/api/v1/assets/{id}/lifecycle/`, `.../lifecycle/reassess/`, `.../lifecycle/exceptions/`.
+- **Exports:** asset export gains a `lifecycle` related table (needs `lifecycle.view`; site
+  scope from Task 014).
+- **Frontend:** Lifecycle page (totals, findings with filters, review queue with
+  approve/reject, exceptions with revoke, reassess all); Lifecycle catalogue (products,
+  sources, vendor aliases, new product/source); product page (milestones with source links
+  and verification, add/edit date, aliases, support statement, matched assets in your sites,
+  change history, reassess); asset Lifecycle tab (per-dimension status, governing date, days,
+  support level, evidence links, observed values with source, match state, exception dialog
+  and history). Calendar dates are formatted without timezone shifts. Sidebar: Lifecycle
+  (Inventory), Lifecycle catalogue (Administration).
+- **Config:** `ITAM_LIFECYCLE_WARNING_DAYS`, `ITAM_LIFECYCLE_COUNT_EXTENDED_SUPPORT`,
+  `ITAM_LIFECYCLE_MAX_EXCEPTION_DAYS` in settings, Compose and `.env.example`. CI reverses
+  the `lifecycle` migration. README and docs/17.
+
+## Verification (workstation; SQLite test-only fallback)
+
+- Backend **702 passed, 6 skipped** (PostgreSQL/Redis-only). New: 41 engine tests
+  (`test_engine.py`: thresholds, last-day rule, security end, extended support on/off, final
+  date, end-of-sale only, conflicts, source precedence, third-party label, statements,
+  summary; exact/alias/vendor-alias/unknown vendor/missing model/ambiguous/revision/family/
+  rejected/OS release/build alias/patch candidate/missing version/firmware-only) and 22 API
+  tests (`test_api.py`: end-to-end flow, manual data preserved, not applicable, candidate
+  approval with alias, rejection, wrong dimension, decision reset on changed observations,
+  rematch after edit, re-verification after date change with history, conflicting evidence,
+  extended support, exception override and expiry, exception rules and revoke, permissions,
+  cross-site denial, audit and revisions, concurrent edits 409/428, duplicates, vendor alias,
+  support statement, policy and reassess all); 1 new export test.
+- Migrations applied, reversed (`lifecycle zero`, `accounts 0008`) and reapplied; no drift.
+  OpenAPI validates with `--fail-on-warn` (lifecycle serializers prefixed to avoid component
+  name collisions); frontend types regenerated. Ruff clean.
+- Frontend: typecheck, oxlint, **153 tests** (11 new) and build pass. Screenshots at 1440x900
+  (findings, product page, asset tab; mocked API) led to single-line findings rows and an
+  exact-match sidebar entry. One existing test (`admin-sites` categories) failed once under
+  full-suite load and passed in isolation and in two further full runs.
+- Not run: Docker stack, live PostgreSQL (CI covers), Playwright against a real backend.
+
+**Open (ASM-53):** third-party-only dates setting a status; extended-support policy;
+not-applicable category lists; separate verifier (four-eyes) not enforced; "EOL evidence
+missing" data-quality queue and notifications (Task 018/021); vendor feed adapters (DEC-12).
+
+Proposed next task: **016 | Software installations/licenses/M365 views** (tasks/BACKLOG.md).
+Do not start automatically.
+
+---
+
+# Previous record: Task 014 | CSV/XLSX/JSON exports with RBAC and async jobs
+
+Status: **Complete (CI run 41822280216 green: backend 644 passed, 0 skipped; frontend 142)** (2026-11-04, branch DEV).
 
 **Read:** AGENTS.md, docs/00, 04 (Import/export endpoints, async 202), 07 (ExportDialog), 08
 (section 10 Import/Export Center), 09 (role matrix), 11 (Export), 14 (formula injection, data
@@ -66,9 +153,6 @@ needs SMTP (Task 018); report endpoints are Task 021.
 **Open:** ASM-52 role grants (Auditor/Security Analyst personal data) and retention to
 confirm; EOL evidence IDs in exports with Task 015; asset-list row selection for "Selected
 records" (the API supports it).
-
-Proposed next task: **015 | EOL source/model catalogue + evidence and assessment**
-(tasks/BACKLOG.md). Do not start automatically.
 
 ---
 

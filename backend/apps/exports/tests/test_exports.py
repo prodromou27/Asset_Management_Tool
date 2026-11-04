@@ -80,7 +80,7 @@ def test_families_describe_columns_related_and_personal_masking(admin, client_fo
     assert set(admin_families) == {"assets", "groups"}
     assets = admin_families["assets"]
     assert assets["personal_data_allowed"] is True
-    assert {"hostnames", "interfaces", "ip_addresses", "groups"} == {
+    assert {"hostnames", "interfaces", "ip_addresses", "groups", "lifecycle"} == {
         r["key"] for r in assets["related"]
     }
     assert "q" in assets["filter_keys"]
@@ -368,3 +368,14 @@ def test_create_complete_and_download_are_audited(admin, run_jobs, inventory):
     )
     assert actions == ["exports.create", "exports.complete", "exports.download"]
     assert ExportJob.objects.get(pk=job["id"]).download_count == 1
+
+
+def test_lifecycle_assessments_export_as_a_related_table(admin, run_jobs, inventory):
+    from apps.lifecycle import services as lifecycle
+
+    lifecycle.reassess_assets([inventory["core"].pk, inventory["remote"].pk])
+    job = create(admin, run_jobs, format="json", related=["lifecycle"])
+    document = json.loads(download(admin, job).content)
+    core = next(i for i in document["items"] if i["name"] == "sw-core-01")
+    assert {r["dimension"] for r in core["lifecycle"]} == {"hardware", "os"}
+    assert all(r["status"] for r in core["lifecycle"])

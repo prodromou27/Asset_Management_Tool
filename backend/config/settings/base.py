@@ -28,6 +28,9 @@ env = environ.Env(
     ITAM_IMPORT_RETENTION_DAYS=(int, 90),
     ITAM_EXPORT_RETENTION_HOURS=(int, 24),
     ITAM_EXPORT_MAX_ROWS=(int, 100_000),
+    ITAM_LIFECYCLE_WARNING_DAYS=(list, [180, 90]),
+    ITAM_LIFECYCLE_COUNT_EXTENDED_SUPPORT=(bool, False),
+    ITAM_LIFECYCLE_MAX_EXCEPTION_DAYS=(int, 365),
 )
 
 env_file = BASE_DIR / ".env"
@@ -62,6 +65,7 @@ INSTALLED_APPS = [
     "apps.groups",
     "apps.imports",
     "apps.exports",
+    "apps.lifecycle",
 ]
 
 AUTH_USER_MODEL = "accounts.User"
@@ -193,6 +197,18 @@ SPECTACULAR_SETTINGS = {
         "ExportJobStatusEnum": "apps.exports.models.ExportJob.Status",
         "ExportFormatEnum": "apps.exports.models.ExportJob.Format",
         "ExportScopeEnum": "apps.exports.models.ExportJob.Scope",
+        "LifecycleStatusEnum": "apps.lifecycle.models.Status",
+        "LifecycleDimensionEnum": "apps.lifecycle.models.Dimension",
+        "MilestoneTypeEnum": "apps.lifecycle.models.MilestoneType",
+        "LifecycleProductKindEnum": "apps.lifecycle.models.LifecycleProduct.Kind",
+        "SupportStatementEnum": "apps.lifecycle.models.LifecycleProduct.SupportStatement",
+        "LifecycleAliasKindEnum": "apps.lifecycle.models.LifecycleAlias.Kind",
+        "LifecycleSourceTypeEnum": "apps.lifecycle.models.LifecycleSource.SourceType",
+        "MilestoneVerificationEnum": "apps.lifecycle.models.LifecycleMilestone.Verification",
+        "LifecycleMatchStateEnum": "apps.lifecycle.models.AssetLifecycleMatch.State",
+        "LifecycleMatchMethodEnum": "apps.lifecycle.models.AssetLifecycleMatch.Method",
+        "SupportLevelEnum": "apps.lifecycle.models.LifecycleAssessment.SupportLevel",
+        "EvidenceQualityEnum": "apps.lifecycle.models.LifecycleAssessment.EvidenceQuality",
         "SyncRunModeEnum": "apps.integrations.models.SyncRun.Mode",
     },
 }
@@ -229,6 +245,10 @@ CELERY_BEAT_SCHEDULE = {
         "task": "exports.purge",
         "schedule": 3600.0,
     },
+    "reassess-lifecycle": {
+        "task": "lifecycle.reassess_all",
+        "schedule": 3600.0,
+    },
 }
 
 LOGGING = {
@@ -251,6 +271,12 @@ ITAM_IMPORT_RETENTION_DAYS = env("ITAM_IMPORT_RETENTION_DAYS")
 # Exports (Task 014): hours a finished export can be downloaded, and the record limit.
 ITAM_EXPORT_RETENTION_HOURS = env("ITAM_EXPORT_RETENTION_HOURS")
 ITAM_EXPORT_MAX_ROWS = env("ITAM_EXPORT_MAX_ROWS")
+# Lifecycle (Task 015): warning thresholds in days before a support milestone, whether
+# vendor extended support counts as supported (it usually needs a separate agreement), and
+# the longest allowed exception.
+ITAM_LIFECYCLE_WARNING_DAYS = [int(d) for d in env("ITAM_LIFECYCLE_WARNING_DAYS")]
+ITAM_LIFECYCLE_COUNT_EXTENDED_SUPPORT = env("ITAM_LIFECYCLE_COUNT_EXTENDED_SUPPORT")
+ITAM_LIFECYCLE_MAX_EXCEPTION_DAYS = env("ITAM_LIFECYCLE_MAX_EXCEPTION_DAYS")
 # Deployment-level kill switch: no connector contacts a live source unless true,
 # in addition to the per-instance approval recorded by an administrator.
 ITAM_ALLOW_LIVE_INTEGRATIONS = env("ITAM_ALLOW_LIVE_INTEGRATIONS")

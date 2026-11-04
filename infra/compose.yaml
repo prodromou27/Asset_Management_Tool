@@ -41,6 +41,11 @@ x-backend-env: &backend-env
   # Exports (Task 014): hours a finished export stays downloadable, and the record limit.
   ITAM_EXPORT_RETENTION_HOURS: ${ITAM_EXPORT_RETENTION_HOURS:-24}
   ITAM_EXPORT_MAX_ROWS: ${ITAM_EXPORT_MAX_ROWS:-100000}
+  # Lifecycle (Task 015): warning days before a milestone, whether extended support counts,
+  # and the longest exception.
+  ITAM_LIFECYCLE_WARNING_DAYS: ${ITAM_LIFECYCLE_WARNING_DAYS:-180,90}
+  ITAM_LIFECYCLE_COUNT_EXTENDED_SUPPORT: ${ITAM_LIFECYCLE_COUNT_EXTENDED_SUPPORT:-false}
+  ITAM_LIFECYCLE_MAX_EXCEPTION_DAYS: ${ITAM_LIFECYCLE_MAX_EXCEPTION_DAYS:-365}
 
 x-backend-depends: &backend-depends
   postgres:

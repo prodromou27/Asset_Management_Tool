@@ -166,6 +166,39 @@ ASSET_RELATED: tuple[Related, ...] = (
         ),
         permission=catalog.GROUPS_VIEW,
     ),
+    Related(
+        "lifecycle",
+        "Lifecycle assessments",
+        "asset_id",
+        (
+            _ASSET_ID,
+            Column("dimension", "Dimension", lambda a, c: a.dimension),
+            Column("status", "Vendor lifecycle status", lambda a, c: a.status),
+            Column("effective_status", "Effective status", lambda a, c: a.effective_status),
+            Column(
+                "product", "Catalogue product", lambda a, c: str(a.product) if a.product else ""
+            ),
+            Column("support_level", "Support level", lambda a, c: a.support_level),
+            Column("milestone_type", "Milestone", lambda a, c: a.milestone_type),
+            Column("milestone_date", "Milestone date", lambda a, c: _iso(a.milestone_date)),
+            Column(
+                "days_remaining",
+                "Days remaining",
+                lambda a, c: a.days_remaining if a.days_remaining is not None else "",
+            ),
+            Column("evidence_quality", "Evidence", lambda a, c: a.evidence_quality),
+            Column(
+                "evidence_ids", "Evidence IDs", lambda a, c: " ".join(map(str, a.milestone_ids))
+            ),
+            Column(
+                "exception_until",
+                "Exception until",
+                lambda a, c: _iso(a.exception.expires_on) if a.exception else "",
+            ),
+            Column("assessed_at", "Assessed at", lambda a, c: _iso(a.assessed_at)),
+        ),
+        permission=catalog.LIFECYCLE_VIEW,
+    ),
 )
 
 
@@ -200,6 +233,14 @@ def _asset_related_rows(key: str, asset_ids: list) -> Iterator:
     if key == "ip_addresses":
         return AssetIPAddress.objects.filter(asset_id__in=asset_ids).order_by(
             "asset_id", "-is_primary", "address"
+        )
+    if key == "lifecycle":
+        from apps.lifecycle.models import LifecycleAssessment
+
+        return (
+            LifecycleAssessment.objects.filter(asset_id__in=asset_ids)
+            .select_related("product", "exception")
+            .order_by("asset_id", "dimension")
         )
     return (
         AssetGroupMembership.objects.filter(
@@ -270,7 +311,7 @@ FAMILIES: dict[str, Family] = {
         "Assets",
         catalog.ASSETS_VIEW,
         "Assets in your sites with provenance and source freshness; related tables keep "
-        "hostnames, interfaces/MACs, IPs and group memberships separate.",
+        "hostnames, interfaces/MACs, IPs, group memberships and lifecycle assessments separate.",
         FILTER_KEYS,
         ASSET_RELATED,
     ),
