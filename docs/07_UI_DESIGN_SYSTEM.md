@@ -12,30 +12,34 @@
 6. No emoji icons in navigation or dashboard. No giant welcoming hero/banner.
 7. Make dangerous actions visually quieter until intentionally selected, then explicit confirmation.
 
-## Proposed design tokens (adjust only via design review)
+## Design tokens (owner design review 2026-11-04: "navy console" direction)
 
-| Token | Light | Dark (optional later) |
+The owner rejected the first implementation as plain and dated (style, colours, navigation) and chose a dark navy sidebar with a blue accent. Values live in `frontend/src/styles/tokens.css`; change them only through design review. Dark mode is deferred (the tokens are structured for it).
+
+| Token | Light | Use |
 |---|---|---|
-| Page background | #F6F8FA | #101923 |
-| Main surface | #FFFFFF | #18232E |
-| Primary text | #17212B | #ECF1F5 |
-| Secondary text | #5F6C79 | #A5B2BF |
-| Hairline border | #E0E6EB | #33414D |
-| Brand/action | #175E70 (deep teal) | #59A9B9 |
-| Link | #175E70 | #79C1CE |
-| Success | #16734A | #56BA8A |
-| Warning | #A45A0C | #E7B35B |
-| Danger | #B63636 | #E27D7D |
-| Neutral/unknown | #65717D | #A8B3BB |
-| Focus ring | #2F7F94 | #64BBD0 |
+| Page background | #F4F6F9 | Canvas |
+| Main surface | #FFFFFF | Panels, tables, top bar |
+| Muted surface | #F8FAFC | Table header band, search field |
+| Primary text | #152033 | Body |
+| Secondary text | #5B6576 | Metadata, labels (5.9:1 on white) |
+| Hairline / strong border | #E3E7ED / #C9D1DC | Dividers / control outlines |
+| Brand/action | #2563EB (hover #1D4ED8) | Primary buttons, brand mark (white text 5.2:1) |
+| Link | #1D4ED8 | Links |
+| Success | #15803D | Supported, healthy |
+| Warning | #B45309 | Expiring, needs attention |
+| Danger | #C62828 | End of support, destructive |
+| Neutral/unknown | #64748B | Unknown, stale |
+| Focus ring | #3B82F6 | Keyboard focus (halo on inputs) |
+| Navigation | #0F1B2D background, #C5CEDB text, #8391A7 section labels, #213552 active, #60A5FA active marker | Sidebar |
 
-Font: IBM Plex Sans (or system sans fallback), numeric/technical values in IBM Plex Mono when helpful. 14px body, 13px dense table, 12px metadata, 20–24px page title, 16–18px section. Avoid mixing 3+ font families.
+Font: **Inter** (variable, bundled with the app, no external CDN), numeric/technical values in **IBM Plex Mono**. 14px body, 13px dense table, 11.5px uppercase table headers, 12px metadata, 22px page title, 15px section. Icons: **Lucide** only (one family), 16–18px, 1.75 stroke, always next to a text label in navigation.
 
-Spacing scale 4/8/12/16/24/32 px. Standard control 36px, dense table row 40–44px, sidebar 232–248px, top bar 56px. Border radius 4–6px in most surfaces, 8px for drawers; no 20px rounded giant cards. Shadows subtle only for popovers/dialogs.
+Spacing scale 4/8/12/16/24/32 px. Standard control 36px, dense table row 40–44px, sidebar 232–248px, top bar 56px. Border radius 6px for controls, 8px for panels and drawers, 10px for dialogs, pill for status badges; no 20px rounded giant cards. Shadows subtle only for popovers/dialogs.
 
 ## Layout
 
-Desktop >=1280px: persistent dark-ish or neutral narrow left navigation, minimal 56px top bar (search, jobs, notifications, user), content max-width adaptable, section header with title + metadata + primary action, filter toolbar followed by table/content. Use 12-column grid internally where needed, but do not make everything a card grid.
+Desktop >=1280px: persistent dark navy left navigation grouped into Inventory, Sources, Administration and System sections with icons; minimal 56px top bar with section / page context, asset search and the user menu (initials avatar, roles); jobs and notifications join it when those features exist, content max-width adaptable, section header with title + metadata + primary action, filter toolbar followed by table/content. Use 12-column grid internally where needed, but do not make everything a card grid.
 
 At 768–1279px collapse optional panels; at <=767px use overlay nav and responsive stacked detail sections. Read-only inventory table may horizontally scroll on small screens with first column pinned. No essential content hidden behind hover alone.
 

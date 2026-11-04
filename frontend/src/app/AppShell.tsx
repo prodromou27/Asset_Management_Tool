@@ -1,49 +1,65 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { Link, NavLink, useNavigate } from 'react-router-dom'
+import { Boxes, ChevronDown, Menu, Search, X } from 'lucide-react'
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { logout, queryKeys } from '../shared/api/accounts'
 import { PERMISSIONS } from '../shared/api/types'
+import { locate, SECTIONS, type NavItem } from './navigation'
 import { useSession } from './useSession'
 
-interface NavItem {
-  to: string
-  label: string
-  permission?: string
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  const letters = parts.length > 1 ? parts[0][0] + parts[parts.length - 1][0] : (parts[0] ?? '?').slice(0, 2)
+  return letters.toUpperCase()
 }
 
-const PRIMARY: NavItem[] = [
-  { to: '/assets', label: 'Assets', permission: PERMISSIONS.assetsView },
-  { to: '/discovery', label: 'Discovery', permission: PERMISSIONS.discoveryView },
-  { to: '/groups', label: 'Groups', permission: PERMISSIONS.groupsView },
-  { to: '/licenses', label: 'Licenses', permission: PERMISSIONS.licensesView },
-  { to: '/imports', label: 'Imports', permission: PERMISSIONS.importsRun },
-  { to: '/', label: 'System health' },
-]
-
-const ADMINISTRATION: NavItem[] = [
-  { to: '/admin/sites', label: 'Sites & locations', permission: PERMISSIONS.sitesManage },
-  { to: '/admin/categories', label: 'Categories & fields', permission: PERMISSIONS.categoriesManage },
-  { to: '/admin/integrations', label: 'Integrations', permission: PERMISSIONS.integrationsManage },
-  { to: '/admin/users', label: 'Users & roles', permission: PERMISSIONS.usersView },
-  { to: '/admin/audit', label: 'Audit log', permission: PERMISSIONS.auditView },
-  { to: '/admin/security', label: 'Security policy', permission: PERMISSIONS.securityView },
-]
-
-function NavList({ items }: { items: NavItem[] }) {
+function NavList({ items, onNavigate }: { items: NavItem[]; onNavigate: () => void }) {
   return (
     <ul className="nav-list">
-      {items.map((item) => (
-        <li key={item.to}>
+      {items.map(({ to, label, icon: Icon }) => (
+        <li key={to}>
           <NavLink
-            to={item.to}
-            end={item.to === '/'}
+            to={to}
+            end={to === '/'}
+            onClick={onNavigate}
             className={({ isActive }) => `nav-link${isActive ? ' nav-link--active' : ''}`}
           >
-            {item.label}
+            <Icon className="nav-link__icon" size={18} strokeWidth={1.75} aria-hidden="true" />
+            <span>{label}</span>
           </NavLink>
         </li>
       ))}
     </ul>
+  )
+}
+
+function GlobalSearch() {
+  const { can } = useSession()
+  const navigate = useNavigate()
+  const [value, setValue] = useState('')
+  if (!can(PERMISSIONS.assetsView)) return null
+
+  const submit = (event: FormEvent) => {
+    event.preventDefault()
+    const q = value.trim()
+    navigate(q ? `/assets?q=${encodeURIComponent(q)}` : '/assets')
+  }
+
+  return (
+    <form className="global-search" role="search" onSubmit={submit}>
+      <Search className="global-search__icon" size={16} aria-hidden="true" />
+      <label className="visually-hidden" htmlFor="global-search">
+        Search assets
+      </label>
+      <input
+        id="global-search"
+        className="global-search__input"
+        type="search"
+        placeholder="Search assets by name, tag, serial, IP…"
+        value={value}
+        onChange={(event) => setValue(event.target.value)}
+      />
+    </form>
   )
 }
 
@@ -76,6 +92,7 @@ function UserMenu() {
   }, [open])
 
   if (!me) return null
+  const roles = me.roles.map((r) => r.name).join(', ') || 'No role'
   return (
     <div className="user-menu" ref={ref}>
       <button
@@ -85,8 +102,14 @@ function UserMenu() {
         aria-controls="user-menu-panel"
         onClick={() => setOpen((value) => !value)}
       >
-        <span className="user-menu__name">{me.display_name}</span>
-        <span className="user-menu__role">{me.roles.map((r) => r.name).join(', ') || 'No role'}</span>
+        <span className="avatar" aria-hidden="true">
+          {initials(me.display_name || me.username)}
+        </span>
+        <span className="user-menu__text">
+          <span className="user-menu__name">{me.display_name}</span>
+          <span className="user-menu__role">{roles}</span>
+        </span>
+        <ChevronDown size={16} aria-hidden="true" className="user-menu__chevron" />
       </button>
       {open && (
         <div className="user-menu__panel" id="user-menu-panel">
@@ -110,32 +133,81 @@ function UserMenu() {
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { me, can } = useSession()
+  const { pathname } = useLocation()
+  const [navOpen, setNavOpen] = useState(false)
   // A temporary password grants no access until replaced, so hide navigation.
   const restricted = me?.must_change_password ?? false
-  const adminItems = ADMINISTRATION.filter((item) => !item.permission || can(item.permission))
+  const sections = SECTIONS.map((section) => ({
+    ...section,
+    items: section.items.filter((item) => !item.permission || can(item.permission)),
+  })).filter((section) => section.items.length > 0)
+  const where = locate(pathname)
+
+  useEffect(() => {
+    if (!navOpen) return
+    const onKey = (event: KeyboardEvent) => event.key === 'Escape' && setNavOpen(false)
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [navOpen])
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell${navOpen ? ' app-shell--nav-open' : ''}`}>
       <a className="skip-link" href="#main">
         Skip to content
       </a>
-      <nav className="app-shell__nav" aria-label="Primary">
-        <div className="app-shell__brand">ITAM</div>
-        {!restricted && (
-          <NavList items={PRIMARY.filter((item) => !item.permission || can(item.permission))} />
-        )}
-        {!restricted && adminItems.length > 0 && (
-          <>
-            <p className="nav-section" id="nav-admin">
-              Administration
-            </p>
-            <NavList items={adminItems} />
-          </>
-        )}
+      <nav className="app-shell__nav" id="app-nav" aria-label="Primary">
+        <div className="app-shell__brand">
+          <span className="brand-mark" aria-hidden="true">
+            <Boxes size={18} strokeWidth={2} />
+          </span>
+          <span className="brand-name">ITAM</span>
+          <button
+            type="button"
+            className="nav-close"
+            aria-label="Close navigation"
+            onClick={() => setNavOpen(false)}
+          >
+            <X size={18} aria-hidden="true" />
+          </button>
+        </div>
+        {!restricted &&
+          sections.map((section) => (
+            <div className="nav-group" key={section.id}>
+              <p className="nav-section" id={`nav-${section.id}`}>
+                {section.label}
+              </p>
+              <NavList items={section.items} onNavigate={() => setNavOpen(false)} />
+            </div>
+          ))}
       </nav>
+      {navOpen && (
+        <div className="nav-backdrop" aria-hidden="true" onClick={() => setNavOpen(false)} />
+      )}
       <div className="app-shell__body">
         <header className="top-bar">
-          <UserMenu />
+          <button
+            type="button"
+            className="nav-toggle"
+            aria-label="Open navigation"
+            aria-controls="app-nav"
+            aria-expanded={navOpen}
+            onClick={() => setNavOpen(true)}
+          >
+            <Menu size={20} aria-hidden="true" />
+          </button>
+          {where.page && (
+            <p className="top-bar__context">
+              <span className="top-bar__section">{where.section}</span>
+              <span className="top-bar__sep" aria-hidden="true">
+                /
+              </span>
+              <span className="top-bar__page">{where.page}</span>
+            </p>
+          )}
+          <div className="top-bar__end">
+            {!restricted && <GlobalSearch />}
+            <UserMenu />
+          </div>
         </header>
         <main className="app-shell__main" id="main" tabIndex={-1}>
           {children}

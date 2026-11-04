@@ -1,4 +1,51 @@
-# Current Task: Simple installation (HTTP first, HTTPS later)
+# Current Task: UI redesign - application shell and visual system (before 014)
+
+Status: **Complete locally; awaiting CI** (2026-11-04, branch DEV). Owner feedback: "I
+don't like the UI" - plain/dated, colours, layout/navigation. Owner chose the dark navy
+sidebar direction, light mode only, and to redesign before Task 014.
+
+**Read:** AGENTS.md, docs/00, 07 (whole), 08 (shell), 15 (UI quality gate).
+
+## Outcome
+
+- **Design tokens** (`tokens.css`, docs/07 updated): navy sidebar, blue accent #2563EB,
+  refreshed neutrals, muted surface, strong border, backdrop, nav colours, surface shadow.
+  Hard-coded colours in `global.css` replaced by tokens.
+- **Fonts and icons bundled** (no CDN, works on isolated networks): Inter Variable, IBM
+  Plex Mono 400/500, Lucide icons (one family). New dependencies `@fontsource-variable/inter`,
+  `@fontsource/ibm-plex-mono`, `lucide-react`.
+- **Shell** (`AppShell.tsx`, new `navigation.ts`):
+  - dark sidebar with brand mark, sections Inventory / Sources / Administration / System,
+    icons on every entry and an active marker; sections with no permitted entries are hidden;
+  - top bar with section / page context, asset search (goes to `/assets?q=`; hidden without
+    `assets.view` or with a temporary password) and a user menu with initials and roles;
+  - below 768px the sidebar becomes an overlay drawer (menu button, close button, backdrop,
+    Escape closes).
+- **Components:** page title, panels (8px radius, faint shadow), buttons (6px radius, hover
+  states), inputs (focus halo), tables (uppercase header band, hover tint, asset rows on one
+  line with sideways scroll), status badges (pill with dot, text darkened to keep AA
+  contrast), dialogs, sign-in screen (navy band, raised panel).
+- Docs: docs/07 tokens, typography, icons, radii and layout.
+
+## Verification
+
+- Frontend: typecheck, oxlint, **134 tests** (12 new in `AppShell.test.tsx`: navigation
+  placement, grouped sections and active state, user menu, top-bar search, search hidden
+  without permission, drawer open/close/Escape) and the production build pass.
+- Screenshots with mocked data via Playwright + system Edge at 1440x900 and 390x844 (assets
+  list with 28 rows, system health, mobile drawer); temporary harness not committed. The
+  first round showed wrapped asset rows, fixed to one line.
+- Contrast computed for every token pair: all text >= 4.5:1; badge text 5.3-6.2:1 after the fix.
+- Bundle +11 kB JS (the pre-existing >500 kB chunk warning is unchanged); fonts are separate files.
+- Not done: page-by-page restyle beyond shared components (pages use the shared classes);
+  dark mode (deferred by owner).
+
+Proposed next task: **014 | CSV/XLSX/JSON exports with RBAC and async jobs**
+(tasks/BACKLOG.md). Do not start automatically.
+
+---
+
+# Previous record: Simple installation
 
 Status: **Complete (CI run 41811176901 green)** (2026-11-04, branch DEV). Owner request: make
 the installation simpler, run on port 80 without a certificate, and let an administrator
@@ -33,9 +80,6 @@ add a certificate later. Replaces the earlier five-script staging kit.
 - GitHub CI run 41811176901 on `ce1a7ee`: backend **619 passed, 0 skipped**, frontend 122,
   Compose config (ports 80,443; http mode selects http.conf) and image builds pass.
 - Not run: the scripts on AlmaLinux or the Docker stack.
-
-Proposed next task: **014 | CSV/XLSX/JSON exports with RBAC and async jobs**
-(tasks/BACKLOG.md). Do not start automatically.
 
 ---
 

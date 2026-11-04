@@ -1,17 +1,35 @@
-/* Light theme tokens from docs/07_UI_DESIGN_SYSTEM.md. Change only via design review. */
+/* Light theme tokens from docs/07_UI_DESIGN_SYSTEM.md (navy console direction, owner design
+ * review 2026-11-04). Change only via design review. Text colours meet WCAG AA (>= 4.5:1)
+ * on their intended background. */
 :root {
-  --color-page-bg: #f6f8fa;
+  --color-page-bg: #f4f6f9;
   --color-surface: #ffffff;
-  --color-text-primary: #17212b;
-  --color-text-secondary: #5f6c79;
-  --color-border: #e0e6eb;
-  --color-brand: #175e70;
-  --color-link: #175e70;
-  --color-success: #16734a;
-  --color-warning: #a45a0c;
-  --color-danger: #b63636;
-  --color-neutral: #65717d;
-  --color-focus-ring: #2f7f94;
+  --color-surface-muted: #f8fafc;
+  --color-text-primary: #152033;
+  --color-text-secondary: #5b6576;
+  --color-border: #e3e7ed;
+  --color-border-strong: #c9d1dc;
+  --color-brand: #2563eb;
+  --color-brand-hover: #1d4ed8;
+  --color-brand-soft: #eaf1fe;
+  --color-on-brand: #ffffff;
+  --color-link: #1d4ed8;
+  --color-success: #15803d;
+  --color-warning: #b45309;
+  --color-danger: #c62828;
+  --color-danger-hover: #a51f1f;
+  --color-neutral: #64748b;
+  --color-focus-ring: #3b82f6;
+  --color-backdrop: rgb(15 27 45 / 45%);
+
+  /* Navigation (dark navy sidebar). */
+  --color-nav-bg: #0f1b2d;
+  --color-nav-text: #c5cedb;
+  --color-nav-muted: #8391a7;
+  --color-nav-hover: #1a2a40;
+  --color-nav-active: #213552;
+  --color-nav-accent: #60a5fa;
+  --color-nav-border: #1e2d44;
 
   --space-1: 4px;
   --space-2: 8px;
@@ -29,9 +47,10 @@
   --size-topbar: 56px;
   --size-sidebar: 240px;
 
-  --font-sans: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-sans: 'Inter Variable', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Consolas, monospace;
 
-  --shadow-overlay: 0 8px 24px rgb(23 33 43 / 16%);
+  --shadow-surface: 0 1px 2px rgb(15 27 45 / 6%);
+  --shadow-overlay: 0 10px 28px rgb(15 27 45 / 18%);
   --duration-fast: 120ms;
 }
