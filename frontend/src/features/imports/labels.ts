@@ -40,4 +40,6 @@ export const FAMILY_LABEL: Record<string, string> = {
   group: 'Groups',
   group_membership: 'Static group members',
   license_entitlement: 'License entitlements',
+  domain: 'Domains',
+  tls_endpoint: 'Approved TLS endpoints',
 }

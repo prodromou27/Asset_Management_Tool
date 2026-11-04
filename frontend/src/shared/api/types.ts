@@ -45,6 +45,14 @@ export type LicenseEntitlement = Schemas['LicenseEntitlement']
 export type LicenseEntitlementWrite = Schemas['LicenseEntitlementWriteRequest']
 export type EntitlementAllocation = Schemas['LicenseEntitlementAllocation']
 export type LicenseAllocate = Schemas['LicenseAllocateRequest']
+export type Domain = Schemas['Domain']
+export type DomainWrite = Schemas['DomainWriteRequest']
+export type Expiry = Schemas['Expiry']
+export type Certificate = Schemas['Certificate']
+export type CertificateDetail = Schemas['CertificateDetail']
+export type CertificateDeployment = Schemas['Deployment']
+export type TlsEndpoint = Schemas['TlsEndpoint']
+export type TlsEndpointWrite = Schemas['TlsEndpointWriteRequest']
 export type CategoryReview = Schemas['CategoryReview']
 export type BulkResult = Schemas['BulkResult']
 export type Assignee = Schemas['Assignee']
@@ -134,4 +142,6 @@ export const PERMISSIONS = {
   lifecycleView: 'lifecycle.view',
   lifecycleManage: 'lifecycle.manage',
   lifecycleApprove: 'lifecycle.approve',
+  certificatesView: 'certificates.view',
+  certificatesManage: 'certificates.manage',
 } as const

@@ -31,6 +31,9 @@ env = environ.Env(
     ITAM_LIFECYCLE_WARNING_DAYS=(list, [180, 90]),
     ITAM_LIFECYCLE_COUNT_EXTENDED_SUPPORT=(bool, False),
     ITAM_LIFECYCLE_MAX_EXCEPTION_DAYS=(int, 365),
+    ITAM_CERT_WARNING_DAYS=(list, [90, 60, 30, 14, 7]),
+    ITAM_TLS_CHECK_INTERVAL_HOURS=(int, 24),
+    ITAM_TLS_CHECK_TIMEOUT_SECONDS=(int, 5),
 )
 
 env_file = BASE_DIR / ".env"
@@ -67,6 +70,7 @@ INSTALLED_APPS = [
     "apps.exports",
     "apps.lifecycle",
     "apps.software",
+    "apps.domains",
 ]
 
 AUTH_USER_MODEL = "accounts.User"
@@ -206,6 +210,8 @@ SPECTACULAR_SETTINGS = {
         "LifecycleAliasKindEnum": "apps.lifecycle.models.LifecycleAlias.Kind",
         "LifecycleSourceTypeEnum": "apps.lifecycle.models.LifecycleSource.SourceType",
         "MilestoneVerificationEnum": "apps.lifecycle.models.LifecycleMilestone.Verification",
+        "CertificateSourceEnum": "apps.domains.models.Certificate.Source",
+        "TlsCheckStatusEnum": "apps.domains.models.TlsEndpoint.CheckStatus",
         "LifecycleMatchStateEnum": "apps.lifecycle.models.AssetLifecycleMatch.State",
         "LifecycleMatchMethodEnum": "apps.lifecycle.models.AssetLifecycleMatch.Method",
         "SupportLevelEnum": "apps.lifecycle.models.LifecycleAssessment.SupportLevel",
@@ -250,6 +256,10 @@ CELERY_BEAT_SCHEDULE = {
         "task": "lifecycle.reassess_all",
         "schedule": 3600.0,
     },
+    "check-tls-endpoints": {
+        "task": "domains.check_endpoints",
+        "schedule": 900.0,  # picks endpoints whose last check is older than the interval
+    },
 }
 
 LOGGING = {
@@ -278,6 +288,13 @@ ITAM_EXPORT_MAX_ROWS = env("ITAM_EXPORT_MAX_ROWS")
 ITAM_LIFECYCLE_WARNING_DAYS = [int(d) for d in env("ITAM_LIFECYCLE_WARNING_DAYS")]
 ITAM_LIFECYCLE_COUNT_EXTENDED_SUPPORT = env("ITAM_LIFECYCLE_COUNT_EXTENDED_SUPPORT")
 ITAM_LIFECYCLE_MAX_EXCEPTION_DAYS = env("ITAM_LIFECYCLE_MAX_EXCEPTION_DAYS")
+
+# Domains and TLS certificates (Task 017, docs/10 thresholds).
+ITAM_CERT_WARNING_DAYS = [int(d) for d in env("ITAM_CERT_WARNING_DAYS")]
+ITAM_TLS_CHECK_INTERVAL_HOURS = env("ITAM_TLS_CHECK_INTERVAL_HOURS")
+ITAM_TLS_CHECK_TIMEOUT_SECONDS = env("ITAM_TLS_CHECK_TIMEOUT_SECONDS")
+# Loopback targets are refused outside tests (SSRF, docs/14).
+ITAM_TLS_ALLOW_LOOPBACK = False
 # Deployment-level kill switch: no connector contacts a live source unless true,
 # in addition to the per-instance approval recorded by an administrator.
 ITAM_ALLOW_LIVE_INTEGRATIONS = env("ITAM_ALLOW_LIVE_INTEGRATIONS")

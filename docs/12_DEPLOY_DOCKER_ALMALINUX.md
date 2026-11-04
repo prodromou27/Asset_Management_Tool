@@ -63,6 +63,7 @@ Prefer named Docker volumes for PostgreSQL. For necessary bind mounts, confirm l
 | ITAM worker | Graph/Defender endpoints | TCP 443 | Inventory, security and license facts |
 | ITAM worker | Approved vendor lifecycle sites | TCP 443 | Support milestones |
 | ITAM worker | SMTP relay | TCP 587 STARTTLS or approved alternative | Notifications |
+| ITAM worker (daily) and api ("Check now") | Approved TLS endpoints only (Task 017) | The approved port, usually TCP 443 | Read the presented certificate (TLS handshake only) |
 | ITAM to DNS | Approved resolvers | UDP/TCP 53 | Only approved DNS checks |
 | api/worker | postgres | TCP 5432, internal Compose network only | DB |
 | api/worker | Redis | TCP 6379, internal Compose network only | Queue |

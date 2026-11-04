@@ -135,6 +135,11 @@ scripts/compose.sh dev exec api python manage.py load_observations \
 - Matching: the Entra device ID links a Defender machine to the asset of an Intune device from the **same tenant** when a hostname or MAC corroborates it and nothing conflicts (ADR-014); otherwise it is a review candidate. Hostname or IP alone never links.
 - Security facts (onboarding, sensor health, exposure, risk, tags, first/last seen, original values) are stored apart from asset fields and shown on the asset's **Security** tab (requires `discovery.view` and site access). "Last report received" is not an online status, and a machine missing from Defender's list is flagged, never treated as deleted. Sanitized fixtures: `fixtures/defender/api/README.md`.
 
+### Domains & Certificates (Task 017)
+
+- **Domains & Certificates** (Inventory): owned domains with registrar, owner and registration expiry (Unknown until recorded with its evidence, never taken from a certificate); TLS certificates with SANs, issuer, SHA-256 fingerprint and days left (90/60/30/14/7-day thresholds); and the **approved TLS endpoints** ITAM reads certificates from, with rotation history per endpoint. Assets show their endpoints on a **Certificates** tab.
+- Approving an endpoint (host, port, optional SNI) allows ITAM to open a TLS handshake to it once a day (and on "Check now"); nothing else is sent. Metadata and link-local addresses are always refused and DNS answers are pinned per check. Public certificates can also be uploaded; private keys are refused. Domains and endpoints can be imported.
+
 ### Software & Licenses (Task 016b)
 
 - **Software & Licenses** (Inventory) brings installed software, installations, **Entitlements**, **Allocations** and **Microsoft 365** subscriptions together; each total is labelled separately (observed installations, purchased units, allocated units, tenant-reported units) and ITAM never states license compliance.

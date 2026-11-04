@@ -459,6 +459,32 @@ paths:
               schema:
                 $ref: '#/components/schemas/AssetDetail'
           description: ''
+  /api/v1/assets/{id}/certificates/:
+    get:
+      operationId: assets_certificates_list
+      description: |-
+        docs/04 GET /assets/{id}/certificates: endpoints linked to the asset with the
+        certificate each currently presents.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - assets
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TlsEndpoint'
+          description: ''
   /api/v1/assets/{id}/classification/:
     post:
       operationId: assets_classification_create
@@ -1142,6 +1168,153 @@ paths:
                 items:
                   $ref: '#/components/schemas/AuthProvider'
           description: ''
+  /api/v1/certificates/:
+    get:
+      operationId: certificates_list
+      parameters:
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - in: query
+        name: deployed
+        schema:
+          type: boolean
+        description: Only certificates on an endpoint
+      - in: query
+        name: expiry
+        schema:
+          type: string
+          enum:
+          - expired
+          - expiring
+          - ok
+          - unknown
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: q
+        schema:
+          type: string
+        description: Name, SAN, issuer or fingerprint
+      tags:
+      - certificates
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedCertificateList'
+          description: ''
+    post:
+      operationId: certificates_create
+      parameters:
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      tags:
+      - certificates
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CertificateUploadRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CertificateUploadRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CertificateUploadRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedCertificateList'
+          description: ''
+  /api/v1/certificates/{id}/:
+    get:
+      operationId: certificates_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - certificates
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CertificateDetail'
+          description: ''
+  /api/v1/certificates/deployments/:
+    get:
+      operationId: certificates_deployments_list
+      description: 'docs/04 GET /certificates/deployments: certificate observations
+        per endpoint.'
+      parameters:
+      - in: query
+        name: certificate
+        schema:
+          type: string
+      - in: query
+        name: current
+        schema:
+          type: boolean
+        description: Only certificates still presented
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - in: query
+        name: endpoint
+        schema:
+          type: string
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      tags:
+      - certificates
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedDeploymentList'
+          description: ''
   /api/v1/custom-fields/{id}/:
     patch:
       operationId: custom_fields_partial_update
@@ -1681,6 +1854,171 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/DiscoverySource'
+          description: ''
+  /api/v1/domains/:
+    get:
+      operationId: domains_list
+      parameters:
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - in: query
+        name: expiry
+        schema:
+          type: string
+          enum:
+          - expired
+          - expiring
+          - ok
+          - unknown
+      - in: query
+        name: include_retired
+        schema:
+          type: boolean
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: q
+        schema:
+          type: string
+        description: Domain, owner or registrar
+      tags:
+      - domains
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedDomainList'
+          description: ''
+    post:
+      operationId: domains_create
+      tags:
+      - domains
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DomainWriteRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DomainWriteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DomainWriteRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Domain'
+          description: ''
+  /api/v1/domains/{id}/:
+    get:
+      operationId: domains_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - domains
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Domain'
+          description: ''
+    patch:
+      operationId: domains_partial_update
+      parameters:
+      - in: header
+        name: If-Match
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - domains
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedDomainWriteRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedDomainWriteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedDomainWriteRequest'
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Domain'
+          description: ''
+  /api/v1/domains/{id}/retire/:
+    post:
+      operationId: domains_retire_create
+      parameters:
+      - in: header
+        name: If-Match
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - domains
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Domain'
           description: ''
   /api/v1/exports/:
     get:
@@ -5108,6 +5446,196 @@ paths:
               schema:
                 $ref: '#/components/schemas/SourceLink'
           description: ''
+  /api/v1/tls-endpoints/:
+    get:
+      operationId: tls_endpoints_list
+      parameters:
+      - in: query
+        name: asset
+        schema:
+          type: string
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - in: query
+        name: include_retired
+        schema:
+          type: boolean
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: q
+        schema:
+          type: string
+        description: Host, SNI, service or owner
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - blocked
+          - failed
+          - never
+          - ok
+      tags:
+      - tls-endpoints
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTlsEndpointList'
+          description: ''
+    post:
+      operationId: tls_endpoints_create
+      tags:
+      - tls-endpoints
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TlsEndpointWriteRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TlsEndpointWriteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TlsEndpointWriteRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TlsEndpoint'
+          description: ''
+  /api/v1/tls-endpoints/{id}/:
+    get:
+      operationId: tls_endpoints_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - tls-endpoints
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TlsEndpoint'
+          description: ''
+    patch:
+      operationId: tls_endpoints_partial_update
+      parameters:
+      - in: header
+        name: If-Match
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - tls-endpoints
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedTlsEndpointWriteRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedTlsEndpointWriteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedTlsEndpointWriteRequest'
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TlsEndpoint'
+          description: ''
+  /api/v1/tls-endpoints/{id}/check/:
+    post:
+      operationId: tls_endpoints_check_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - tls-endpoints
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TlsEndpoint'
+          description: ''
+  /api/v1/tls-endpoints/{id}/retire/:
+    post:
+      operationId: tls_endpoints_retire_create
+      parameters:
+      - in: header
+        name: If-Match
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - tls-endpoints
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TlsEndpoint'
+          description: ''
   /api/v1/users/:
     get:
       operationId: users_list
@@ -6667,6 +7195,227 @@ components:
         * `reclassified` - Asset reclassified
         * `dismissed` - Current category kept
         * `resolved` - No longer suggested
+    Certificate:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        fingerprint_sha256:
+          type: string
+          readOnly: true
+        subject:
+          type: string
+          readOnly: true
+        common_name:
+          type: string
+          readOnly: true
+        issuer:
+          type: string
+          readOnly: true
+        serial_number:
+          type: string
+          readOnly: true
+        sans:
+          type: array
+          items:
+            type: string
+          readOnly: true
+        not_before:
+          type: string
+          format: date-time
+          readOnly: true
+        not_after:
+          type: string
+          format: date-time
+          readOnly: true
+        expiry:
+          allOf:
+          - $ref: '#/components/schemas/Expiry'
+          readOnly: true
+        signature_algorithm:
+          type: string
+          readOnly: true
+        public_key:
+          type: string
+          readOnly: true
+        self_signed:
+          type: boolean
+          readOnly: true
+        is_ca:
+          type: boolean
+          readOnly: true
+        source:
+          allOf:
+          - $ref: '#/components/schemas/CertificateSourceEnum'
+          readOnly: true
+        first_seen_at:
+          type: string
+          format: date-time
+          readOnly: true
+        endpoints:
+          type: integer
+          readOnly: true
+          description: Approved endpoints currently presenting it
+        note:
+          type: string
+          readOnly: true
+      required:
+      - common_name
+      - endpoints
+      - expiry
+      - fingerprint_sha256
+      - first_seen_at
+      - id
+      - is_ca
+      - issuer
+      - not_after
+      - not_before
+      - note
+      - public_key
+      - sans
+      - self_signed
+      - serial_number
+      - signature_algorithm
+      - source
+      - subject
+    CertificateDetail:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        fingerprint_sha256:
+          type: string
+          readOnly: true
+        subject:
+          type: string
+          readOnly: true
+        common_name:
+          type: string
+          readOnly: true
+        issuer:
+          type: string
+          readOnly: true
+        serial_number:
+          type: string
+          readOnly: true
+        sans:
+          type: array
+          items:
+            type: string
+          readOnly: true
+        not_before:
+          type: string
+          format: date-time
+          readOnly: true
+        not_after:
+          type: string
+          format: date-time
+          readOnly: true
+        expiry:
+          allOf:
+          - $ref: '#/components/schemas/Expiry'
+          readOnly: true
+        signature_algorithm:
+          type: string
+          readOnly: true
+        public_key:
+          type: string
+          readOnly: true
+        self_signed:
+          type: boolean
+          readOnly: true
+        is_ca:
+          type: boolean
+          readOnly: true
+        source:
+          allOf:
+          - $ref: '#/components/schemas/CertificateSourceEnum'
+          readOnly: true
+        first_seen_at:
+          type: string
+          format: date-time
+          readOnly: true
+        endpoints:
+          type: integer
+          readOnly: true
+          description: Approved endpoints currently presenting it
+        note:
+          type: string
+          readOnly: true
+        pem:
+          type: string
+          readOnly: true
+        deployments:
+          type: array
+          items:
+            $ref: '#/components/schemas/Deployment'
+          readOnly: true
+      required:
+      - common_name
+      - deployments
+      - endpoints
+      - expiry
+      - fingerprint_sha256
+      - first_seen_at
+      - id
+      - is_ca
+      - issuer
+      - not_after
+      - not_before
+      - note
+      - pem
+      - public_key
+      - sans
+      - self_signed
+      - serial_number
+      - signature_algorithm
+      - source
+      - subject
+    CertificateRef:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        common_name:
+          type: string
+        fingerprint_sha256:
+          type: string
+        not_after:
+          type: string
+          format: date-time
+        expiry:
+          $ref: '#/components/schemas/Expiry'
+      required:
+      - common_name
+      - expiry
+      - fingerprint_sha256
+      - id
+      - not_after
+    CertificateSourceEnum:
+      enum:
+      - observed
+      - uploaded
+      type: string
+      description: |-
+        * `observed` - Observed on an endpoint
+        * `uploaded` - Uploaded
+    CertificateUploadRequest:
+      type: object
+      properties:
+        pem:
+          type: string
+          minLength: 1
+          maxLength: 100000
+        note:
+          type: string
+          maxLength: 500
+      required:
+      - pem
     ChangePasswordRequest:
       type: object
       properties:
@@ -7071,6 +7820,61 @@ components:
       description: |-
         * `up` - up
         * `down` - down
+    Deployment:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        endpoint:
+          allOf:
+          - $ref: '#/components/schemas/DeploymentEndpointRef'
+          readOnly: true
+        certificate:
+          allOf:
+          - $ref: '#/components/schemas/CertificateRef'
+          readOnly: true
+        first_seen_at:
+          type: string
+          format: date-time
+          readOnly: true
+        last_seen_at:
+          type: string
+          format: date-time
+          readOnly: true
+        replaced_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        current:
+          type: boolean
+          readOnly: true
+      required:
+      - certificate
+      - current
+      - endpoint
+      - first_seen_at
+      - id
+      - last_seen_at
+      - replaced_at
+    DeploymentEndpointRef:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        label:
+          type: string
+        service:
+          type: string
+        retired:
+          type: boolean
+      required:
+      - id
+      - label
+      - retired
+      - service
     DirectoryUserRef:
       type: object
       properties:
@@ -7145,6 +7949,117 @@ components:
         * `security` - Security
         * `directory` - Directory and licensing
         * `import` - Import
+    Domain:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        fqdn:
+          type: string
+          readOnly: true
+        owner:
+          type: string
+          readOnly: true
+        registrar:
+          type: string
+          readOnly: true
+        expires_on:
+          type: string
+          format: date
+          readOnly: true
+          nullable: true
+        expiry_evidence:
+          type: string
+          readOnly: true
+        expiry_verified_by:
+          type: string
+          readOnly: true
+          nullable: true
+        expiry_verified_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        expiry:
+          allOf:
+          - $ref: '#/components/schemas/Expiry'
+          readOnly: true
+        auto_renew:
+          type: boolean
+          readOnly: true
+          nullable: true
+        note:
+          type: string
+          readOnly: true
+        retired_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        retired_reason:
+          type: string
+          readOnly: true
+        version:
+          type: integer
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        modified_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - auto_renew
+      - created_at
+      - expires_on
+      - expiry
+      - expiry_evidence
+      - expiry_verified_at
+      - expiry_verified_by
+      - fqdn
+      - id
+      - modified_at
+      - note
+      - owner
+      - registrar
+      - retired_at
+      - retired_reason
+      - version
+    DomainWriteRequest:
+      type: object
+      properties:
+        fqdn:
+          type: string
+          minLength: 1
+          maxLength: 300
+        owner:
+          type: string
+          maxLength: 200
+        registrar:
+          type: string
+          maxLength: 200
+        expires_on:
+          type: string
+          format: date
+          nullable: true
+        expiry_evidence:
+          type: string
+          maxLength: 500
+        auto_renew:
+          type: boolean
+          nullable: true
+        note:
+          type: string
+          maxLength: 2000
+        reason:
+          type: string
+          maxLength: 500
+      required:
+      - fqdn
     EndpointSecurityState:
       type: object
       properties:
@@ -7309,6 +8224,34 @@ components:
         * `defender` - Defender
         * `import` - Import
         * `fixture` - Fixture import
+    Expiry:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/ExpiryStatusEnum'
+        days_remaining:
+          type: integer
+          nullable: true
+        threshold:
+          type: integer
+          nullable: true
+          description: Warning threshold reached
+      required:
+      - days_remaining
+      - status
+      - threshold
+    ExpiryStatusEnum:
+      enum:
+      - unknown
+      - ok
+      - expiring
+      - expired
+      type: string
+      description: |-
+        * `unknown` - unknown
+        * `ok` - ok
+        * `expiring` - expiring
+        * `expired` - expired
     ExportColumn:
       type: object
       properties:
@@ -11186,6 +12129,66 @@ components:
           nullable: true
         count:
           type: integer
+    PaginatedCertificateList:
+      type: object
+      required:
+      - items
+      - next_cursor
+      - previous_cursor
+      - count
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Certificate'
+        next_cursor:
+          type: string
+          nullable: true
+        previous_cursor:
+          type: string
+          nullable: true
+        count:
+          type: integer
+    PaginatedDeploymentList:
+      type: object
+      required:
+      - items
+      - next_cursor
+      - previous_cursor
+      - count
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Deployment'
+        next_cursor:
+          type: string
+          nullable: true
+        previous_cursor:
+          type: string
+          nullable: true
+        count:
+          type: integer
+    PaginatedDomainList:
+      type: object
+      required:
+      - items
+      - next_cursor
+      - previous_cursor
+      - count
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Domain'
+        next_cursor:
+          type: string
+          nullable: true
+        previous_cursor:
+          type: string
+          nullable: true
+        count:
+          type: integer
     PaginatedExportJobList:
       type: object
       required:
@@ -11546,6 +12549,26 @@ components:
           nullable: true
         count:
           type: integer
+    PaginatedTlsEndpointList:
+      type: object
+      required:
+      - items
+      - next_cursor
+      - previous_cursor
+      - count
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/TlsEndpoint'
+        next_cursor:
+          type: string
+          nullable: true
+        previous_cursor:
+          type: string
+          nullable: true
+        count:
+          type: integer
     PaginatedUserList:
       type: object
       required:
@@ -11720,6 +12743,35 @@ components:
           maxLength: 32
         is_active:
           type: boolean
+    PatchedDomainWriteRequest:
+      type: object
+      properties:
+        fqdn:
+          type: string
+          minLength: 1
+          maxLength: 300
+        owner:
+          type: string
+          maxLength: 200
+        registrar:
+          type: string
+          maxLength: 200
+        expires_on:
+          type: string
+          format: date
+          nullable: true
+        expiry_evidence:
+          type: string
+          maxLength: 500
+        auto_renew:
+          type: boolean
+          nullable: true
+        note:
+          type: string
+          maxLength: 2000
+        reason:
+          type: string
+          maxLength: 500
     PatchedFieldAuthorityPolicyRequest:
       type: object
       properties:
@@ -12047,6 +13099,38 @@ components:
           maxLength: 500
         is_active:
           type: boolean
+    PatchedTlsEndpointWriteRequest:
+      type: object
+      properties:
+        host:
+          type: string
+          minLength: 1
+          maxLength: 300
+        port:
+          type: integer
+          maximum: 65535
+          minimum: 1
+        sni:
+          type: string
+          maxLength: 300
+        asset:
+          type: string
+          format: uuid
+          nullable: true
+        service:
+          type: string
+          maxLength: 200
+        owner:
+          type: string
+          maxLength: 200
+        enabled:
+          type: boolean
+        note:
+          type: string
+          maxLength: 2000
+        reason:
+          type: string
+          maxLength: 500
     PatchedUserUpdateRequest:
       type: object
       properties:
@@ -13608,6 +14692,180 @@ components:
       - label
       - match_help
       - version
+    TlsAssetRef:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        site_code:
+          type: string
+      required:
+      - id
+      - name
+      - site_code
+    TlsCheckStatusEnum:
+      enum:
+      - never
+      - ok
+      - failed
+      - blocked
+      type: string
+      description: |-
+        * `never` - Not checked yet
+        * `ok` - Certificate read
+        * `failed` - Check failed
+        * `blocked` - Target not allowed
+    TlsEndpoint:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        host:
+          type: string
+          readOnly: true
+        port:
+          type: integer
+          readOnly: true
+          default: 443
+        sni:
+          type: string
+          readOnly: true
+          default: ''
+        asset:
+          allOf:
+          - $ref: '#/components/schemas/TlsAssetRef'
+          nullable: true
+          readOnly: true
+        asset_hidden:
+          type: boolean
+          readOnly: true
+          description: Linked to an asset outside your sites
+        service:
+          type: string
+          readOnly: true
+        owner:
+          type: string
+          readOnly: true
+        enabled:
+          type: boolean
+          readOnly: true
+        note:
+          type: string
+          readOnly: true
+        certificate:
+          allOf:
+          - $ref: '#/components/schemas/CertificateRef'
+          nullable: true
+          readOnly: true
+        hostname_matches:
+          type: boolean
+          readOnly: true
+          nullable: true
+        last_checked_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        last_success_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        last_status:
+          allOf:
+          - $ref: '#/components/schemas/TlsCheckStatusEnum'
+          readOnly: true
+        last_error:
+          type: string
+          readOnly: true
+        last_address:
+          type: string
+          readOnly: true
+        tls_version:
+          type: string
+          readOnly: true
+        retired_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        retired_reason:
+          type: string
+          readOnly: true
+        version:
+          type: integer
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        modified_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - asset
+      - asset_hidden
+      - certificate
+      - created_at
+      - enabled
+      - host
+      - hostname_matches
+      - id
+      - last_address
+      - last_checked_at
+      - last_error
+      - last_status
+      - last_success_at
+      - modified_at
+      - note
+      - owner
+      - port
+      - retired_at
+      - retired_reason
+      - service
+      - sni
+      - tls_version
+      - version
+    TlsEndpointWriteRequest:
+      type: object
+      properties:
+        host:
+          type: string
+          minLength: 1
+          maxLength: 300
+        port:
+          type: integer
+          maximum: 65535
+          minimum: 1
+        sni:
+          type: string
+          maxLength: 300
+        asset:
+          type: string
+          format: uuid
+          nullable: true
+        service:
+          type: string
+          maxLength: 200
+        owner:
+          type: string
+          maxLength: 200
+        enabled:
+          type: boolean
+        note:
+          type: string
+          maxLength: 2000
+        reason:
+          type: string
+          maxLength: 500
+      required:
+      - host
     UploadFamilyEnum:
       enum:
       - asset
@@ -13615,6 +14873,8 @@ components:
       - group
       - group_membership
       - license_entitlement
+      - domain
+      - tls_endpoint
       type: string
       description: |-
         * `asset` - asset
@@ -13622,6 +14882,8 @@ components:
         * `group` - group
         * `group_membership` - group_membership
         * `license_entitlement` - license_entitlement
+        * `domain` - domain
+        * `tls_endpoint` - tls_endpoint
     UploadRequest:
       type: object
       properties:

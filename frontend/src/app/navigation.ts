@@ -5,6 +5,7 @@ import {
   Building2,
   FileDown,
   FileUp,
+  Globe,
   History,
   Library,
   LayoutList,
@@ -25,6 +26,8 @@ export interface NavItem {
   permission?: string
   /** Shown when the user holds any of these (areas combining several permissions). */
   anyOf?: string[]
+  /** Other path prefixes that belong to this entry (detail pages under another root). */
+  also?: string[]
   /** Active only on this exact path (not on deeper routes owned by another entry). */
   end?: boolean
 }
@@ -49,6 +52,13 @@ export const SECTIONS: NavSection[] = [
         anyOf: [PERMISSIONS.assetsView, PERMISSIONS.licensesView],
       },
       { to: '/lifecycle', label: 'Lifecycle', icon: History, permission: PERMISSIONS.lifecycleView, end: true },
+      {
+        to: '/domains',
+        label: 'Domains & Certificates',
+        icon: Globe,
+        permission: PERMISSIONS.certificatesView,
+        also: ['/certificates'],
+      },
     ],
   },
   {
@@ -93,8 +103,8 @@ export function locate(pathname: string): { section?: string; page?: string } {
   let best: { section: string; page: string; length: number } | undefined
   for (const section of SECTIONS) {
     for (const item of section.items) {
-      const matches =
-        item.to === '/' ? pathname === '/' : pathname === item.to || pathname.startsWith(`${item.to}/`)
+      const under = (root: string) => pathname === root || pathname.startsWith(`${root}/`)
+      const matches = item.to === '/' ? pathname === '/' : under(item.to) || (item.also ?? []).some(under)
       if (matches && (!best || item.to.length > best.length)) {
         best = { section: section.label, page: item.label, length: item.to.length }
       }

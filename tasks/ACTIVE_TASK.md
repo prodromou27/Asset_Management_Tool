@@ -1,4 +1,58 @@
-# Current Task: 016b | License entitlements/allocations + Software & Licenses area
+# Current Task: 017 | Domain and TLS certificate inventory/expiry
+
+Status: **Complete locally; awaiting CI** (2026-11-04, branch DEV). No real hosts contacted:
+checks were tested against a local TLS server on 127.0.0.1 with generated test certificates.
+
+**Read:** AGENTS.md, docs/00, 03 (Domains), 04 (Domain/TLS endpoints), 06 (Domain and TLS),
+08 (§7), 10 (thresholds), 11 (domain and TLS endpoint templates), 14 (SSRF row), 15 (A11,
+A12), 17.
+
+**Previous:** 016b license entitlements (CI run 41869188389 green).
+
+## Outcome (ASM-56)
+
+- **App `apps.domains`** (`domains.0001_domains_and_certificates`): domains (expiry Unknown
+  unless recorded with evidence; verifier stored), certificates (unique SHA-256, public PEM
+  only), approved TLS endpoints, certificate deployments (rotation history).
+- **Permissions** (`accounts.0011_certificate_permissions`): `certificates.view` all roles;
+  `certificates.manage` System Admin, ITAM Manager, Infrastructure Engineer.
+- **Checks:** TLS handshake only, DNS pinned, metadata/link-local/multicast/reserved/
+  unspecified refused (loopback outside tests), TLS 1.2+, 5 s timeout; every 15 min for
+  endpoints due after 24 h (max 200 per run); "Check now" once a minute; failures keep the
+  last certificate. Settings `ITAM_CERT_WARNING_DAYS`, `ITAM_TLS_CHECK_INTERVAL_HOURS`,
+  `ITAM_TLS_CHECK_TIMEOUT_SECONDS` (Compose pass-through).
+- **API:** domains, certificates (upload), deployments, TLS endpoints (retire, check),
+  `/assets/{id}/certificates/`. **Imports:** `domain`, `tls_endpoint`.
+- **Frontend:** sidebar "Domains & Certificates" with Certificates, TLS endpoints and
+  Domains tabs; certificate page (identifiers, where seen, PEM); asset Certificates tab.
+  Test setup: async query timeout 5 s (parallel suite was flaky at the 1 s default).
+
+## Verification (workstation; SQLite test-only fallback)
+
+- Backend **744 passed, 6 skipped** (PostgreSQL/Redis-only). New: 14 tests (name
+  normalisation and URL refusal, thresholds and last day, A12 domain expiry Unknown and never
+  from a certificate, evidence rule and verifier, upload dedup and private-key refusal, real
+  TLS check with rotation history and hostname match, A11 one certificate on two endpoints,
+  failure keeps last certificate, SSRF guards incl. DNS answer to metadata/loopback with no
+  connection attempted, schedule picks only due enabled endpoints, asset link site scope,
+  permissions, retire closes deployments, domain/endpoint imports with rollback).
+- Migrations applied, reversed (`domains zero`, `accounts 0010`) and reapplied; no drift.
+  OpenAPI validates with `--fail-on-warn`; types regenerated. Ruff clean.
+- Frontend: typecheck, oxlint, **171 tests** (7 new) three consecutive full runs, build pass.
+  Screenshots (mocked API) led to the identifiers layout, wrapping endpoint rows and the
+  top-bar context on certificate pages.
+- Not run: Docker stack, checks against real hosts (needs approved endpoints on the server).
+
+**Open (ASM-56):** chain validation against an internal CA bundle; manage rights for
+Security Analyst; registrar/WHOIS lookups (none: Unknown stays Unknown); domain/certificate
+export family; firewall rules for the outbound checks; expiry notifications (Task 018).
+
+Proposed next task: **018 | SMTP config UI, template engine, outbox and test mail**
+(tasks/BACKLOG.md). Do not start automatically.
+
+---
+
+# Previous record: Task 016b | License entitlements/allocations + Software & Licenses area
 
 Status: **Complete (CI run 41869188389 green)** (2026-11-04, branch DEV). Owner decisions from 016a
 apply (two slices; this is the second). No live sources or credentials used.
@@ -48,9 +102,6 @@ license model), 08 (§6 Software & Licenses), 09 (roles), 11 (license import tem
 **Open (ASM-55):** role grants for `licenses.view`/`licenses.manage` beyond the defaults;
 allocation to directory users/asset owners instead of free text; per-site entitlements;
 renewal notifications (Task 018).
-
-Proposed next task: **017 | Domain and TLS certificate inventory/expiry** (tasks/BACKLOG.md).
-Do not start automatically.
 
 ---
 

@@ -74,6 +74,8 @@ def test_templates_and_download(admin):
         "group",
         "group_membership",
         "license_entitlement",
+        "domain",
+        "tls_endpoint",
     }
     asset = templates["asset"]
     assert asset["version"] == 1 and asset["custom_columns"] is True and asset["allowed"] is True

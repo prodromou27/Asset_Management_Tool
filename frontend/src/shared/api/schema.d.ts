@@ -28,6 +28,13 @@ export interface paths {
   "/api/v1/assets/{id}/archive/": {
     post: operations["assets_archive_create"];
   };
+  "/api/v1/assets/{id}/certificates/": {
+    /**
+     * @description docs/04 GET /assets/{id}/certificates: endpoints linked to the asset with the
+     * certificate each currently presents.
+     */
+    get: operations["assets_certificates_list"];
+  };
   "/api/v1/assets/{id}/classification/": {
     post: operations["assets_classification_create"];
   };
@@ -106,6 +113,17 @@ export interface paths {
   "/api/v1/auth/providers/": {
     get: operations["auth_providers_list"];
   };
+  "/api/v1/certificates/": {
+    get: operations["certificates_list"];
+    post: operations["certificates_create"];
+  };
+  "/api/v1/certificates/{id}/": {
+    get: operations["certificates_retrieve"];
+  };
+  "/api/v1/certificates/deployments/": {
+    /** @description docs/04 GET /certificates/deployments: certificate observations per endpoint. */
+    get: operations["certificates_deployments_list"];
+  };
   "/api/v1/custom-fields/{id}/": {
     patch: operations["custom_fields_partial_update"];
   };
@@ -150,6 +168,17 @@ export interface paths {
   };
   "/api/v1/discovery/sources/": {
     get: operations["discovery_sources_list"];
+  };
+  "/api/v1/domains/": {
+    get: operations["domains_list"];
+    post: operations["domains_create"];
+  };
+  "/api/v1/domains/{id}/": {
+    get: operations["domains_retrieve"];
+    patch: operations["domains_partial_update"];
+  };
+  "/api/v1/domains/{id}/retire/": {
+    post: operations["domains_retire_create"];
   };
   "/api/v1/exports/": {
     get: operations["exports_list"];
@@ -472,6 +501,20 @@ export interface paths {
   };
   "/api/v1/source-links/{id}/unlink/": {
     post: operations["source_links_unlink_create"];
+  };
+  "/api/v1/tls-endpoints/": {
+    get: operations["tls_endpoints_list"];
+    post: operations["tls_endpoints_create"];
+  };
+  "/api/v1/tls-endpoints/{id}/": {
+    get: operations["tls_endpoints_retrieve"];
+    patch: operations["tls_endpoints_partial_update"];
+  };
+  "/api/v1/tls-endpoints/{id}/check/": {
+    post: operations["tls_endpoints_check_create"];
+  };
+  "/api/v1/tls-endpoints/{id}/retire/": {
+    post: operations["tls_endpoints_retire_create"];
   };
   "/api/v1/users/": {
     get: operations["users_list"];
@@ -957,6 +1000,77 @@ export interface components {
      * @enum {string}
      */
     CategoryReviewStatusEnum: "open" | "reclassified" | "dismissed" | "resolved";
+    Certificate: {
+      /** Format: uuid */
+      id: string;
+      fingerprint_sha256: string;
+      subject: string;
+      common_name: string;
+      issuer: string;
+      serial_number: string;
+      sans: readonly string[];
+      /** Format: date-time */
+      not_before: string;
+      /** Format: date-time */
+      not_after: string;
+      expiry: components["schemas"]["Expiry"];
+      signature_algorithm: string;
+      public_key: string;
+      self_signed: boolean;
+      is_ca: boolean;
+      source: components["schemas"]["CertificateSourceEnum"];
+      /** Format: date-time */
+      first_seen_at: string;
+      /** @description Approved endpoints currently presenting it */
+      endpoints: number;
+      note: string;
+    };
+    CertificateDetail: {
+      /** Format: uuid */
+      id: string;
+      fingerprint_sha256: string;
+      subject: string;
+      common_name: string;
+      issuer: string;
+      serial_number: string;
+      sans: readonly string[];
+      /** Format: date-time */
+      not_before: string;
+      /** Format: date-time */
+      not_after: string;
+      expiry: components["schemas"]["Expiry"];
+      signature_algorithm: string;
+      public_key: string;
+      self_signed: boolean;
+      is_ca: boolean;
+      source: components["schemas"]["CertificateSourceEnum"];
+      /** Format: date-time */
+      first_seen_at: string;
+      /** @description Approved endpoints currently presenting it */
+      endpoints: number;
+      note: string;
+      pem: string;
+      deployments: readonly components["schemas"]["Deployment"][];
+    };
+    CertificateRef: {
+      /** Format: uuid */
+      id: string;
+      common_name: string;
+      fingerprint_sha256: string;
+      /** Format: date-time */
+      not_after: string;
+      expiry: components["schemas"]["Expiry"];
+    };
+    /**
+     * @description * `observed` - Observed on an endpoint
+     * * `uploaded` - Uploaded
+     * @enum {string}
+     */
+    CertificateSourceEnum: "observed" | "uploaded";
+    CertificateUploadRequest: {
+      pem: string;
+      note?: string;
+    };
     ChangePasswordRequest: {
       current_password: string;
       new_password: string;
@@ -1113,6 +1227,25 @@ export interface components {
      * @enum {string}
      */
     DependencyStatusStatusEnum: "up" | "down";
+    Deployment: {
+      id: number;
+      endpoint: components["schemas"]["DeploymentEndpointRef"];
+      certificate: components["schemas"]["CertificateRef"];
+      /** Format: date-time */
+      first_seen_at: string;
+      /** Format: date-time */
+      last_seen_at: string;
+      /** Format: date-time */
+      replaced_at: string | null;
+      current: boolean;
+    };
+    DeploymentEndpointRef: {
+      /** Format: uuid */
+      id: string;
+      label: string;
+      service: string;
+      retired: boolean;
+    };
     DirectoryUserRef: {
       /** Format: uuid */
       id: string;
@@ -1141,6 +1274,41 @@ export interface components {
      * @enum {string}
      */
     DiscoverySourceKindEnum: "network" | "endpoint" | "security" | "directory" | "import";
+    Domain: {
+      /** Format: uuid */
+      id: string;
+      fqdn: string;
+      owner: string;
+      registrar: string;
+      /** Format: date */
+      expires_on: string | null;
+      expiry_evidence: string;
+      expiry_verified_by: string | null;
+      /** Format: date-time */
+      expiry_verified_at: string | null;
+      expiry: components["schemas"]["Expiry"];
+      auto_renew: boolean | null;
+      note: string;
+      /** Format: date-time */
+      retired_at: string | null;
+      retired_reason: string;
+      version: number;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      modified_at: string;
+    };
+    DomainWriteRequest: {
+      fqdn: string;
+      owner?: string;
+      registrar?: string;
+      /** Format: date */
+      expires_on?: string | null;
+      expiry_evidence?: string;
+      auto_renew?: boolean | null;
+      note?: string;
+      reason?: string;
+    };
     EndpointSecurityState: {
       /** Format: uuid */
       id: string;
@@ -1206,6 +1374,20 @@ export interface components {
      * @enum {string}
      */
     EvidenceSourceEnum: "manual" | "librenms" | "endpoint_central" | "intune" | "defender" | "import" | "fixture";
+    Expiry: {
+      status: components["schemas"]["ExpiryStatusEnum"];
+      days_remaining: number | null;
+      /** @description Warning threshold reached */
+      threshold: number | null;
+    };
+    /**
+     * @description * `unknown` - unknown
+     * * `ok` - ok
+     * * `expiring` - expiring
+     * * `expired` - expired
+     * @enum {string}
+     */
+    ExpiryStatusEnum: "unknown" | "ok" | "expiring" | "expired";
     ExportColumn: {
       key: string;
       label: string;
@@ -2595,6 +2777,24 @@ export interface components {
       previous_cursor: string | null;
       count: number;
     };
+    PaginatedCertificateList: {
+      items: components["schemas"]["Certificate"][];
+      next_cursor: string | null;
+      previous_cursor: string | null;
+      count: number;
+    };
+    PaginatedDeploymentList: {
+      items: components["schemas"]["Deployment"][];
+      next_cursor: string | null;
+      previous_cursor: string | null;
+      count: number;
+    };
+    PaginatedDomainList: {
+      items: components["schemas"]["Domain"][];
+      next_cursor: string | null;
+      previous_cursor: string | null;
+      count: number;
+    };
     PaginatedExportJobList: {
       items: components["schemas"]["ExportJob"][];
       next_cursor: string | null;
@@ -2703,6 +2903,12 @@ export interface components {
       previous_cursor: string | null;
       count: number;
     };
+    PaginatedTlsEndpointList: {
+      items: components["schemas"]["TlsEndpoint"][];
+      next_cursor: string | null;
+      previous_cursor: string | null;
+      count: number;
+    };
     PaginatedUserList: {
       items: components["schemas"]["User"][];
       next_cursor: string | null;
@@ -2768,6 +2974,17 @@ export interface components {
       name?: string;
       code?: string;
       is_active?: boolean;
+    };
+    PatchedDomainWriteRequest: {
+      fqdn?: string;
+      owner?: string;
+      registrar?: string;
+      /** Format: date */
+      expires_on?: string | null;
+      expiry_evidence?: string;
+      auto_renew?: boolean | null;
+      note?: string;
+      reason?: string;
     };
     PatchedFieldAuthorityPolicyRequest: {
       precedence?: {
@@ -2902,6 +3119,18 @@ export interface components {
       parent?: string | null;
       description?: string;
       is_active?: boolean;
+    };
+    PatchedTlsEndpointWriteRequest: {
+      host?: string;
+      port?: number;
+      sni?: string;
+      /** Format: uuid */
+      asset?: string | null;
+      service?: string;
+      owner?: string;
+      enabled?: boolean;
+      note?: string;
+      reason?: string;
     };
     PatchedUserUpdateRequest: {
       display_name?: string;
@@ -3473,15 +3702,77 @@ export interface components {
       custom_columns: boolean;
       allowed: boolean;
     };
+    TlsAssetRef: {
+      /** Format: uuid */
+      id: string;
+      name: string;
+      site_code: string;
+    };
+    /**
+     * @description * `never` - Not checked yet
+     * * `ok` - Certificate read
+     * * `failed` - Check failed
+     * * `blocked` - Target not allowed
+     * @enum {string}
+     */
+    TlsCheckStatusEnum: "never" | "ok" | "failed" | "blocked";
+    TlsEndpoint: {
+      /** Format: uuid */
+      id: string;
+      host: string;
+      /** @default 443 */
+      port: number;
+      /** @default */
+      sni: string;
+      asset: components["schemas"]["TlsAssetRef"] | null;
+      /** @description Linked to an asset outside your sites */
+      asset_hidden: boolean;
+      service: string;
+      owner: string;
+      enabled: boolean;
+      note: string;
+      certificate: components["schemas"]["CertificateRef"] | null;
+      hostname_matches: boolean | null;
+      /** Format: date-time */
+      last_checked_at: string | null;
+      /** Format: date-time */
+      last_success_at: string | null;
+      last_status: components["schemas"]["TlsCheckStatusEnum"];
+      last_error: string;
+      last_address: string;
+      tls_version: string;
+      /** Format: date-time */
+      retired_at: string | null;
+      retired_reason: string;
+      version: number;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      modified_at: string;
+    };
+    TlsEndpointWriteRequest: {
+      host: string;
+      port?: number;
+      sni?: string;
+      /** Format: uuid */
+      asset?: string | null;
+      service?: string;
+      owner?: string;
+      enabled?: boolean;
+      note?: string;
+      reason?: string;
+    };
     /**
      * @description * `asset` - asset
      * * `location` - location
      * * `group` - group
      * * `group_membership` - group_membership
      * * `license_entitlement` - license_entitlement
+     * * `domain` - domain
+     * * `tls_endpoint` - tls_endpoint
      * @enum {string}
      */
-    UploadFamilyEnum: "asset" | "location" | "group" | "group_membership" | "license_entitlement";
+    UploadFamilyEnum: "asset" | "location" | "group" | "group_membership" | "license_entitlement" | "domain" | "tls_endpoint";
     UploadRequest: {
       family: components["schemas"]["UploadFamilyEnum"];
       /** Format: binary */
@@ -3811,6 +4102,24 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["AssetDetail"];
+        };
+      };
+    };
+  };
+  /**
+   * @description docs/04 GET /assets/{id}/certificates: endpoints linked to the asset with the
+   * certificate each currently presents.
+   */
+  assets_certificates_list: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["TlsEndpoint"][];
         };
       };
     };
@@ -4241,6 +4550,88 @@ export interface operations {
       };
     };
   };
+  certificates_list: {
+    parameters: {
+      query?: {
+        /** @description The pagination cursor value. */
+        cursor?: string;
+        /** @description Only certificates on an endpoint */
+        deployed?: boolean;
+        expiry?: "expired" | "expiring" | "ok" | "unknown";
+        /** @description Number of results to return per page. */
+        page_size?: number;
+        /** @description Name, SAN, issuer or fingerprint */
+        q?: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["PaginatedCertificateList"];
+        };
+      };
+    };
+  };
+  certificates_create: {
+    parameters: {
+      query?: {
+        /** @description The pagination cursor value. */
+        cursor?: string;
+        /** @description Number of results to return per page. */
+        page_size?: number;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CertificateUploadRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["CertificateUploadRequest"];
+        "multipart/form-data": components["schemas"]["CertificateUploadRequest"];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          "application/json": components["schemas"]["PaginatedCertificateList"];
+        };
+      };
+    };
+  };
+  certificates_retrieve: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["CertificateDetail"];
+        };
+      };
+    };
+  };
+  /** @description docs/04 GET /certificates/deployments: certificate observations per endpoint. */
+  certificates_deployments_list: {
+    parameters: {
+      query?: {
+        certificate?: string;
+        /** @description Only certificates still presented */
+        current?: boolean;
+        /** @description The pagination cursor value. */
+        cursor?: string;
+        endpoint?: string;
+        /** @description Number of results to return per page. */
+        page_size?: number;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["PaginatedDeploymentList"];
+        };
+      };
+    };
+  };
   custom_fields_partial_update: {
     parameters: {
       header: {
@@ -4549,6 +4940,105 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["DiscoverySource"][];
+        };
+      };
+    };
+  };
+  domains_list: {
+    parameters: {
+      query?: {
+        /** @description The pagination cursor value. */
+        cursor?: string;
+        expiry?: "expired" | "expiring" | "ok" | "unknown";
+        include_retired?: boolean;
+        /** @description Number of results to return per page. */
+        page_size?: number;
+        /** @description Domain, owner or registrar */
+        q?: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["PaginatedDomainList"];
+        };
+      };
+    };
+  };
+  domains_create: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DomainWriteRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["DomainWriteRequest"];
+        "multipart/form-data": components["schemas"]["DomainWriteRequest"];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          "application/json": components["schemas"]["Domain"];
+        };
+      };
+    };
+  };
+  domains_retrieve: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["Domain"];
+        };
+      };
+    };
+  };
+  domains_partial_update: {
+    parameters: {
+      header: {
+        "If-Match": string;
+      };
+      path: {
+        id: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["PatchedDomainWriteRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["PatchedDomainWriteRequest"];
+        "multipart/form-data": components["schemas"]["PatchedDomainWriteRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["Domain"];
+        };
+      };
+    };
+  };
+  domains_retire_create: {
+    parameters: {
+      header: {
+        "If-Match": string;
+      };
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ReasonRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["ReasonRequest"];
+        "multipart/form-data": components["schemas"]["ReasonRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["Domain"];
         };
       };
     };
@@ -6663,6 +7153,120 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["SourceLink"];
+        };
+      };
+    };
+  };
+  tls_endpoints_list: {
+    parameters: {
+      query?: {
+        asset?: string;
+        /** @description The pagination cursor value. */
+        cursor?: string;
+        include_retired?: boolean;
+        /** @description Number of results to return per page. */
+        page_size?: number;
+        /** @description Host, SNI, service or owner */
+        q?: string;
+        status?: "blocked" | "failed" | "never" | "ok";
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["PaginatedTlsEndpointList"];
+        };
+      };
+    };
+  };
+  tls_endpoints_create: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["TlsEndpointWriteRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["TlsEndpointWriteRequest"];
+        "multipart/form-data": components["schemas"]["TlsEndpointWriteRequest"];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          "application/json": components["schemas"]["TlsEndpoint"];
+        };
+      };
+    };
+  };
+  tls_endpoints_retrieve: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["TlsEndpoint"];
+        };
+      };
+    };
+  };
+  tls_endpoints_partial_update: {
+    parameters: {
+      header: {
+        "If-Match": string;
+      };
+      path: {
+        id: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["PatchedTlsEndpointWriteRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["PatchedTlsEndpointWriteRequest"];
+        "multipart/form-data": components["schemas"]["PatchedTlsEndpointWriteRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["TlsEndpoint"];
+        };
+      };
+    };
+  };
+  tls_endpoints_check_create: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["TlsEndpoint"];
+        };
+      };
+    };
+  };
+  tls_endpoints_retire_create: {
+    parameters: {
+      header: {
+        "If-Match": string;
+      };
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ReasonRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["ReasonRequest"];
+        "multipart/form-data": components["schemas"]["ReasonRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["TlsEndpoint"];
         };
       };
     };

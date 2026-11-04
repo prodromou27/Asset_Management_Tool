@@ -1909,3 +1909,22 @@ code,
 .page > .section-title {
   margin-top: var(--space-6);
 }
+
+/* ---- Task 017: domains and certificates ------------------------------------------ */
+
+.pre-wrap {
+  margin: var(--space-3) 0 0;
+  white-space: pre-wrap;
+  word-break: break-all;
+  font-size: 12px;
+}
+
+details.panel > summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.panel + .section-title,
+.kpi-strip + .panel {
+  margin-top: var(--space-6);
+}

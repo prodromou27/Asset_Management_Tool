@@ -33,6 +33,8 @@ EXPORTS_PERSONAL = "exports.personal"
 LIFECYCLE_VIEW = "lifecycle.view"
 LIFECYCLE_MANAGE = "lifecycle.manage"
 LIFECYCLE_APPROVE = "lifecycle.approve"
+CERTIFICATES_VIEW = "certificates.view"
+CERTIFICATES_MANAGE = "certificates.manage"
 
 PERMISSIONS: dict[str, str] = {
     USERS_VIEW: "View user accounts, role assignments and access review data",
@@ -66,6 +68,10 @@ PERMISSIONS: dict[str, str] = {
     LIFECYCLE_VIEW: "View lifecycle catalogue, evidence and asset lifecycle assessments",
     LIFECYCLE_MANAGE: "Add and edit lifecycle products, aliases, sources and dates (unverified)",
     LIFECYCLE_APPROVE: "Verify lifecycle evidence, approve or reject matches and grant exceptions",
+    CERTIFICATES_VIEW: "View domains, TLS certificates and approved TLS endpoints",
+    CERTIFICATES_MANAGE: (
+        "Maintain domains, upload certificates and approve, check or retire TLS endpoints"
+    ),
 }
 
 SYSTEM_ADMIN = "system_admin"
@@ -103,6 +109,8 @@ ROLES: list[tuple[str, str, str, list[str]]] = [
             LIFECYCLE_VIEW,
             LIFECYCLE_MANAGE,
             LIFECYCLE_APPROVE,
+            CERTIFICATES_VIEW,
+            CERTIFICATES_MANAGE,
         ],
     ),
     (
@@ -118,13 +126,22 @@ ROLES: list[tuple[str, str, str, list[str]]] = [
             EXPORTS_RUN,
             LIFECYCLE_VIEW,
             LIFECYCLE_MANAGE,
+            CERTIFICATES_VIEW,
+            CERTIFICATES_MANAGE,
         ],
     ),
     (
         "security_analyst",
         "Security Analyst",
         "Read and investigate assets; flag high-risk lifecycle findings.",
-        [ASSETS_VIEW, DISCOVERY_VIEW, GROUPS_VIEW, EXPORTS_RUN, LIFECYCLE_VIEW],
+        [
+            ASSETS_VIEW,
+            DISCOVERY_VIEW,
+            GROUPS_VIEW,
+            EXPORTS_RUN,
+            LIFECYCLE_VIEW,
+            CERTIFICATES_VIEW,
+        ],
     ),
     (
         "asset_operator",
@@ -140,6 +157,7 @@ ROLES: list[tuple[str, str, str, list[str]]] = [
             EXPORTS_RUN,
             EXPORTS_PERSONAL,
             LIFECYCLE_VIEW,
+            CERTIFICATES_VIEW,
         ],
     ),
     (
@@ -157,13 +175,14 @@ ROLES: list[tuple[str, str, str, list[str]]] = [
             GROUPS_VIEW,
             EXPORTS_RUN,
             LIFECYCLE_VIEW,
+            CERTIFICATES_VIEW,
         ],
     ),
     (
         "read_only",
         "Read Only",
         "Site-scoped read access.",
-        [ASSETS_VIEW, GROUPS_VIEW, EXPORTS_RUN, LIFECYCLE_VIEW],
+        [ASSETS_VIEW, GROUPS_VIEW, EXPORTS_RUN, LIFECYCLE_VIEW, CERTIFICATES_VIEW],
     ),
 ]
 

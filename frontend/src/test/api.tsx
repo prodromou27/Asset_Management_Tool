@@ -100,6 +100,8 @@ const ALL_ADMIN = [
   'lifecycle.view',
   'lifecycle.manage',
   'lifecycle.approve',
+  'certificates.view',
+  'certificates.manage',
   'reconciliation.decide',
   'audit.view',
   'categories.manage',

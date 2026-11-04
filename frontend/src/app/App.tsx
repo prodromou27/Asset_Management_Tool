@@ -17,6 +17,8 @@ import { GroupsPage } from '../features/groups/GroupsPage'
 import { ImportJobPage } from '../features/imports/ImportJobPage'
 import { ImportsPage } from '../features/imports/ImportsPage'
 import { LicenseProductPage } from '../features/licenses/LicenseProductPage'
+import { CertificatePage } from '../features/domains/CertificatePage'
+import { DomainsPage } from '../features/domains/DomainsPage'
 import { SubscriptionPage } from '../features/licenses/SubscriptionPage'
 import { DiscoveryPage } from '../features/discovery/DiscoveryPage'
 import { SitesPage } from '../features/admin-sites/SitesPage'
@@ -199,6 +201,22 @@ export function AppRoutes() {
         element={
           <Protected permission={PERMISSIONS.importsRun} what="imports">
             <ImportJobPage />
+          </Protected>
+        }
+      />
+      <Route
+        path="/domains"
+        element={
+          <Protected permission={PERMISSIONS.certificatesView} what="domains and certificates">
+            <DomainsPage />
+          </Protected>
+        }
+      />
+      <Route
+        path="/certificates/:id"
+        element={
+          <Protected permission={PERMISSIONS.certificatesView} what="certificates">
+            <CertificatePage />
           </Protected>
         }
       />

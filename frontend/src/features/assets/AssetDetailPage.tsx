@@ -1,4 +1,5 @@
 import { AssetSoftwarePanel } from '../software/AssetSoftwarePanel'
+import { AssetCertificatesPanel } from '../domains/CertificatePage'
 import { AssetLifecyclePanel } from '../lifecycle/AssetLifecyclePanel'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
@@ -179,6 +180,9 @@ export function AssetDetailPage() {
           },
           ...(can(PERMISSIONS.lifecycleView)
             ? [{ id: 'lifecycle', label: 'Lifecycle', content: <AssetLifecyclePanel assetId={data.id} /> }]
+            : []),
+          ...(can(PERMISSIONS.certificatesView)
+            ? [{ id: 'certificates', label: 'Certificates', content: <AssetCertificatesPanel assetId={data.id} /> }]
             : []),
           { id: 'history', label: 'History', content: <History assetId={data.id} /> },
         ]}

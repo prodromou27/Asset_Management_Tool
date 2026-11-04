@@ -5,6 +5,12 @@ from apps.accounts import views as account_views
 from apps.accounts.urls import auth_urlpatterns, user_urlpatterns
 from apps.assets import saved_views
 from apps.assets.urls import asset_urlpatterns, category_urlpatterns, custom_field_urlpatterns
+from apps.domains.urls import asset_urlpatterns as certificate_asset_urlpatterns
+from apps.domains.urls import (
+    certificate_urlpatterns,
+    domain_urlpatterns,
+    endpoint_urlpatterns,
+)
 from apps.lifecycle.urls import asset_urlpatterns as lifecycle_asset_urlpatterns
 from apps.organizations.urls import (
     department_urlpatterns,
@@ -53,6 +59,10 @@ urlpatterns = [
     path("api/v1/assets/", include(lifecycle_asset_urlpatterns)),
     path("api/v1/software/", include("apps.software.urls")),
     path("api/v1/assets/", include(software_asset_urlpatterns)),
+    path("api/v1/domains/", include(domain_urlpatterns)),
+    path("api/v1/certificates/", include(certificate_urlpatterns)),
+    path("api/v1/tls-endpoints/", include(endpoint_urlpatterns)),
+    path("api/v1/assets/", include(certificate_asset_urlpatterns)),
     path("api/v1/saved-views/", saved_views.SavedViewListCreateView.as_view(), name="saved-views"),
     path(
         "api/v1/saved-views/<uuid:pk>/",
