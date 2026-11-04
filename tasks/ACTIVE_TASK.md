@@ -1,6 +1,6 @@
 # Current Task: 013 | CSV/XLSX imports with preview/guarded upsert
 
-Status: **Complete (workstation-verified; CI pending at the time of writing)**
+Status: **Complete (CI run 41797570026 green)**
 (2026-11-04, branch DEV).
 
 **Read:** AGENTS.md, docs/00, 04 (Import/export endpoints, idempotency), 08 (§10 Import/Export
@@ -141,6 +141,9 @@ read-only to `audit.view` holders.
   - Fix: widen the column to 100 (`imports.0002_widen_row_target`), and any unexpected
     preview failure now returns the job to "uploaded" with a message.
   - Regression tests added for both; backend now 606 passed locally.
+- GitHub CI run 41797570026 on `ccddf26` (PostgreSQL 16 + Redis 7): backend **612 passed,
+  0 skipped**; migrations applied and reversed (including `imports`); OpenAPI drift check;
+  frontend 122 tests; Compose config and production image builds pass.
 - Not run: Docker stack, Playwright, browser review at 1440×900 and 390×844.
 
 **Open:**
