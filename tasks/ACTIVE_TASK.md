@@ -1,6 +1,6 @@
 # Current Task: Simple installation (HTTP first, HTTPS later)
 
-Status: **Complete locally; awaiting CI** (2026-11-04, branch DEV). Owner request: make
+Status: **Complete (CI run 41811176901 green)** (2026-11-04, branch DEV). Owner request: make
 the installation simpler, run on port 80 without a certificate, and let an administrator
 add a certificate later. Replaces the earlier five-script staging kit.
 
@@ -30,6 +30,8 @@ add a certificate later. Replaces the earlier five-script staging kit.
   scheme are refused.
 - `check --deploy --fail-level WARNING` passes in both modes. Ruff clean. `bash -n` on
   both scripts.
+- GitHub CI run 41811176901 on `ce1a7ee`: backend **619 passed, 0 skipped**, frontend 122,
+  Compose config (ports 80,443; http mode selects http.conf) and image builds pass.
 - Not run: the scripts on AlmaLinux or the Docker stack.
 
 Proposed next task: **014 | CSV/XLSX/JSON exports with RBAC and async jobs**
