@@ -8,6 +8,7 @@ Graph host, https, port 443, no userinfo, and the expected collection path, so t
 token can never be sent anywhere else.
 """
 
+import re
 from urllib.parse import urlparse
 
 import httpx
@@ -50,7 +51,9 @@ class GraphClient(ReadOnlyClient):
     required_permission = REQUIRED_PERMISSION
     license_hint = "and the tenant needs an active Intune license"
     # Continuations are allowed only for these collection paths (after the prefix).
-    continuation_paths = ("/deviceManagement/managedDevices",)
+    continuation_paths = ("/deviceManagement/managedDevices", "/deviceManagement/detectedApps")
+    # ...and per-app device lists (Task 016a; app IDs are opaque path segments).
+    continuation_patterns = (r"/deviceManagement/detectedApps/[^/]+/managedDevices",)
 
     def __init__(self, tokens: TokenProvider, **kwargs):
         kwargs.pop("auth_scheme", None)
@@ -76,7 +79,11 @@ class GraphClient(ReadOnlyClient):
     def check_continuation(self, url: str) -> str:
         super().check_continuation(url)
         path = urlparse(url).path
-        if path not in {f"{self.api_prefix}{p}" for p in self.continuation_paths}:
+        allowed = path in {f"{self.api_prefix}{p}" for p in self.continuation_paths} or any(
+            re.fullmatch(f"{re.escape(self.api_prefix)}{pattern}", path)
+            for pattern in getattr(self, "continuation_patterns", ())
+        )
+        if not allowed:
             raise UnsafeTarget(
                 f"{self.source_label} returned a continuation link for an unexpected "
                 "resource; it was not followed."

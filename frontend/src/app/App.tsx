@@ -10,6 +10,8 @@ import { ExportsPage } from '../features/exports/ExportsPage'
 import { CataloguePage } from '../features/lifecycle/CataloguePage'
 import { LifecyclePage } from '../features/lifecycle/LifecyclePage'
 import { ProductPage } from '../features/lifecycle/ProductPage'
+import { SoftwarePage } from '../features/software/SoftwarePage'
+import { SoftwareProductPage } from '../features/software/SoftwareProductPage'
 import { GroupDetailPage } from '../features/groups/GroupDetailPage'
 import { GroupsPage } from '../features/groups/GroupsPage'
 import { ImportJobPage } from '../features/imports/ImportJobPage'
@@ -125,6 +127,22 @@ export function AppRoutes() {
         element={
           <Protected permission={PERMISSIONS.groupsView} what="groups">
             <GroupDetailPage />
+          </Protected>
+        }
+      />
+      <Route
+        path="/software"
+        element={
+          <Protected permission={PERMISSIONS.assetsView} what="software">
+            <SoftwarePage />
+          </Protected>
+        }
+      />
+      <Route
+        path="/software/products/:id"
+        element={
+          <Protected permission={PERMISSIONS.assetsView} what="software">
+            <SoftwareProductPage />
           </Protected>
         }
       />

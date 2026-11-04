@@ -49,6 +49,7 @@ SNAPSHOT_FIELDS = (
     "default_vrf",
     "stale_after_hours",
     "auto_link_strong_matches",
+    "collect_software",
 )
 
 

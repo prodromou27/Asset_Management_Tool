@@ -25,3 +25,11 @@ user names, e-mail addresses or phone numbers. Times are UTC (around 2026-11-02 
 **Property names come from the Graph v1.0 `managedDevice` documentation; the values are
 not captures from a real tenant.** Before live use, compare them with a sanitized
 response from the approved tenant (docs/17 DEC-07, ASM-33).
+
+## Detected apps (Task 016a)
+
+`detectedApps` lists four invented apps (one with `deviceCount` 0, one reported only on a
+device that is not in the managed-device list); `detectedAppDevices` maps each app ID to the
+managed device IDs the test fake returns from
+`/deviceManagement/detectedApps/{id}/managedDevices`. Property names follow the Graph v1.0
+`detectedApp` resource; verify against a sanitized tenant capture (DEC-07, ASM-54).

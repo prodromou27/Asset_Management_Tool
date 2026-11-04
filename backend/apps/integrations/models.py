@@ -122,6 +122,9 @@ class IntegrationInstance(models.Model):
     last_test_ok = models.BooleanField(null=True, blank=True)
     last_test_message = models.CharField(max_length=500, blank=True)
     source_software_version = models.CharField(max_length=100, blank=True)
+    # Task 016a: read installed software (Endpoint Central softwareInfo, Intune detected
+    # apps). Off by default: it adds API requests (docs/17 ASM-54).
+    collect_software = models.BooleanField(default=False)
     capabilities = models.JSONField(default=dict, blank=True)
     consecutive_failures = models.PositiveIntegerField(default=0)
 

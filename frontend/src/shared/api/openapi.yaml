@@ -918,6 +918,66 @@ paths:
                 items:
                   $ref: '#/components/schemas/EndpointSecurityState'
           description: ''
+  /api/v1/assets/{id}/software/:
+    get:
+      operationId: assets_software_list
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      - in: query
+        name: removed
+        schema:
+          type: boolean
+        description: Include removed entries
+      tags:
+      - assets
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SoftwareInstallation'
+          description: ''
+    post:
+      operationId: assets_software_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - assets
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ManualSoftwareRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ManualSoftwareRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ManualSoftwareRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoftwareInstallation'
+          description: ''
   /api/v1/audit/events/:
     get:
       operationId: audit_events_list
@@ -4393,6 +4453,221 @@ paths:
               schema:
                 $ref: '#/components/schemas/Site'
           description: ''
+  /api/v1/software/installations/:
+    get:
+      operationId: software_installations_list
+      parameters:
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - in: query
+        name: lifecycle_status
+        schema:
+          type: string
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: product
+        schema:
+          type: integer
+      - in: query
+        name: q
+        schema:
+          type: string
+        description: Product or publisher
+      - in: query
+        name: version
+        schema:
+          type: integer
+      tags:
+      - software
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSoftwareInstallationList'
+          description: ''
+  /api/v1/software/installations/{id}/remove/:
+    post:
+      operationId: software_installations_remove_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - software
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoftwareInstallation'
+          description: ''
+  /api/v1/software/products/:
+    get:
+      operationId: software_products_list
+      parameters:
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - in: query
+        name: installed
+        schema:
+          type: boolean
+        description: Only products installed in your sites
+      - in: query
+        name: lifecycle
+        schema:
+          type: string
+        description: ended | review
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: publisher
+        schema:
+          type: string
+      - in: query
+        name: q
+        schema:
+          type: string
+      tags:
+      - software
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSoftwareProductList'
+          description: ''
+  /api/v1/software/products/{id}/:
+    get:
+      operationId: software_products_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - software
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoftwareProductDetail'
+          description: ''
+  /api/v1/software/versions/{id}/lifecycle/approve/:
+    post:
+      operationId: software_versions_lifecycle_approve_create
+      parameters:
+      - in: header
+        name: If-Match
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - software
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VersionApproveRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/VersionApproveRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/VersionApproveRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoftwareVersion'
+          description: ''
+  /api/v1/software/versions/{id}/lifecycle/reject/:
+    post:
+      operationId: software_versions_lifecycle_reject_create
+      parameters:
+      - in: header
+        name: If-Match
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - software
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VersionRejectRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/VersionRejectRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/VersionRejectRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SoftwareVersion'
+          description: ''
   /api/v1/source-links/{id}/unlink/:
     post:
       operationId: source_links_unlink_create
@@ -6179,12 +6454,15 @@ components:
           type: boolean
         uses_detail_refresh:
           type: boolean
+        supports_software:
+          type: boolean
       required:
       - auth_schemes
       - fixed_base_url
       - permissions
       - required_settings
       - supports_evidence
+      - supports_software
       - uses_detail_refresh
       - uses_source_timezone
     CustomFieldCreateRequest:
@@ -7430,6 +7708,20 @@ components:
         * `create_only` - Create only
         * `update_matched` - Update matched
         * `upsert` - Create and update
+    InstallAsset:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        site_code:
+          type: string
+      required:
+      - id
+      - name
+      - site_code
     InstanceRef:
       type: object
       properties:
@@ -7479,6 +7771,9 @@ components:
           type: integer
           readOnly: true
         auto_link_strong_matches:
+          type: boolean
+          readOnly: true
+        collect_software:
           type: boolean
           readOnly: true
         last_attempt_at:
@@ -7632,6 +7927,7 @@ components:
       - ca_bundle_ref
       - capabilities
       - client_id
+      - collect_software
       - connector
       - consecutive_failures
       - created_at
@@ -7710,6 +8006,8 @@ components:
           maximum: 720
           minimum: 1
         auto_link_strong_matches:
+          type: boolean
+        collect_software:
           type: boolean
         is_enabled:
           type: boolean
@@ -9386,6 +9684,31 @@ components:
       required:
       - password
       - username
+    ManualSoftwareRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 300
+        publisher:
+          type: string
+          default: ''
+          maxLength: 200
+        version:
+          type: string
+          default: ''
+          maxLength: 100
+        installed_on:
+          type: string
+          format: date
+          nullable: true
+        note:
+          type: string
+          default: ''
+          maxLength: 500
+      required:
+      - name
     Match:
       type: object
       properties:
@@ -10201,6 +10524,46 @@ components:
           nullable: true
         count:
           type: integer
+    PaginatedSoftwareInstallationList:
+      type: object
+      required:
+      - items
+      - next_cursor
+      - previous_cursor
+      - count
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/SoftwareInstallation'
+        next_cursor:
+          type: string
+          nullable: true
+        previous_cursor:
+          type: string
+          nullable: true
+        count:
+          type: integer
+    PaginatedSoftwareProductList:
+      type: object
+      required:
+      - items
+      - next_cursor
+      - previous_cursor
+      - count
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/SoftwareProduct'
+        next_cursor:
+          type: string
+          nullable: true
+        previous_cursor:
+          type: string
+          nullable: true
+        count:
+          type: integer
     PaginatedSyncRunList:
       type: object
       required:
@@ -10454,6 +10817,8 @@ components:
           maximum: 720
           minimum: 1
         auto_link_strong_matches:
+          type: boolean
+        collect_software:
           type: boolean
         is_enabled:
           type: boolean
@@ -11402,6 +11767,254 @@ components:
       - suspended_units
       - taken_at
       - warning_units
+    SoftwareInstallation:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        product_id:
+          type: integer
+          readOnly: true
+        publisher:
+          type: string
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+        version:
+          type: string
+          readOnly: true
+        version_id:
+          type: integer
+          readOnly: true
+        lifecycle_status:
+          allOf:
+          - $ref: '#/components/schemas/LifecycleStatusEnum'
+          readOnly: true
+        raw_publisher:
+          type: string
+          readOnly: true
+        raw_name:
+          type: string
+          readOnly: true
+        raw_version:
+          type: string
+          readOnly: true
+        source:
+          type: string
+          readOnly: true
+        external_id:
+          type: string
+          readOnly: true
+        asset:
+          allOf:
+          - $ref: '#/components/schemas/InstallAsset'
+          nullable: true
+          readOnly: true
+        installed_on:
+          type: string
+          format: date
+          readOnly: true
+          nullable: true
+        first_seen_at:
+          type: string
+          format: date-time
+          readOnly: true
+        last_seen_at:
+          type: string
+          format: date-time
+          readOnly: true
+        removed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        removed_reason:
+          type: string
+          readOnly: true
+        created_by:
+          type: string
+          readOnly: true
+          nullable: true
+        note:
+          type: string
+          readOnly: true
+      required:
+      - asset
+      - created_by
+      - external_id
+      - first_seen_at
+      - id
+      - installed_on
+      - last_seen_at
+      - lifecycle_status
+      - name
+      - note
+      - product_id
+      - publisher
+      - raw_name
+      - raw_publisher
+      - raw_version
+      - removed_at
+      - removed_reason
+      - source
+      - version
+      - version_id
+    SoftwareProduct:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        publisher:
+          type: string
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+        version_count:
+          type: integer
+          readOnly: true
+        installations:
+          type: integer
+          readOnly: true
+          description: In your sites
+        eos_versions:
+          type: integer
+          readOnly: true
+          description: Versions past end of support or end of security updates
+      required:
+      - eos_versions
+      - id
+      - installations
+      - name
+      - publisher
+      - version_count
+    SoftwareProductDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        publisher:
+          type: string
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+        version_count:
+          type: integer
+          readOnly: true
+        installations:
+          type: integer
+          readOnly: true
+          description: In your sites
+        eos_versions:
+          type: integer
+          readOnly: true
+          description: Versions past end of support or end of security updates
+        versions:
+          type: array
+          items:
+            $ref: '#/components/schemas/SoftwareVersion'
+          readOnly: true
+      required:
+      - eos_versions
+      - id
+      - installations
+      - name
+      - publisher
+      - version_count
+      - versions
+    SoftwareVersion:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        version:
+          type: string
+          readOnly: true
+        installations:
+          type: integer
+          readOnly: true
+          description: In your sites
+        lifecycle_state:
+          type: string
+          readOnly: true
+        lifecycle_method:
+          type: string
+          readOnly: true
+        lifecycle_product:
+          allOf:
+          - $ref: '#/components/schemas/LifecycleProductRef'
+          readOnly: true
+          nullable: true
+        lifecycle_candidates:
+          type: array
+          items:
+            $ref: '#/components/schemas/LifecycleCandidate'
+          readOnly: true
+        lifecycle_status:
+          allOf:
+          - $ref: '#/components/schemas/LifecycleStatusEnum'
+          readOnly: true
+        lifecycle_milestone_type:
+          type: string
+          readOnly: true
+        lifecycle_milestone_date:
+          type: string
+          format: date
+          readOnly: true
+          nullable: true
+        lifecycle_days_remaining:
+          type: integer
+          readOnly: true
+          nullable: true
+        lifecycle_evidence_quality:
+          type: string
+          readOnly: true
+        lifecycle_reasons:
+          type: array
+          items:
+            type: string
+          readOnly: true
+        lifecycle_reviewed_by:
+          type: string
+          readOnly: true
+          nullable: true
+        lifecycle_reviewed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        lifecycle_assessed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        lifecycle_version:
+          type: integer
+          readOnly: true
+      required:
+      - id
+      - installations
+      - lifecycle_assessed_at
+      - lifecycle_candidates
+      - lifecycle_days_remaining
+      - lifecycle_evidence_quality
+      - lifecycle_method
+      - lifecycle_milestone_date
+      - lifecycle_milestone_type
+      - lifecycle_product
+      - lifecycle_reasons
+      - lifecycle_reviewed_at
+      - lifecycle_reviewed_by
+      - lifecycle_state
+      - lifecycle_status
+      - lifecycle_version
+      - version
     SourceLink:
       type: object
       properties:
@@ -12208,6 +12821,30 @@ components:
       required:
       - alias
       - vendor
+    VersionApproveRequest:
+      type: object
+      properties:
+        product:
+          type: string
+          format: uuid
+        remember_alias:
+          type: boolean
+          default: false
+        note:
+          type: string
+          default: ''
+          maxLength: 500
+      required:
+      - product
+    VersionRejectRequest:
+      type: object
+      properties:
+        note:
+          type: string
+          minLength: 5
+          maxLength: 500
+      required:
+      - note
   securitySchemes:
     sessionAuth:
       type: apiKey

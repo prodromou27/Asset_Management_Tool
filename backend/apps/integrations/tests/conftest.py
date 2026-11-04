@@ -243,6 +243,7 @@ INTUNE_SECRET = "fixture-client-secret-not-real"  # noqa: S105 - fake, test-only
 GRAPH_HOST = "graph.microsoft.com"
 LOGIN_HOST = "login.microsoftonline.com"
 COLLECTION = "/v1.0/deviceManagement/managedDevices"
+APPS = "/v1.0/deviceManagement/detectedApps"
 READ_ROLE = "DeviceManagementManagedDevices.Read.All"
 
 
@@ -271,6 +272,9 @@ class FakeGraph:
         self.tenant_id = data["tenant_id"]
         self.client_id = data["client_id"]
         self.devices: list[dict] = data["managedDevices"]
+        self.apps: list[dict] = data["detectedApps"]
+        self.app_devices: dict[str, list[str]] = data["detectedAppDevices"]
+        self.app_requests: list[httpx.Request] = []
         self.page_size = 4
         self.roles = [READ_ROLE]
         self.overrides: dict = {}
@@ -320,6 +324,8 @@ class FakeGraph:
 
         assert request.url.host == GRAPH_HOST, f"request to {request.url.host}"
         assert request.method == "GET", f"connector sent {request.method} to Graph"
+        if request.url.path.startswith(APPS):
+            return self._apps(request)
         assert request.url.path == COLLECTION, request.url.path
         self.requests.append(request)
         auth = request.headers.get("Authorization", "")
@@ -360,6 +366,34 @@ class FakeGraph:
             query = f"$select={select}&" if select else ""
             body["@odata.nextLink"] = f"{self.next_link_base}?{query}$skiptoken={page + 1}"
         return httpx.Response(200, json=body)
+
+    def _apps(self, request: httpx.Request) -> httpx.Response:
+        """Detected apps (two per page) and per-app device lists. `overrides["apps"]` or
+        `overrides["app:<id>"]` replace a response."""
+        from urllib.parse import unquote
+
+        self.app_requests.append(request)
+        auth = request.headers.get("Authorization", "")
+        if not auth.startswith("Bearer ") or auth[7:] not in self.valid_tokens:
+            return httpx.Response(401, json={"error": {"code": "InvalidAuthenticationToken"}})
+        path = request.url.path
+        if path == APPS:
+            if (response := self._override("apps")) is not None:
+                return response
+            page = int(request.url.params.get("$skiptoken", 1))
+            rows = self.apps[(page - 1) * 2 : page * 2]
+            body = {"value": copy.deepcopy(rows)}
+            if page * 2 < len(self.apps):
+                body["@odata.nextLink"] = f"https://{GRAPH_HOST}{APPS}?$skiptoken={page + 1}"
+            return httpx.Response(200, json=body)
+        app_id = unquote(path.removeprefix(f"{APPS}/").removesuffix("/managedDevices"))
+        if (response := self._override(f"app:{app_id}")) is not None:
+            return response
+        ids = self.app_devices.get(app_id, [])
+        return httpx.Response(200, json={"value": [{"id": i} for i in ids]})
+
+    def app_paths(self) -> list[str]:
+        return [r.url.path for r in self.app_requests]
 
     def graph_pages(self) -> list[int]:
         return [int(r.url.params.get("$skiptoken", 1)) for r in self.requests]

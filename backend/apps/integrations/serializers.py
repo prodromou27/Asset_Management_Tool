@@ -55,6 +55,7 @@ class ConnectorInfoSerializer(serializers.Serializer):
     permissions = serializers.ListField(child=serializers.CharField())
     uses_source_timezone = serializers.BooleanField()
     uses_detail_refresh = serializers.BooleanField()
+    supports_software = serializers.BooleanField()
 
 
 class IntegrationInstanceSerializer(serializers.ModelSerializer):
@@ -88,6 +89,7 @@ class IntegrationInstanceSerializer(serializers.ModelSerializer):
             "default_vrf",
             "stale_after_hours",
             "auto_link_strong_matches",
+            "collect_software",
             "last_attempt_at",
             "last_success_at",
             "last_error",
@@ -151,6 +153,7 @@ class IntegrationInstanceSerializer(serializers.ModelSerializer):
             "permissions": list(connector.permissions),
             "uses_source_timezone": connector.uses_source_timezone,
             "uses_detail_refresh": connector.uses_detail_refresh,
+            "supports_software": connector.supports_software,
         }
 
     def get_live_integrations_enabled(self, obj) -> bool:
@@ -184,6 +187,7 @@ class IntegrationInstanceWriteSerializer(serializers.Serializer):
     base_url = serializers.CharField(max_length=300, allow_blank=True, required=False)
     stale_after_hours = serializers.IntegerField(min_value=1, max_value=720, required=False)
     auto_link_strong_matches = serializers.BooleanField(required=False)
+    collect_software = serializers.BooleanField(required=False)
     is_enabled = serializers.BooleanField(required=False)
     # Available/Degraded are set only by real sync results, never by hand.
     status = serializers.ChoiceField(

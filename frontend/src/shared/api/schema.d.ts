@@ -80,6 +80,10 @@ export interface paths {
      */
     get: operations["assets_security_list"];
   };
+  "/api/v1/assets/{id}/software/": {
+    get: operations["assets_software_list"];
+    post: operations["assets_software_create"];
+  };
   "/api/v1/audit/events/": {
     get: operations["audit_events_list"];
   };
@@ -419,6 +423,24 @@ export interface paths {
   "/api/v1/sites/{id}/": {
     get: operations["sites_retrieve"];
     patch: operations["sites_partial_update"];
+  };
+  "/api/v1/software/installations/": {
+    get: operations["software_installations_list"];
+  };
+  "/api/v1/software/installations/{id}/remove/": {
+    post: operations["software_installations_remove_create"];
+  };
+  "/api/v1/software/products/": {
+    get: operations["software_products_list"];
+  };
+  "/api/v1/software/products/{id}/": {
+    get: operations["software_products_retrieve"];
+  };
+  "/api/v1/software/versions/{id}/lifecycle/approve/": {
+    post: operations["software_versions_lifecycle_approve_create"];
+  };
+  "/api/v1/software/versions/{id}/lifecycle/reject/": {
+    post: operations["software_versions_lifecycle_reject_create"];
   };
   "/api/v1/source-links/{id}/unlink/": {
     post: operations["source_links_unlink_create"];
@@ -991,6 +1013,7 @@ export interface components {
       permissions: string[];
       uses_source_timezone: boolean;
       uses_detail_refresh: boolean;
+      supports_software: boolean;
     };
     CustomFieldCreateRequest: {
       key: string;
@@ -1461,6 +1484,12 @@ export interface components {
      * @enum {string}
      */
     ImportModeEnum: "create_only" | "update_matched" | "upsert";
+    InstallAsset: {
+      /** Format: uuid */
+      id: string;
+      name: string;
+      site_code: string;
+    };
     InstanceRef: {
       /** Format: uuid */
       id: string;
@@ -1479,6 +1508,7 @@ export interface components {
       default_vrf: string;
       stale_after_hours: number;
       auto_link_strong_matches: boolean;
+      collect_software: boolean;
       /** Format: date-time */
       last_attempt_at: string | null;
       /** Format: date-time */
@@ -1547,6 +1577,7 @@ export interface components {
       base_url?: string;
       stale_after_hours?: number;
       auto_link_strong_matches?: boolean;
+      collect_software?: boolean;
       is_enabled?: boolean;
       status?: components["schemas"]["IntegrationInstanceWriteStatusEnum"];
       credential_ref?: string;
@@ -2132,6 +2163,17 @@ export interface components {
       username: string;
       password: string;
     };
+    ManualSoftwareRequest: {
+      name: string;
+      /** @default */
+      publisher?: string;
+      /** @default */
+      version?: string;
+      /** Format: date */
+      installed_on?: string | null;
+      /** @default */
+      note?: string;
+    };
     Match: {
       /** Format: uuid */
       asset_id: string;
@@ -2423,6 +2465,18 @@ export interface components {
       previous_cursor: string | null;
       count: number;
     };
+    PaginatedSoftwareInstallationList: {
+      items: components["schemas"]["SoftwareInstallation"][];
+      next_cursor: string | null;
+      previous_cursor: string | null;
+      count: number;
+    };
+    PaginatedSoftwareProductList: {
+      items: components["schemas"]["SoftwareProduct"][];
+      next_cursor: string | null;
+      previous_cursor: string | null;
+      count: number;
+    };
     PaginatedSyncRunList: {
       items: components["schemas"]["SyncRun"][];
       next_cursor: string | null;
@@ -2520,6 +2574,7 @@ export interface components {
       base_url?: string;
       stale_after_hours?: number;
       auto_link_strong_matches?: boolean;
+      collect_software?: boolean;
       is_enabled?: boolean;
       status?: components["schemas"]["IntegrationInstanceWriteStatusEnum"];
       credential_ref?: string;
@@ -2889,6 +2944,76 @@ export interface components {
       direct_users: number | null;
       group_users: number | null;
     };
+    SoftwareInstallation: {
+      id: number;
+      product_id: number;
+      publisher: string;
+      name: string;
+      version: string;
+      version_id: number;
+      lifecycle_status: components["schemas"]["LifecycleStatusEnum"];
+      raw_publisher: string;
+      raw_name: string;
+      raw_version: string;
+      source: string;
+      external_id: string;
+      asset: components["schemas"]["InstallAsset"] | null;
+      /** Format: date */
+      installed_on: string | null;
+      /** Format: date-time */
+      first_seen_at: string;
+      /** Format: date-time */
+      last_seen_at: string;
+      /** Format: date-time */
+      removed_at: string | null;
+      removed_reason: string;
+      created_by: string | null;
+      note: string;
+    };
+    SoftwareProduct: {
+      id: number;
+      publisher: string;
+      name: string;
+      version_count: number;
+      /** @description In your sites */
+      installations: number;
+      /** @description Versions past end of support or end of security updates */
+      eos_versions: number;
+    };
+    SoftwareProductDetail: {
+      id: number;
+      publisher: string;
+      name: string;
+      version_count: number;
+      /** @description In your sites */
+      installations: number;
+      /** @description Versions past end of support or end of security updates */
+      eos_versions: number;
+      versions: readonly components["schemas"]["SoftwareVersion"][];
+    };
+    SoftwareVersion: {
+      id: number;
+      version: string;
+      /** @description In your sites */
+      installations: number;
+      lifecycle_state: string;
+      lifecycle_method: string;
+      lifecycle_product: components["schemas"]["LifecycleProductRef"] | null;
+      lifecycle_candidates: readonly components["schemas"]["LifecycleCandidate"][];
+      lifecycle_status: components["schemas"]["LifecycleStatusEnum"];
+      lifecycle_milestone_type: string;
+      /** Format: date */
+      lifecycle_milestone_date: string | null;
+      lifecycle_days_remaining: number | null;
+      lifecycle_evidence_quality: string;
+      lifecycle_reasons: readonly string[];
+      lifecycle_reviewed_by: string | null;
+      /** Format: date-time */
+      lifecycle_reviewed_at: string | null;
+      /** Format: date-time */
+      lifecycle_assessed_at: string | null;
+      lifecycle_version: number;
+    };
     SourceLink: {
       /** Format: uuid */
       id: string;
@@ -3179,6 +3304,17 @@ export interface components {
     VendorAliasRequest: {
       alias: string;
       vendor: string;
+    };
+    VersionApproveRequest: {
+      /** Format: uuid */
+      product: string;
+      /** @default false */
+      remember_alias?: boolean;
+      /** @default */
+      note?: string;
+    };
+    VersionRejectRequest: {
+      note: string;
     };
   };
   responses: never;
@@ -3724,6 +3860,45 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["EndpointSecurityState"][];
+        };
+      };
+    };
+  };
+  assets_software_list: {
+    parameters: {
+      query?: {
+        /** @description Include removed entries */
+        removed?: boolean;
+      };
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["SoftwareInstallation"][];
+        };
+      };
+    };
+  };
+  assets_software_create: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ManualSoftwareRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["ManualSoftwareRequest"];
+        "multipart/form-data": components["schemas"]["ManualSoftwareRequest"];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          "application/json": components["schemas"]["SoftwareInstallation"];
         };
       };
     };
@@ -5853,6 +6028,134 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["Site"];
+        };
+      };
+    };
+  };
+  software_installations_list: {
+    parameters: {
+      query?: {
+        /** @description The pagination cursor value. */
+        cursor?: string;
+        lifecycle_status?: string;
+        /** @description Number of results to return per page. */
+        page_size?: number;
+        product?: number;
+        /** @description Product or publisher */
+        q?: string;
+        version?: number;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["PaginatedSoftwareInstallationList"];
+        };
+      };
+    };
+  };
+  software_installations_remove_create: {
+    parameters: {
+      path: {
+        id: number;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ReasonRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["ReasonRequest"];
+        "multipart/form-data": components["schemas"]["ReasonRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["SoftwareInstallation"];
+        };
+      };
+    };
+  };
+  software_products_list: {
+    parameters: {
+      query?: {
+        /** @description The pagination cursor value. */
+        cursor?: string;
+        /** @description Only products installed in your sites */
+        installed?: boolean;
+        /** @description ended | review */
+        lifecycle?: string;
+        /** @description Number of results to return per page. */
+        page_size?: number;
+        publisher?: string;
+        q?: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["PaginatedSoftwareProductList"];
+        };
+      };
+    };
+  };
+  software_products_retrieve: {
+    parameters: {
+      path: {
+        id: number;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["SoftwareProductDetail"];
+        };
+      };
+    };
+  };
+  software_versions_lifecycle_approve_create: {
+    parameters: {
+      header: {
+        "If-Match": string;
+      };
+      path: {
+        id: number;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["VersionApproveRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["VersionApproveRequest"];
+        "multipart/form-data": components["schemas"]["VersionApproveRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["SoftwareVersion"];
+        };
+      };
+    };
+  };
+  software_versions_lifecycle_reject_create: {
+    parameters: {
+      header: {
+        "If-Match": string;
+      };
+      path: {
+        id: number;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["VersionRejectRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["VersionRejectRequest"];
+        "multipart/form-data": components["schemas"]["VersionRejectRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["SoftwareVersion"];
         };
       };
     };

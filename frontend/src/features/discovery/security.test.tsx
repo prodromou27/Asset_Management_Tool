@@ -123,7 +123,7 @@ describe('Defender integration page', () => {
         required_settings: ['tenant_id', 'client_id'],
         permissions: ['Machine.Read.All'],
         uses_source_timezone: false,
-        uses_detail_refresh: false,
+        uses_detail_refresh: false, supports_software: false,
       },
       capabilities: {
         machines: true,

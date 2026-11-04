@@ -80,7 +80,7 @@ def test_families_describe_columns_related_and_personal_masking(admin, client_fo
     assert set(admin_families) == {"assets", "groups"}
     assets = admin_families["assets"]
     assert assets["personal_data_allowed"] is True
-    assert {"hostnames", "interfaces", "ip_addresses", "groups", "lifecycle"} == {
+    assert {"hostnames", "interfaces", "ip_addresses", "groups", "lifecycle", "software"} == {
         r["key"] for r in assets["related"]
     }
     assert "q" in assets["filter_keys"]
@@ -112,7 +112,7 @@ def test_user_without_export_permission_is_refused(make_user, client_for, hq):
     ("body", "field"),
     [
         ({"columns": ["name", "password"]}, "columns"),
-        ({"related": ["software"]}, "related"),
+        ({"related": ["certificates"]}, "related"),
         ({"scope": "filtered", "filters": {"drop_table": "x"}}, "filters"),
         ({"scope": "selected", "ids": []}, "ids"),
     ],

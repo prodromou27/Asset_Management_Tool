@@ -19,7 +19,8 @@ This file is a sequencing index, **not permission to implement everything in one
 | 013 | CSV/XLSX imports with preview/guarded upsert | 003–004 | 04,11,14 |
 | 014 | CSV/XLSX/JSON exports with RBAC and async jobs | 003,013 | 04,11,14 |
 | 015 | EOL source/model catalogue + evidence and assessment | 011 | 06,03,15 |
-| 016 | Software installations/licenses/M365 views | 010–011 | 06,08,03 |
+| 016a | Software catalogue, installations, connector reads, software lifecycle | 010–011, 015 | 06,08,03,05 |
+| 016b | License entitlements/allocations + Software & Licenses area with M365 | 016a | 06,08,03,11 |
 | 017 | Domain and TLS certificate inventory/expiry | 003 | 06,08,14 |
 | 018 | SMTP config UI, template engine, outbox and test mail | 002 | 10,09,14,15 |
 | 019 | Backups, off-host encryption and isolated restore | 001,002 | 12,13,14,15 |

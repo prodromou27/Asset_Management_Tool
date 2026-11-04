@@ -399,6 +399,7 @@ export function makeIntegration(overrides: Partial<IntegrationInstance> = {}): I
     default_vrf: '',
     stale_after_hours: 48,
     auto_link_strong_matches: false,
+    collect_software: false,
     last_attempt_at: '2026-11-02T08:01:00Z',
     last_success_at: '2026-11-02T08:01:00Z',
     last_error: '',

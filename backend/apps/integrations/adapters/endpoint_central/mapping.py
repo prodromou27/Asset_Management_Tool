@@ -17,6 +17,21 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 SENSITIVE_WORDS = ("password", "passwd", "secret", "token", "apikey", "api_key", "credential")
 
+# Installed software rows (softwareInfo). Key names are fixture assumptions (ASM-29/54).
+SOFTWARE_FIELDS = {
+    "name": ("software_name", "softwarename", "display_name", "displayname", "name"),
+    "version": ("software_version", "softwareversion", "version", "display_version"),
+    "publisher": (
+        "manufacturer_name",
+        "software_manufacturer",
+        "publisher",
+        "manufacturer",
+        "vendor",
+    ),
+    "installed": ("installed_date", "install_date", "installeddate", "installed_at"),
+    "source_ref": ("software_id", "softwareid", "id"),
+}
+
 FIELDS = {
     "external_id": ("resource_id", "resourceid", "res_id", "computer_id", "id"),
     "name": ("resource_name", "computer_name", "name", "hostname", "host_name"),

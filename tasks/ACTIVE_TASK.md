@@ -1,4 +1,66 @@
-# Current Task: 015 | EOL catalogue, evidence and assessment
+# Current Task: 016a | Software catalogue, installations and software lifecycle
+
+Status: **Complete locally; awaiting CI** (2026-11-04, branch DEV). Owner decisions: split
+Task 016 into 016a (this) and 016b (entitlements, allocations, Software & Licenses area with
+M365); connector software reads for both Endpoint Central and Intune, off by default.
+
+**Read:** AGENTS.md, docs/00, 03 (software tables), 04 (software endpoints, asset software),
+05 (Endpoint Central softwareInfo, Intune detectedApps), 06, 08 (asset Software tab), 11, 15
+(A14, performance target), 17 (ASM-29, ASM-33, ASM-53).
+
+**Previous:** 015 lifecycle (CI run 41833135237 green).
+
+## Outcome (ASM-54)
+
+- **App `apps.software`** (migration `software.0001_software_inventory`): products, versions
+  (with per-version lifecycle match and assessment), installations (discovered rows keyed by
+  source device and resolved through source links; manual rows on the asset; removal only
+  after a complete read; restore when reported again).
+- **Connectors** (`integrations.0011_collect_software`, switch per integration, default off):
+  Endpoint Central `softwareInfo` (dcapi only; refreshed computers plus first read); Intune
+  `detectedApps` + per-app `managedDevices` (complete-read rule, 20,000-app cap). Graph
+  continuation check extended to the new paths only. Sync phase "facts" replaces "security".
+- **Lifecycle:** `match_software` (exact / alias / review for builds, unknown publishers,
+  several hits); per-version assessment with the ASM-53 rules; review (approve with optional
+  alias, reject) with If-Match; reassessment hooked into catalogue changes and the hourly run.
+  Software never changes `Asset.support_status`.
+- **API:** `GET /software/products/`, `GET /software/products/{id}/`,
+  `GET /software/installations/`, `POST /software/installations/{id}/remove/`,
+  `POST /software/versions/{id}/lifecycle/approve|reject/`, `GET|POST /assets/{id}/software/`.
+  Site scope via the resolved asset; counts are scoped too.
+- **Exports:** asset export related table `software`.
+- **Frontend:** Software page (products with counts and lifecycle flags, installations),
+  product page (versions with lifecycle, suggested matches, approve/reject, installations),
+  asset Software tab (discovered/manual, show removed, record/remove manual), integration
+  switch "Collect installed software" for Endpoint Central and Intune. Sidebar: Software.
+- **Fixtures:** fictitious `softwareInfo` (EC 301/302) and `detectedApps` (Intune), with README
+  notes that envelopes are assumptions to verify.
+
+## Verification (workstation; SQLite test-only fallback)
+
+- Backend **720 passed, 6 skipped** (PostgreSQL/Redis-only). New: 15 software tests
+  (EC reads once per refresh and request budget, removal after complete read, failed read
+  removes nothing, dcapi/switch required, Intune per-app reads and budget, no app requests
+  when off, complete vs partial reads and restore, site-scoped products/installations/detail,
+  unlinking hides software without deleting, manual add/duplicate/permission/remove with
+  audit, store rules, software lifecycle review and assessment with If-Match and asset status
+  unchanged, rejection, approval permission, export table) and 3 software matching unit tests.
+- Migrations applied, reversed (`software zero`, `integrations 0010`) and reapplied; no
+  drift. OpenAPI validates with `--fail-on-warn`; types regenerated. Ruff clean.
+- Frontend: typecheck, oxlint, **160 tests** (7 new) and build pass. Screenshots of the
+  Software products and product pages (mocked API) led to clearer suggested-match text,
+  pluralisation and heading spacing.
+- Not run: Docker stack, live sources, the 1m-installation performance target (Task 022).
+
+**Open (ASM-54):** sanitized EC/Graph captures (DEC-06/07); request volume with real tenants;
+software CSV import family; Software & Licenses area and entitlements (016b).
+
+Proposed next task: **016b | License entitlements/allocations + Software & Licenses area**
+(tasks/BACKLOG.md). Do not start automatically.
+
+---
+
+# Previous record: Task 015 | EOL catalogue, evidence and assessment
 
 Status: **Complete (CI run 41833135237 green)** (2026-11-04, branch DEV).
 
@@ -81,9 +143,6 @@ installations (Task 016); the catalogue already accepts software products.
 **Open (ASM-53):** third-party-only dates setting a status; extended-support policy;
 not-applicable category lists; separate verifier (four-eyes) not enforced; "EOL evidence
 missing" data-quality queue and notifications (Task 018/021); vendor feed adapters (DEC-12).
-
-Proposed next task: **016 | Software installations/licenses/M365 views** (tasks/BACKLOG.md).
-Do not start automatically.
 
 ---
 

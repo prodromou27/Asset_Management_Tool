@@ -2,7 +2,13 @@
 
 Request budget per sync: one token request (renewed only near expiry or after a 401) and
 one GET per page of managed devices, following ``@odata.nextLink``. No per-device reads.
-Detected apps are not read yet (software belongs to Task 016).
+
+Installed software (Task 016a, ASM-54), only when the integration's "Collect installed
+software" switch is on: one GET per page of ``/deviceManagement/detectedApps`` plus one GET
+per page of ``/deviceManagement/detectedApps/{id}/managedDevices`` for each app reported on
+at least one device. Same permission (DeviceManagementManagedDevices.Read.All). The
+software read is complete only when every page succeeded and the device listing was
+complete; otherwise software is added or refreshed but nothing is marked removed.
 
 The listing is complete only when the last page has no ``@odata.nextLink``. A page that
 fails after the first, a continuation link that fails validation, a repeated link or the
@@ -11,6 +17,7 @@ marked stale (docs/05 failure behaviour).
 """
 
 from collections.abc import Callable
+from urllib.parse import quote
 
 from django.utils import timezone
 
@@ -19,7 +26,10 @@ from .client import REQUIRED_PERMISSION, GraphClient, InvalidQuery
 from .mapping import SELECT, device_to_record
 
 COLLECTION = "/deviceManagement/managedDevices"
+APPS = "/deviceManagement/detectedApps"
+APP_SELECT = "id,displayName,version,publisher,deviceCount"
 MAX_PAGES = 2000
+MAX_APPS = 20000
 PROGRESS_EVERY = 100
 # Granted roles whose names mean write or privileged access. The connector never uses
 # them; they are reported so the app registration can be reduced to least privilege.
@@ -35,7 +45,7 @@ def permission_summary(roles: list[str] | None) -> tuple[dict, str]:
     excess = excess_roles(roles)
     caps = {
         "managed_devices": True,
-        "detected_apps": False,
+        "detected_apps": True,  # same permission; read only when switched on
         "permission_read_all": roles is None or REQUIRED_PERMISSION in roles,
         "excess_permissions": bool(excess),
     }
@@ -67,6 +77,9 @@ class IntuneAdapter:
         self.instance = instance
         self.client = client
         self.caps = capabilities or instance.capabilities or {}
+        # Set only when software is collected (read by store_facts).
+        self.software: dict[str, list[dict]] | None = None
+        self.software_complete: set[str] = set()
 
     def prepare(self) -> None:
         """Nothing to detect: Graph v1.0 has one documented route."""
@@ -150,9 +163,88 @@ class IntuneAdapter:
             run.devices_processed = index
             if index % PROGRESS_EVERY == 0:
                 progress()
+        if self.instance.collect_software:
+            self._detected_apps(run, progress, {r["external_id"] for r in records}, complete)
         run.api_requests = self.client.total_requests
         progress()
         return records, complete
+
+    # --- Detected apps ----------------------------------------------------------------
+
+    def _collection(self, run, path: str, params: dict | None, what: str) -> tuple[list, bool]:
+        """Every page of a Graph collection; (rows, complete)."""
+        rows: list = []
+        seen: set[str] = set()
+        try:
+            body = self.client.get(path, params=params)
+        except AuthError:
+            raise
+        except SourceError as exc:
+            self._warn(run, None, f"{what} not read: {exc}")
+            return rows, False
+        for _ in range(MAX_PAGES):
+            batch = body.get("value") if isinstance(body, dict) else None
+            if not isinstance(batch, list):
+                self._warn(run, None, f"{what}: unexpected response; stopped.")
+                return rows, False
+            rows.extend(r for r in batch if isinstance(r, dict))
+            next_link = body.get("@odata.nextLink")
+            if not next_link:
+                return rows, True
+            if not isinstance(next_link, str) or next_link in seen:
+                self._warn(run, None, f"{what}: repeated continuation link; stopped.")
+                return rows, False
+            seen.add(next_link)
+            try:
+                body = self.client.get_continuation(next_link)
+            except AuthError:
+                raise
+            except SourceError as exc:
+                self._warn(run, None, f"{what} stopped: {exc}")
+                return rows, False
+        self._warn(run, None, f"{what}: stopped after {MAX_PAGES} pages.")
+        return rows, False
+
+    def _detected_apps(self, run, progress, device_ids: set[str], listing_complete: bool) -> None:
+        run.phase = "software"
+        progress()
+        apps, complete = self._collection(run, APPS, {"$select": APP_SELECT}, "Detected apps")
+        if len(apps) > MAX_APPS:
+            self._warn(
+                run, None, f"{len(apps)} detected apps; only the first {MAX_APPS} were read."
+            )
+            apps, complete = apps[:MAX_APPS], False
+        software: dict[str, list[dict]] = {d: [] for d in device_ids}
+        for index, app in enumerate(apps, start=1):
+            app_id = str(app.get("id") or "").strip()
+            name = str(app.get("displayName") or "").strip()
+            if not app_id or not name:
+                continue
+            count = app.get("deviceCount")
+            if isinstance(count, int) and count <= 0:
+                continue
+            devices, ok = self._collection(
+                run,
+                f"{APPS}/{quote(app_id, safe='')}/managedDevices",
+                {"$select": "id"},
+                f"Devices of {name[:80]}",
+            )
+            complete = complete and ok
+            item = {
+                "name": name,
+                "publisher": str(app.get("publisher") or ""),
+                "version": str(app.get("version") or ""),
+                "source_ref": app_id,
+            }
+            for device in devices:
+                device_id = str(device.get("id") or "").strip()
+                if device_id in software:
+                    software[device_id].append(item)
+            if index % PROGRESS_EVERY == 0:
+                run.checkpoint = f"apps {index}/{len(apps)}"
+                progress()
+        self.software = software
+        self.software_complete = set(software) if complete and listing_complete else set()
 
     @staticmethod
     def _warn(run, external_id, message: str) -> None:

@@ -199,6 +199,30 @@ ASSET_RELATED: tuple[Related, ...] = (
         ),
         permission=catalog.LIFECYCLE_VIEW,
     ),
+    Related(
+        "software",
+        "Installed software",
+        "asset_id",
+        (
+            Column("asset_id", "Asset ID", lambda p, c: str(p[0])),
+            Column("installation_id", "Installation ID", lambda p, c: p[1].pk),
+            Column("publisher", "Publisher", lambda p, c: p[1].version.product.publisher),
+            Column("product", "Product", lambda p, c: p[1].version.product.name),
+            Column("version", "Version", lambda p, c: p[1].version.version),
+            Column(
+                "source",
+                "Source",
+                lambda p, c: p[1].instance.name if p[1].instance_id else "Manual",
+            ),
+            Column("first_seen_at", "First seen", lambda p, c: _iso(p[1].first_seen_at)),
+            Column("last_seen_at", "Last seen", lambda p, c: _iso(p[1].last_seen_at)),
+            Column(
+                "lifecycle_status",
+                "Lifecycle status",
+                lambda p, c: p[1].version.lifecycle_status,
+            ),
+        ),
+    ),
 )
 
 
@@ -233,6 +257,13 @@ def _asset_related_rows(key: str, asset_ids: list) -> Iterator:
     if key == "ip_addresses":
         return AssetIPAddress.objects.filter(asset_id__in=asset_ids).order_by(
             "asset_id", "-is_primary", "address"
+        )
+    if key == "software":
+        from apps.software.selectors import installations_for_assets
+
+        return sorted(
+            installations_for_assets(asset_ids),
+            key=lambda p: (str(p[0]), p[1].version.product.name_key, p[1].version.version_key),
         )
     if key == "lifecycle":
         from apps.lifecycle.models import LifecycleAssessment
@@ -311,7 +342,7 @@ FAMILIES: dict[str, Family] = {
         "Assets",
         catalog.ASSETS_VIEW,
         "Assets in your sites with provenance and source freshness; related tables keep "
-        "hostnames, interfaces/MACs, IPs, group memberships and lifecycle assessments separate.",
+        "hostnames, interfaces/MACs, IPs, groups, lifecycle and installed software separate.",
         FILTER_KEYS,
         ASSET_RELATED,
     ),

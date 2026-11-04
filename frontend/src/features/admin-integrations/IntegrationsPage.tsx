@@ -22,6 +22,9 @@ import { EmptyState, LoadingState, QueryErrorState } from '../../shared/ui/State
 import { StatusBadge } from '../../shared/ui/StatusBadge'
 import { AVAILABILITY_LABEL, FIELD_LABEL, FRESHNESS, INSTANCE_STATUS } from '../discovery/labels'
 
+/** Sources whose connector can read installed software (Task 016a). */
+const SOFTWARE_SOURCES = new Set(['endpoint_central', 'intune'])
+
 export function IntegrationsPage() {
   const integrations = useQuery({ queryKey: discoveryKeys.integrations, queryFn: fetchIntegrations })
   const sources = useQuery({ queryKey: discoveryKeys.sources, queryFn: fetchSources })
@@ -145,6 +148,7 @@ function IntegrationDialog({
   const [flags, setFlags] = useState<string[]>([
     ...((instance?.is_enabled ?? true) ? ['enabled'] : []),
     ...(instance?.auto_link_strong_matches ? ['auto_link'] : []),
+    ...(instance?.collect_software ? ['software'] : []),
   ])
   const [disconnected, setDisconnected] = useState(instance?.status === 'disconnected')
   const [client, setClient] = useState<Record<string, string[]>>({})
@@ -159,6 +163,7 @@ function IntegrationDialog({
         stale_after_hours: Number(staleHours),
         is_enabled: flags.includes('enabled'),
         auto_link_strong_matches: flags.includes('auto_link'),
+        collect_software: flags.includes('software'),
       }
       if (instance) {
         const status = disconnected ? 'disconnected' : instance.status === 'disconnected' ? 'configured' : undefined
@@ -257,6 +262,16 @@ function IntegrationDialog({
             description:
               'Only a verified serial or hardware UUID with the same manufacturer and category and no conflicting identifier. IP, hostname, MAC or serial alone never auto-link.',
           },
+          ...(SOFTWARE_SOURCES.has(source)
+            ? [
+                {
+                  value: 'software',
+                  label: 'Collect installed software',
+                  description:
+                    'Adds read-only requests: Endpoint Central one per computer with a newer scan; Intune one per detected app. Off by default.',
+                },
+              ]
+            : []),
         ]}
         value={flags}
         onChange={setFlags}

@@ -1896,3 +1896,16 @@ code,
 .data-table--nowrap td {
   white-space: nowrap;
 }
+
+/* ---- Task 016a: software ----------------------------------------------------- */
+
+.checkbox--inline {
+  padding: 0;
+  border: none;
+  align-items: center;
+  font-size: 13px;
+}
+
+.page > .section-title {
+  margin-top: var(--space-6);
+}

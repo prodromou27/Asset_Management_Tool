@@ -23,7 +23,7 @@ const CONNECTOR = {
   required_settings: [],
   permissions: [],
   uses_source_timezone: true,
-  uses_detail_refresh: true,
+  uses_detail_refresh: true, supports_software: false,
 }
 
 function librenms(overrides: Partial<IntegrationInstance> = {}): IntegrationInstance {
@@ -407,7 +407,7 @@ describe('Microsoft Intune integration page', () => {
         required_settings: ['tenant_id', 'client_id'],
         permissions: ['DeviceManagementManagedDevices.Read.All'],
         uses_source_timezone: false,
-        uses_detail_refresh: false,
+        uses_detail_refresh: false, supports_software: false,
       },
       source_software_version: 'Microsoft Graph v1.0',
       capabilities: {

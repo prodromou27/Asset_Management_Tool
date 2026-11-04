@@ -326,3 +326,69 @@ def match(cat: Catalogue, asset, dimension: str, rejected: set[str]) -> Result:
     return match_os(
         cat, asset.manufacturer, asset.os_name, asset.os_version, asset.firmware_version, rejected
     )
+
+
+def match_software(
+    cat: Catalogue, publisher: str, name: str, version: str, rejected: set[str]
+) -> Result:
+    """A reported software version against catalogue products of kind ``software``.
+
+    The publisher must resolve to a catalogue vendor (directly or through a vendor alias);
+    the name must equal the product name or an approved ``product_name`` alias, and the
+    version must equal the product's release (or the alias's release). A build of a
+    catalogued release, or a match without a known publisher, needs review.
+    """
+    if not key(name):
+        return Result(State.NO_MATCH, reason="Software name not reported.")
+    name_key, ver_key = key(name), key(version)
+    pool = [e for e in cat.entries if e.kind == Kind.SOFTWARE and e.id not in rejected]
+    named = [
+        e
+        for e in pool
+        if e.name_key == name_key
+        or any(k == "product_name" and v == name_key for k, v, _ in e.aliases)
+    ]
+    if not named:
+        return Result(State.NO_MATCH, reason=f"'{name}' is not in the lifecycle catalogue.")
+    vendor = cat.vendor_key(publisher)
+    if vendor is None:
+        return Result(
+            State.CANDIDATE,
+            candidates=[_candidate(e, "Same product name; publisher not confirmed") for e in named],
+            reason="The publisher is missing or not in the catalogue; a reviewer must confirm.",
+        )
+    named = [e for e in named if e.vendor_key == vendor]
+    if not named:
+        return Result(State.NO_MATCH, reason=f"'{name}' by {publisher} is not in the catalogue.")
+    if not ver_key:
+        return Result(State.NO_MATCH, reason=f"Version of '{name}' not reported.")
+    hits: dict[str, tuple[Entry, str]] = {}
+    for e in named:
+        if e.name_key == name_key and e.release_key == ver_key:
+            hits[e.id] = (e, Method.EXACT)
+        elif any(
+            k == "product_name" and v == name_key and (r or e.release_key) == ver_key
+            for k, v, r in e.aliases
+        ):
+            hits.setdefault(e.id, (e, Method.ALIAS))
+    if hits:
+        return _decide(hits, f"'{name} {version}'")
+    candidates = [
+        _candidate(e, "Version is a build or patch of this release")
+        for e in named
+        if e.release_key
+        and _related_prefix(ver_key, e.release_key)
+        and ver_key.startswith(e.release_key)
+    ]
+    if candidates:
+        return Result(
+            State.CANDIDATE,
+            candidates=candidates,
+            reason=(
+                f"'{name} {version}' is not catalogued exactly; "
+                "a reviewer must confirm the release."
+            ),
+        )
+    return Result(
+        State.NO_MATCH, reason=f"Version '{version}' of '{name}' is not in the catalogue."
+    )

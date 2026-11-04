@@ -36,6 +36,14 @@ class Connector:
     # data), called after reconciliation as store_facts(instance, run, records, complete,
     # adapter).
     store_facts: Callable | None = None
+    # Can read installed software when the instance's ``collect_software`` is on.
+    supports_software: bool = False
+
+
+def _store_software(instance, run, records, complete, adapter=None) -> None:
+    from apps.software.services import store_software
+
+    store_software(instance, run, records, complete, adapter)
 
 
 def _librenms() -> Connector:
@@ -65,6 +73,8 @@ def _endpoint_central() -> Connector:
         supports_evidence=False,
         test_connection=adapter.test_connection,
         make_adapter=adapter.EndpointCentralAdapter,
+        store_facts=_store_software,
+        supports_software=True,
     )
 
 
@@ -115,6 +125,8 @@ def _intune() -> Connector:
         supports_evidence=False,
         test_connection=adapter.test_connection,
         make_adapter=adapter.IntuneAdapter,
+        store_facts=_store_software,
+        supports_software=True,
         client_factory=_microsoft_client_factory(
             GraphClient, GRAPH_SCOPE, "ITAM-Intune-Connector/1"
         ),

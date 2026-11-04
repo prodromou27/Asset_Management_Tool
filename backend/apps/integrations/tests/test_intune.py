@@ -606,7 +606,7 @@ def test_connection_test_reports_permissions(client_for, admin_user, intune, gra
     assert body["ok"] is True and body["version"] == "Microsoft Graph v1.0"
     assert body["capabilities"] == {
         "managed_devices": True,
-        "detected_apps": False,
+        "detected_apps": True,
         "permission_read_all": True,
         "excess_permissions": False,
     }

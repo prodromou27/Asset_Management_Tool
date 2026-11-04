@@ -254,7 +254,7 @@ def execute(run_id) -> SyncRun:
                 on_progress=progress,
             )
             if connector.store_facts is not None:
-                run.phase = "security"
+                run.phase = "facts"  # security state, licenses or software
                 progress()
                 connector.store_facts(instance, run, records, complete, adapter)
             if connector.supports_evidence and _evidence_due(instance):

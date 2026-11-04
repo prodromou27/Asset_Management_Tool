@@ -649,6 +649,43 @@
        "ipAddress": []
       }
      ]
+    },
+    "softwareInfo": {
+     "status": "success",
+     "data": [
+      {
+       "softwareId": 9001,
+       "softwareName": "Example Office Suite",
+       "softwareVersion": "16.0.17928.20156",
+       "manufacturerName": "Example Software Corp",
+       "installedDate": 1790000000000
+      },
+      {
+       "softwareId": 9002,
+       "softwareName": "7-Zip 24.08 (x64)",
+       "softwareVersion": "24.08",
+       "manufacturerName": "Igor Pavlov",
+       "installedDate": null
+      },
+      {
+       "softwareId": 9003,
+       "softwareName": "Example Browser",
+       "softwareVersion": "130.0.6723.92",
+       "manufacturerName": "Example Browser Ltd"
+      },
+      {
+       "softwareId": 9003,
+       "softwareName": "Example Browser",
+       "softwareVersion": "130.0.6723.92",
+       "manufacturerName": "Example Browser Ltd"
+      },
+      {
+       "softwareId": 9004,
+       "softwareName": "",
+       "softwareVersion": "1.0",
+       "manufacturerName": "Nameless Inc"
+      }
+     ]
     }
    },
    "302": {
@@ -687,6 +724,23 @@
        "ipAddress": [
         "192.0.2.107"
        ]
+      }
+     ]
+    },
+    "softwareInfo": {
+     "status": "success",
+     "data": [
+      {
+       "softwareId": 9001,
+       "softwareName": "Example Office Suite",
+       "softwareVersion": "16.0.17928.20156",
+       "manufacturerName": "Example Software Corp"
+      },
+      {
+       "softwareId": 9005,
+       "softwareName": "Legacy Viewer",
+       "softwareVersion": "5.1",
+       "manufacturerName": "Example Legacy Software"
       }
      ]
     }

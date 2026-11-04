@@ -174,7 +174,7 @@ describe('Licenses', () => {
             required_settings: ['tenant_id', 'client_id'],
             permissions: ['Organization.Read.All', 'User.Read.All'],
             uses_source_timezone: false,
-            uses_detail_refresh: false,
+            uses_detail_refresh: false, supports_software: false,
           },
           capabilities: { subscribed_skus: true, license_assignments: true, group_names: false },
         }),

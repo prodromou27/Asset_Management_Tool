@@ -28,3 +28,11 @@ examples, not captures from a live server. In particular, the `dcapi` envelope i
 unconfirmed. Before live use, capture sanitized responses from the installed build and
 compare them (docs/17 DEC-06, ASM-29). Regenerate the file with care: tests depend on
 these values.
+
+## Installed software (Task 016a)
+
+`dcapi.details.<id>.softwareInfo` holds fictitious `softwareInfo` documents for 301 (five
+rows: an office suite, 7-Zip, a browser listed twice, and a row without a name) and 302
+(two rows). 303 has none (the route answers 404). The envelope and key names
+(`softwareName`, `softwareVersion`, `manufacturerName`, `installedDate`, `softwareId`) are
+assumptions to verify with a sanitized capture (DEC-06, ASM-54).

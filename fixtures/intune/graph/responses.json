@@ -211,7 +211,51 @@
       "managementAgent": "mdm",
       "managedDeviceOwnerType": "company",
       "wiFiMacAddress": "02:00:00:00:00:07",
-      "someFutureProperty": {"nested": true}
+      "someFutureProperty": {
+        "nested": true
+      }
     }
-  ]
+  ],
+  "detectedApps": [
+    {
+      "id": "app-0001-example-office",
+      "displayName": "Example Office Suite",
+      "version": "16.0.17928.20156",
+      "publisher": "Example Software Corp",
+      "deviceCount": 2
+    },
+    {
+      "id": "app-0002-example-browser",
+      "displayName": "Example Browser",
+      "version": "130.0.6723.92",
+      "publisher": "Example Browser Ltd",
+      "deviceCount": 1
+    },
+    {
+      "id": "app-0003-unused",
+      "displayName": "Uninstalled Tool",
+      "version": "1.0",
+      "publisher": "Example Tools",
+      "deviceCount": 0
+    },
+    {
+      "id": "app-0004-unknown-device",
+      "displayName": "Example Agent",
+      "version": "3.2",
+      "publisher": "Example Security",
+      "deviceCount": 1
+    }
+  ],
+  "detectedAppDevices": {
+    "app-0001-example-office": [
+      "a1000001-0000-4000-8000-000000000001",
+      "a1000002-0000-4000-8000-000000000002"
+    ],
+    "app-0002-example-browser": [
+      "a1000001-0000-4000-8000-000000000001"
+    ],
+    "app-0004-unknown-device": [
+      "ffffffff-0000-4000-8000-00000000ffff"
+    ]
+  }
 }

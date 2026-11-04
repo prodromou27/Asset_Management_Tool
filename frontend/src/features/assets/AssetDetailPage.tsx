@@ -1,3 +1,4 @@
+import { AssetSoftwarePanel } from '../software/AssetSoftwarePanel'
 import { AssetLifecyclePanel } from '../lifecycle/AssetLifecyclePanel'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
@@ -171,6 +172,11 @@ export function AssetDetailPage() {
           ...(can(PERMISSIONS.groupsView)
             ? [{ id: 'groups', label: 'Groups', content: <AssetGroupsPanel assetId={data.id} /> }]
             : []),
+          {
+            id: 'software',
+            label: 'Software',
+            content: <AssetSoftwarePanel assetId={data.id} archived={Boolean(data.archived_at)} />,
+          },
           ...(can(PERMISSIONS.lifecycleView)
             ? [{ id: 'lifecycle', label: 'Lifecycle', content: <AssetLifecyclePanel assetId={data.id} /> }]
             : []),

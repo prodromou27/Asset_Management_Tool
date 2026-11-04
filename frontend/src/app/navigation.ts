@@ -1,5 +1,6 @@
 import {
   Activity,
+  AppWindow,
   Boxes,
   Building2,
   FileDown,
@@ -40,6 +41,7 @@ export const SECTIONS: NavSection[] = [
     items: [
       { to: '/assets', label: 'Assets', icon: Boxes, permission: PERMISSIONS.assetsView },
       { to: '/groups', label: 'Groups', icon: LayoutList, permission: PERMISSIONS.groupsView },
+      { to: '/software', label: 'Software', icon: AppWindow, permission: PERMISSIONS.assetsView },
       { to: '/lifecycle', label: 'Lifecycle', icon: History, permission: PERMISSIONS.lifecycleView, end: true },
       { to: '/licenses', label: 'Licenses', icon: KeyRound, permission: PERMISSIONS.licensesView },
     ],

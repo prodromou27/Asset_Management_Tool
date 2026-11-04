@@ -311,3 +311,71 @@ def test_nothing_recorded_for_os(cat):
     assert match_os(cat, "Cisco", "", "", "", set()).reason == (
         "No operating system or firmware version recorded."
     )
+
+
+# --- Software matching (Task 016a) -----------------------------------------------------------
+
+
+@pytest.fixture
+def sw_cat():
+    from apps.lifecycle.matching import Catalogue
+
+    return Catalogue(
+        vendor_aliases={"example software corporation": "Example Software Corp"},
+        vendors={"example software corp"},
+        entries=[
+            entry(
+                "office16",
+                "software",
+                "Example Software Corp",
+                "Example Office Suite",
+                "16.0",
+                aliases=[("product_name", "Example Office Suite", "16.0.17928.20156")],
+            ),
+            entry("office19", "software", "Example Software Corp", "Example Office Suite", "19.0"),
+        ],
+    )
+
+
+def test_software_exact_and_alias(sw_cat):
+    from apps.lifecycle.matching import match_software
+
+    exact = match_software(sw_cat, "Example Software Corp", "Example Office Suite", "19.0", set())
+    assert (exact.state, exact.method, exact.product_id) == ("matched", "exact", "office19")
+    build = match_software(
+        sw_cat, "Example Software Corporation", "example office suite", "16.0.17928.20156", set()
+    )
+    assert (build.state, build.method, build.product_id) == ("matched", "alias", "office16")
+
+
+def test_software_needs_review_without_publisher_or_exact_release(sw_cat):
+    from apps.lifecycle.matching import match_software
+
+    no_publisher = match_software(sw_cat, "", "Example Office Suite", "19.0", set())
+    assert no_publisher.state == "candidate" and no_publisher.product_id is None
+    patch = match_software(
+        sw_cat, "Example Software Corp", "Example Office Suite", "16.0.99999.1", set()
+    )
+    assert [c["product_id"] for c in patch.candidates] == ["office16"]
+
+
+def test_software_unknown_cases(sw_cat):
+    from apps.lifecycle.matching import match_software
+
+    assert (
+        match_software(sw_cat, "Example Software Corp", "Other App", "1.0", set()).state
+        == "no_match"
+    )
+    # An unknown publisher with a catalogued name is reviewed, never matched or dropped.
+    assert (
+        match_software(sw_cat, "Other Vendor", "Example Office Suite", "19.0", set()).state
+        == "candidate"
+    )
+    assert (
+        match_software(sw_cat, "Example Software Corp", "Example Office Suite", "", set()).state
+        == "no_match"
+    )
+    assert (
+        match_software(sw_cat, "Example Software Corp", "Example Office Suite", "20.0", set()).state
+        == "no_match"
+    )

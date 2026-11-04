@@ -66,6 +66,7 @@ INSTALLED_APPS = [
     "apps.imports",
     "apps.exports",
     "apps.lifecycle",
+    "apps.software",
 ]
 
 AUTH_USER_MODEL = "accounts.User"

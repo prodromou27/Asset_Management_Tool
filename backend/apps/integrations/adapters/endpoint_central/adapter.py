@@ -10,7 +10,12 @@ Request budget per sync: the computer list (page size 500), plus per computer, o
 it is new, Endpoint Central reports a newer successful inventory scan, or the cached
 details are older than ``enrichment_max_age_hours``: 1 request (api/1.4
 compdetailssummary) or up to 4 (dcapi summary, hardware, osInformation, network).
-Installed software is not read yet (Task 016).
+
+Installed software (Task 016a, ASM-54) is read only when the integration's "Collect
+installed software" switch is on and the dcapi generation is in use: one extra
+``GET /dcapi/inventory/computers/{id}/softwareInfo`` per computer whose details are
+refreshed in this sync, plus once for computers with no software recorded yet. Other
+computers keep their previously stored software.
 """
 
 from collections.abc import Callable
@@ -23,7 +28,7 @@ from apps.observations.models import Observation
 
 from ..base import AuthError, NotSupported, SourceError
 from .client import EndpointCentralClient
-from .mapping import FIELDS, computer_to_record, find_rows, parse_time, pick
+from .mapping import FIELDS, SOFTWARE_FIELDS, computer_to_record, find_rows, parse_time, pick
 
 PAGE_SIZE = 500
 MAX_PAGES = 1000
@@ -40,12 +45,14 @@ FAMILIES = {
             "/dcapi/inventory/computers/{id}/network",
         ),
         "detail_param": None,
+        "software": "/dcapi/inventory/computers/{id}/softwareInfo",
     },
     "api_1_4": {
         "list": "/api/1.4/inventory/scancomputers",
         "page": ("page", "pagelimit"),
         "details": ("/api/1.4/inventory/compdetailssummary",),
         "detail_param": "resid",
+        "software": None,
     },
 }
 ORDER = ("dcapi", "api_1_4")
@@ -109,7 +116,7 @@ def test_connection(client: EndpointCentralClient) -> dict:
         raise
     except SourceError:
         pass  # version is informational only
-    caps = {"computers": True, "computer_details": True, "software": False}
+    caps = {"computers": True, "computer_details": True, "software": family == "dcapi"}
     caps.update({f"route_{f}": f == family for f in ORDER})
     return {"version": version, "capabilities": caps, "requests": client.requests, "note": note}
 
@@ -120,6 +127,9 @@ class EndpointCentralAdapter:
         self.client = client
         self.caps = capabilities or instance.capabilities or {}
         self.missing_details: set[str] = set()
+        # Set only when software is collected (read by store_facts).
+        self.software: dict[str, list[dict]] | None = None
+        self.software_complete: set[str] = set()
 
     def prepare(self) -> None:
         if family_of(self.caps):
@@ -129,7 +139,7 @@ class EndpointCentralAdapter:
         family, note = detect_family(self.client)
         if family is None:
             raise SourceError(f"No supported Endpoint Central inventory API was found ({note}).")
-        self.caps = {"computers": True, "computer_details": True, "software": False}
+        self.caps = {"computers": True, "computer_details": True, "software": family == "dcapi"}
         self.caps.update({f"route_{f}": f == family for f in ORDER})
         IntegrationInstance.objects.filter(pk=self.instance.pk).update(capabilities=self.caps)
 
@@ -245,6 +255,44 @@ class EndpointCentralAdapter:
             docs.append({"network_adapters": raw["network_adapters"]})
         return docs
 
+    def _software(self, external_id: str) -> list[dict]:
+        path = FAMILIES[family_of(self.caps)]["software"].format(id=external_id)
+        body = self.client.get(path)
+        items = []
+        for row in find_rows(body, SOFTWARE_FIELDS["name"]):
+            name = pick([row], SOFTWARE_FIELDS["name"])[1]
+            if not name:
+                continue
+            installed = parse_time(pick([row], SOFTWARE_FIELDS["installed"])[1], "UTC")
+            items.append(
+                {
+                    "name": name,
+                    "publisher": pick([row], SOFTWARE_FIELDS["publisher"])[1] or "",
+                    "version": pick([row], SOFTWARE_FIELDS["version"])[1] or "",
+                    "source_ref": pick([row], SOFTWARE_FIELDS["source_ref"])[1] or "",
+                    "installed_on": installed[:10] if installed else None,
+                }
+            )
+        return items
+
+    def _software_wanted(self, run) -> set[str] | None:
+        """External IDs that already have software stored, or None when not collecting."""
+        if not self.instance.collect_software:
+            return None
+        if not FAMILIES[family_of(self.caps)]["software"]:
+            self._warn(
+                run, None, "Installed software needs the dcapi API generation; not collected."
+            )
+            return None
+        from apps.software.models import SoftwareInstallation
+
+        self.software = {}
+        return set(
+            SoftwareInstallation.objects.filter(instance=self.instance)
+            .values_list("external_id", flat=True)
+            .distinct()
+        )
+
     def collect(self, run, progress: Callable[[], None]) -> tuple[list[dict], bool]:
         run.phase = "devices"
         progress()
@@ -257,6 +305,7 @@ class EndpointCentralAdapter:
         fetched_at = now.isoformat()
         tz_name = self.instance.source_timezone
         self._load_cache()
+        known_software = self._software_wanted(run)
         records = []
         for index, row in enumerate(rows, start=1):
             external_id = pick([row], FIELDS["external_id"])[1]
@@ -273,6 +322,17 @@ class EndpointCentralAdapter:
                 except SourceError as exc:
                     reused = " Previous details reused." if cached else ""
                     self._warn(run, external_id, f"Details not read: {exc}.{reused}")
+            refreshed = enriched_at == fetched_at
+            if known_software is not None and (refreshed or external_id not in known_software):
+                try:
+                    self.software[external_id] = self._software(external_id)
+                    self.software_complete.add(external_id)
+                except AuthError:
+                    raise
+                except NotSupported:
+                    self._warn(run, external_id, "Installed software route not available.")
+                except SourceError as exc:
+                    self._warn(run, external_id, f"Installed software not read: {exc}.")
             record, warnings = computer_to_record(
                 row, details, tz_name=tz_name, fetched_at=fetched_at, enriched_at=enriched_at
             )

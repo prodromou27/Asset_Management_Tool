@@ -19,6 +19,7 @@ from apps.reconciliation.urls import (
     merge_urlpatterns,
     reconciliation_urlpatterns,
 )
+from apps.software.urls import asset_urlpatterns as software_asset_urlpatterns
 
 urlpatterns = [
     path("api/v1/health/", include("apps.health.urls")),
@@ -50,6 +51,8 @@ urlpatterns = [
     path("api/v1/exports/", include("apps.exports.urls")),
     path("api/v1/lifecycle/", include("apps.lifecycle.urls")),
     path("api/v1/assets/", include(lifecycle_asset_urlpatterns)),
+    path("api/v1/software/", include("apps.software.urls")),
+    path("api/v1/assets/", include(software_asset_urlpatterns)),
     path("api/v1/saved-views/", saved_views.SavedViewListCreateView.as_view(), name="saved-views"),
     path(
         "api/v1/saved-views/<uuid:pk>/",
