@@ -1,6 +1,6 @@
 # Current Task: 015 | EOL catalogue, evidence and assessment
 
-Status: **Complete locally; awaiting CI** (2026-11-04, branch DEV).
+Status: **Complete (CI run 41833135237 green)** (2026-11-04, branch DEV).
 
 **Read:** AGENTS.md, docs/00, 01 (support states, Review EOL), 03 (lifecycle tables), 04 (EOL
 endpoints, asset lifecycle), 06 (whole), 07, 08 (sections 3 and 5), 09 (EOL approval column),
@@ -74,7 +74,9 @@ installations (Task 016); the catalogue already accepts software products.
   (findings, product page, asset tab; mocked API) led to single-line findings rows and an
   exact-match sidebar entry. One existing test (`admin-sites` categories) failed once under
   full-suite load and passed in isolation and in two further full runs.
-- Not run: Docker stack, live PostgreSQL (CI covers), Playwright against a real backend.
+- GitHub CI run 41833135237 on `e3c58a9`: backend **708 passed, 0 skipped** (PostgreSQL 16 +
+  Redis 7; `lifecycle` migration reversed), frontend 153, Compose config and image builds pass.
+- Not run: Docker stack, Playwright against a real backend.
 
 **Open (ASM-53):** third-party-only dates setting a status; extended-support policy;
 not-applicable category lists; separate verifier (four-eyes) not enforced; "EOL evidence
