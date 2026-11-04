@@ -1,6 +1,6 @@
 # Current Task: 017 | Domain and TLS certificate inventory/expiry
 
-Status: **Complete locally; awaiting CI** (2026-11-04, branch DEV). No real hosts contacted:
+Status: **Complete (CI run 41877536180 green)** (2026-11-04, branch DEV). No real hosts contacted:
 checks were tested against a local TLS server on 127.0.0.1 with generated test certificates.
 
 **Read:** AGENTS.md, docs/00, 03 (Domains), 04 (Domain/TLS endpoints), 06 (Domain and TLS),
@@ -41,6 +41,8 @@ A12), 17.
 - Frontend: typecheck, oxlint, **171 tests** (7 new) three consecutive full runs, build pass.
   Screenshots (mocked API) led to the identifiers layout, wrapping endpoint rows and the
   top-bar context on certificate pages.
+- GitHub CI run 41877536180 on `de1955c`: success; backend **750 passed, 0 skipped** (PostgreSQL
+  16 + Redis 7), frontend 171, Compose config and image builds.
 - Not run: Docker stack, checks against real hosts (needs approved endpoints on the server).
 
 **Open (ASM-56):** chain validation against an internal CA bundle; manage rights for
