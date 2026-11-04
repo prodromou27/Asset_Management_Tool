@@ -1,6 +1,6 @@
 # Current Task: 012 | Static/dynamic groups + editor
 
-Status: **Complete (workstation-verified; CI pending at the time of writing)**
+Status: **Complete (CI run 41793548771 green)**
 (2026-11-04, branch DEV).
 
 **Read:** AGENTS.md, docs/00, 01 (Make asset group), 03 (Groups, group rule representation),
@@ -112,6 +112,9 @@ Out of scope:
 - Ruff check and format are clean; no migration drift; the OpenAPI schema validates with
   `--fail-on-warn` and matches the committed file.
 - Frontend: typecheck, oxlint, **116 tests** (7 new) and the build all pass.
+- GitHub CI run 41793548771 on `b98d534` (PostgreSQL 16 + Redis 7): backend **588 passed,
+  0 skipped**; migrations applied and reversed (including `groups`); OpenAPI drift check;
+  frontend 116 tests; Compose config and production image builds pass.
 - Not run: Docker stack, Playwright, browser review at 1440×900 and 390×844.
 
 **Open:**
