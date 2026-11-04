@@ -9,6 +9,8 @@ x-backend-env: &backend-env
   # Optional comma-separated https origins (for example https://10.0.0.5). Same-origin
   # requests through the proxy on 443 already pass Django's origin check.
   CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:-}
+  # "https" (default) or "http" for an internal install without a certificate.
+  ITAM_PUBLIC_SCHEME: ${ITAM_PUBLIC_SCHEME:-https}
   ITAM_TIMEZONE: ${ITAM_TIMEZONE:-Asia/Nicosia}
   ITAM_LOG_LEVEL: ${ITAM_LOG_LEVEL:-INFO}
   DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?DJANGO_SECRET_KEY is required}

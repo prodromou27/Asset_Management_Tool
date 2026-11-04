@@ -67,13 +67,14 @@ services:
         condition: service_healthy
       frontend:
         condition: service_started
+    # ITAM_PUBLIC_SCHEME selects the proxy config: "http" serves the app on 80;
+    # "https" (default) serves 443 and redirects 80 to it.
     ports:
+      - "80:80"
       - "443:443"
     volumes:
-      # Bind mounts are labelled container_file_t by scripts/staging/deploy.sh
-      # rather than relabelled by Compose (docs/12 section 3); SELinux stays enforcing.
-      - ./nginx/prod.conf:/etc/nginx/conf.d/default.conf:ro
-      - ${ITAM_TLS_CERT_DIR:?ITAM_TLS_CERT_DIR is required}:/etc/nginx/tls:ro
+      - ./nginx/${ITAM_PUBLIC_SCHEME:-https}.conf:/etc/nginx/conf.d/default.conf:ro
+      - ${ITAM_TLS_CERT_DIR:-./nginx/no-cert}:/etc/nginx/tls:ro
     read_only: true
     tmpfs:
       - /var/cache/nginx

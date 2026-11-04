@@ -6,5 +6,4 @@
 .DS_Store
 Thumbs.db
 
-# Staging deploy records (scripts/staging/deploy.sh)
-.deploy/
+.env.before-https

@@ -1,56 +1,36 @@
-# Current Task: Staging installation kit (between 013 and 014)
+# Current Task: Simple installation (HTTP first, HTTPS later)
 
-Status: **Complete (CI run 41802726383 green)** (2026-11-04, branch DEV). Requested by the
-owner: "prepare the installation; the hostname and certificate are not needed yet".
-
-**Read:** AGENTS.md, docs/00, 12 (sections 0-8), 14, 17 (DEC-01, DEC-04, DEC-11, ASM-03).
-
-## Scope
-
-Staging install on one AlmaLinux 10.2 host reached by IP with a temporary self-signed
-certificate. Production go-live remains blocked (ADR-011 gates: Tasks 018/019, Task 022,
-open decisions). Nothing was installed or run on a real host.
+Status: **Complete locally; awaiting CI** (2026-11-04, branch DEV). Owner request: make
+the installation simpler, run on port 80 without a certificate, and let an administrator
+add a certificate later. Replaces the earlier five-script staging kit.
 
 ## Outcome
 
-- **Fix: api healthcheck under production settings.** It called
-  `http://localhost:8000` without a proxy marker, so `SECURE_SSL_REDIRECT` answered 301
-  and `localhost` failed host validation; nginx-proxy (which waits for a healthy api)
-  would never start. It now sends the first `ITAM_ALLOWED_HOSTS` entry as Host and
-  `X-Forwarded-Proto: https`; host validation and the redirect stay strict.
-- `CSRF_TRUSTED_ORIGINS` is passed through Compose (optional; empty = none).
-- `scripts/staging/`:
-  - `preflight.sh`: read-only checks (OS, SELinux, firewalld, NTP, updates, resources,
-    conflicting runtimes, port 443, repository reachability).
-  - `install_docker.sh`: dry run by default; `--yes` installs from Docker's RHEL
-    repository after a GPG fingerprint check and writes an install record. Never
-    removes packages or touches SELinux/firewalld.
-  - `make_selfsigned_cert.sh`: 90-day certificate with IP (and optional short-name)
-    SAN, root-owned key, `container_file_t` label.
-  - `make_env.sh`: `.env` (mode 600) with generated secrets that are never printed;
-    `ITAM_ENV=staging`, integrations off.
-  - `deploy.sh`: guarded by `ITAM_CONFIRM_STAGING=yes`; labels bind mounts, validates
-    Compose and refuses any published port other than `nginx-proxy:443`, builds,
-    migrates once, waits for health, `check --deploy --fail-level WARNING`, smoke tests
-    through the proxy (ready 200, frontend 200, unauthenticated API refused), writes a
-    record to `.deploy/` (git-ignored).
-- docs/12 section 9: step-by-step runbook, certificate/FQDN replacement, known limits.
-  README pointer.
+- `ITAM_PUBLIC_SCHEME=http|https` (default https; ASM-51):
+  - Django: http turns off the HTTPS redirect, HSTS and secure cookies, and silences
+    only those deploy checks. `ITAM_ENV=production` refuses http.
+  - Proxy: `infra/nginx/http.conf` serves the app on 80; `https.conf` (was `prod.conf`)
+    serves 443 and redirects 80. nginx-proxy publishes 80 and 443; the certificate
+    directory defaults to an empty placeholder.
+- `scripts/install.sh`: one command for install and update. Installs Docker if missing
+  (official repository, signing-key fingerprint checked), writes `.env` with generated
+  secrets on first run (http, server IP), builds, migrates, starts, opens http in
+  firewalld, checks health and offers to create the first admin.
+- `scripts/enable_https.sh <fullchain> <privkey> [hostname]` or `--self-signed`: checks
+  that the key matches and the certificate has not expired, installs to `/etc/itam/tls`,
+  switches `.env` (backup kept), opens https and restarts.
+- Removed `scripts/staging/`. docs/12 section 9 rewritten; README; `.env.example`;
+  docs/17 ASM-51. CI checks ports 80,443 and that http mode selects `http.conf`.
+- Kept from the previous step: api healthcheck fix and `CSRF_TRUSTED_ORIGINS` passthrough.
 
 ## Verification (workstation; no Docker or AlmaLinux host here)
 
-- New `backend/tests/test_container_healthcheck.py` (4 tests): the healthcheck request
-  passes with production-like settings, plain HTTP is redirected, unlisted hosts get
-  400, and the Compose healthcheck sends the first allowed host and the https marker.
-- `manage.py check --deploy --fail-level WARNING` under production settings with a
-  staging-style environment: no issues.
-- `make_env.sh` run in a scratch directory: expected keys, secret lengths, valid Fernet
-  key, refuses to overwrite. The certificate command checked with OpenSSL 3.5.
-- `bash -n` on all scripts (shellcheck not available here).
-- GitHub CI run 41802726383 on `c94841d`: backend **616 passed, 0 skipped** (PostgreSQL 16 +
-  Redis 7), frontend 122, Compose config and production image builds pass.
-- Not run: the scripts on AlmaLinux, Docker builds or the stack itself. The first run on
-  the staging host is the real test; send me any failing step output.
+- Backend 613 passed, 6 skipped (PostgreSQL/Redis-only). New production-settings tests:
+  http mode turns off TLS-only settings; http with `ITAM_ENV=production` and an unknown
+  scheme are refused.
+- `check --deploy --fail-level WARNING` passes in both modes. Ruff clean. `bash -n` on
+  both scripts.
+- Not run: the scripts on AlmaLinux or the Docker stack.
 
 Proposed next task: **014 | CSV/XLSX/JSON exports with RBAC and async jobs**
 (tasks/BACKLOG.md). Do not start automatically.
