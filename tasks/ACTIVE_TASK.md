@@ -1,6 +1,6 @@
 # Current Task: 016b | License entitlements/allocations + Software & Licenses area
 
-Status: **Complete locally; awaiting CI** (2026-11-04, branch DEV). Owner decisions from 016a
+Status: **Complete (CI run 41869188389 green)** (2026-11-04, branch DEV). Owner decisions from 016a
 apply (two slices; this is the second). No live sources or credentials used.
 
 **Read:** AGENTS.md, docs/00, 03 (licensing tables), 04 (/licenses endpoints), 06 (software and
@@ -41,6 +41,8 @@ license model), 08 (§6 Software & Licenses), 09 (roles), 11 (license import tem
 - Frontend: typecheck, oxlint, **164 tests** (4 new; 3 updated for the combined area) and
   build pass. Screenshots (mocked API) of Entitlements, Allocations and the product page led to
   section spacing and link-style fixes.
+- GitHub CI run 41869188389 on `c9a4ed2`: backend **736 passed, 0 skipped** (PostgreSQL 16 +
+  Redis 7), frontend 164, Compose config and image builds pass.
 - Not run: Docker stack, live sources.
 
 **Open (ASM-55):** role grants for `licenses.view`/`licenses.manage` beyond the defaults;
