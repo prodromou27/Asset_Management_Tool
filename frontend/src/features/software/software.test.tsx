@@ -86,7 +86,7 @@ describe('Software page', () => {
     expect(within(table).getByText('1,284')).toBeInTheDocument()
     expect(within(table).getByText('1 version past end of support')).toBeInTheDocument()
     expect(within(table).getByText('Not reported')).toBeInTheDocument()
-    expect(screen.getByText(/not licences/)).toBeInTheDocument()
+    expect(screen.getByText(/not licenses/)).toBeInTheDocument()
 
     fireEvent.change(screen.getByLabelText('Lifecycle'), { target: { value: 'ended' } })
     await waitFor(() => {

@@ -35,7 +35,7 @@ export function SoftwareProductPage() {
   return (
     <div className="page page--wide">
       <nav aria-label="Breadcrumb" className="breadcrumb">
-        <Link to="/software">Software</Link>
+        <Link to="/software">Software &amp; Licenses</Link>
       </nav>
       <PageHeader
         title={p.name}

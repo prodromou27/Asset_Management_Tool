@@ -16,7 +16,7 @@ export function SubscriptionPage() {
   const sku = useQuery({ queryKey: licenseKeys.subscription(id), queryFn: () => fetchSubscription(id) })
   const crumb = (
     <nav aria-label="Breadcrumb" className="breadcrumb">
-      <Link to="/licenses">Licenses</Link>
+      <Link to="/software?tab=m365">Software &amp; Licenses</Link>
     </nav>
   )
   if (sku.isPending) return <LoadingState label="Loading subscription…" />

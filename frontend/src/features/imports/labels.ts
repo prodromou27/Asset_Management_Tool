@@ -39,4 +39,5 @@ export const FAMILY_LABEL: Record<string, string> = {
   location: 'Locations',
   group: 'Groups',
   group_membership: 'Static group members',
+  license_entitlement: 'License entitlements',
 }

@@ -14,10 +14,21 @@ compliance truth (docs/06: "Graph tenant inventory is not a billing agreement"):
   assignment paths (direct and/or one or more groups), so a user is never counted twice.
   When the assignment disappears from a complete listing the row is ended, not deleted;
   a later re-assignment opens a new row.
+
+Manually maintained entitlements (Task 016b, ASM-55):
+
+- ``LicenseProduct``: what is licensed (publisher, name, vendor SKU) and how it is
+  counted (metric). Optionally linked to an observed ``SoftwareProduct`` so installation
+  counts can be shown next to purchased quantities; the two are never merged.
+- ``LicenseEntitlement``: purchased units under one agreement/order reference, with term
+  and owner. Retired, never deleted.
+- ``EntitlementAllocation``: units of an entitlement given to an asset or a named user.
+  Ended, never deleted. ITAM records allocations; it does not judge compliance.
 """
 
 import uuid
 
+from django.conf import settings
 from django.db import models
 from django.db.models import Q
 
@@ -163,3 +174,155 @@ class LicenseAllocation(models.Model):
         if self.assigned_directly and self.group_ids:
             return "direct_and_group"
         return "direct" if self.assigned_directly else "group"
+
+
+# --- Manually maintained entitlements (Task 016b) --------------------------------------------
+
+_USER = settings.AUTH_USER_MODEL
+
+
+class LicenseProduct(models.Model):
+    class Metric(models.TextChoices):
+        USER = "user", "Per user"
+        DEVICE = "device", "Per device"
+        CORE = "core", "Per core"
+        CONCURRENT = "concurrent", "Concurrent users"
+        SUBSCRIPTION = "subscription", "Subscription"
+        OTHER = "other", "Other"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    publisher = models.CharField(max_length=200, blank=True)
+    name = models.CharField(max_length=200)
+    sku = models.CharField(max_length=120, blank=True)
+    identity_key = models.CharField(max_length=530, unique=True, editable=False)
+    metric = models.CharField(max_length=15, choices=Metric.choices, default=Metric.USER)
+    software_product = models.ForeignKey(
+        "software.SoftwareProduct",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="license_products",
+    )
+    note = models.TextField(blank=True)
+    is_active = models.BooleanField(default=True)
+    version = models.PositiveIntegerField(default=1)
+    created_by = models.ForeignKey(_USER, null=True, on_delete=models.SET_NULL, related_name="+")
+    modified_by = models.ForeignKey(_USER, null=True, on_delete=models.SET_NULL, related_name="+")
+    created_at = models.DateTimeField(auto_now_add=True)
+    modified_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["name", "publisher", "sku"]
+
+    def __str__(self):
+        label = f"{self.publisher} {self.name}".strip()
+        return f"{label} ({self.sku})" if self.sku else label
+
+
+class LicenseEntitlement(models.Model):
+    class Source(models.TextChoices):
+        MANUAL = "manual", "Manual"
+        IMPORT = "import", "Import"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    product = models.ForeignKey(
+        LicenseProduct, on_delete=models.PROTECT, related_name="entitlements"
+    )
+    # Agreement, order or contract number that identifies the purchase.
+    reference = models.CharField(max_length=120)
+    reference_key = models.CharField(max_length=120, editable=False)
+    quantity = models.PositiveIntegerField()
+    starts_on = models.DateField(null=True, blank=True)
+    ends_on = models.DateField(null=True, blank=True)  # empty: perpetual
+    supplier = models.CharField(max_length=200, blank=True)
+    owner = models.CharField(max_length=200, blank=True)  # responsible person or team
+    note = models.TextField(blank=True)
+    source = models.CharField(max_length=10, choices=Source.choices, default=Source.MANUAL)
+    retired_at = models.DateTimeField(null=True, blank=True)
+    retired_by = models.ForeignKey(_USER, null=True, on_delete=models.SET_NULL, related_name="+")
+    retired_reason = models.CharField(max_length=500, blank=True)
+    version = models.PositiveIntegerField(default=1)
+    created_by = models.ForeignKey(_USER, null=True, on_delete=models.SET_NULL, related_name="+")
+    modified_by = models.ForeignKey(_USER, null=True, on_delete=models.SET_NULL, related_name="+")
+    created_at = models.DateTimeField(auto_now_add=True)
+    modified_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["product__name", "reference"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["product", "reference_key"], name="license_entitlement_reference"
+            ),
+            models.CheckConstraint(
+                condition=Q(quantity__gte=1), name="license_entitlement_quantity"
+            ),
+            models.CheckConstraint(
+                condition=Q(ends_on__isnull=True)
+                | Q(starts_on__isnull=True)
+                | Q(ends_on__gte=models.F("starts_on")),
+                name="license_entitlement_term",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.product} / {self.reference}"
+
+    def status(self, today) -> str:
+        """retired | not_started | expired | active (calendar days, UTC)."""
+        if self.retired_at:
+            return "retired"
+        if self.starts_on and today < self.starts_on:
+            return "not_started"
+        if self.ends_on and today > self.ends_on:
+            return "expired"
+        return "active"
+
+
+class EntitlementAllocation(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    entitlement = models.ForeignKey(
+        LicenseEntitlement, on_delete=models.PROTECT, related_name="allocations"
+    )
+    asset = models.ForeignKey(
+        "assets.Asset",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="license_allocations",
+    )
+    # Named user (name, UPN or e-mail as the organisation records it); personal data.
+    user_name = models.CharField(max_length=320, blank=True)
+    user_key = models.CharField(max_length=320, blank=True, editable=False)
+    units = models.PositiveIntegerField(default=1)
+    note = models.CharField(max_length=500, blank=True)
+    allocated_at = models.DateTimeField()
+    allocated_by = models.ForeignKey(_USER, null=True, on_delete=models.SET_NULL, related_name="+")
+    ended_at = models.DateTimeField(null=True, blank=True)
+    ended_by = models.ForeignKey(_USER, null=True, on_delete=models.SET_NULL, related_name="+")
+    ended_reason = models.CharField(max_length=500, blank=True)
+
+    class Meta:
+        ordering = ["-allocated_at"]
+        constraints = [
+            models.CheckConstraint(
+                condition=(Q(asset__isnull=False) & Q(user_key=""))
+                | (Q(asset__isnull=True) & ~Q(user_key="")),
+                name="entitlement_allocation_one_target",
+            ),
+            models.CheckConstraint(condition=Q(units__gte=1), name="entitlement_allocation_units"),
+            models.UniqueConstraint(
+                fields=["entitlement", "asset"],
+                condition=Q(ended_at__isnull=True, asset__isnull=False),
+                name="entitlement_allocation_asset_active",
+            ),
+            models.UniqueConstraint(
+                fields=["entitlement", "user_key"],
+                condition=Q(ended_at__isnull=True) & ~Q(user_key=""),
+                name="entitlement_allocation_user_active",
+            ),
+        ]
+        indexes = [models.Index(fields=["entitlement", "ended_at"])]
+
+    @property
+    def target(self) -> str:
+        return "asset" if self.asset_id else "user"

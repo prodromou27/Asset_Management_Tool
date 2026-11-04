@@ -139,7 +139,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   const restricted = me?.must_change_password ?? false
   const sections = SECTIONS.map((section) => ({
     ...section,
-    items: section.items.filter((item) => !item.permission || can(item.permission)),
+    items: section.items.filter(
+      (item) => (!item.permission || can(item.permission)) && (!item.anyOf || item.anyOf.some((code) => can(code))),
+    ),
   })).filter((section) => section.items.length > 0)
   const where = locate(pathname)
 

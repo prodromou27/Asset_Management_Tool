@@ -264,6 +264,34 @@ export interface paths {
   "/api/v1/licenses/allocations/": {
     get: operations["licenses_allocations_list"];
   };
+  "/api/v1/licenses/entitlement-allocations/": {
+    get: operations["licenses_entitlement_allocations_list"];
+  };
+  "/api/v1/licenses/entitlement-allocations/{id}/end/": {
+    post: operations["licenses_entitlement_allocations_end_create"];
+  };
+  "/api/v1/licenses/entitlements/": {
+    get: operations["licenses_entitlements_list"];
+    post: operations["licenses_entitlements_create"];
+  };
+  "/api/v1/licenses/entitlements/{id}/": {
+    get: operations["licenses_entitlements_retrieve"];
+    patch: operations["licenses_entitlements_partial_update"];
+  };
+  "/api/v1/licenses/entitlements/{id}/allocations/": {
+    post: operations["licenses_entitlements_allocations_create"];
+  };
+  "/api/v1/licenses/entitlements/{id}/retire/": {
+    post: operations["licenses_entitlements_retire_create"];
+  };
+  "/api/v1/licenses/products/": {
+    get: operations["licenses_products_list"];
+    post: operations["licenses_products_create"];
+  };
+  "/api/v1/licenses/products/{id}/": {
+    get: operations["licenses_products_retrieve"];
+    patch: operations["licenses_products_partial_update"];
+  };
   "/api/v1/licenses/subscriptions/": {
     get: operations["licenses_subscriptions_list"];
   };
@@ -1187,9 +1215,10 @@ export interface components {
     /**
      * @description * `assets` - assets
      * * `groups` - groups
+     * * `license_entitlements` - license_entitlements
      * @enum {string}
      */
-    ExportCreateFamilyEnum: "assets" | "groups";
+    ExportCreateFamilyEnum: "assets" | "groups" | "license_entitlements";
     ExportCreateRequest: {
       family: components["schemas"]["ExportCreateFamilyEnum"];
       format: components["schemas"]["ExportFormatEnum"];
@@ -1696,6 +1725,169 @@ export interface components {
       rolled_back_at: string | null;
       version: number;
       sample: readonly string[][];
+    };
+    LicenseAllocateRequest: {
+      /** Format: uuid */
+      asset?: string | null;
+      user_name?: string;
+      units?: number;
+      note?: string;
+    };
+    LicenseAssetRef: {
+      /** Format: uuid */
+      id: string;
+      name: string;
+      site_code: string;
+    };
+    LicenseEntitlement: {
+      /** Format: uuid */
+      id: string;
+      product: components["schemas"]["LicenseProductRef"];
+      reference: string;
+      quantity: number;
+      /** Format: date */
+      starts_on: string | null;
+      /** Format: date */
+      ends_on: string | null;
+      supplier: string;
+      owner: string;
+      note: string;
+      source: components["schemas"]["LicenseEntitlementSourceEnum"];
+      status: components["schemas"]["LicenseEntitlementStatusEnum"];
+      /** @description Units in open allocations */
+      allocated: number;
+      /** @description Quantity minus allocated */
+      available: number;
+      /** Format: date-time */
+      retired_at: string | null;
+      retired_by: string | null;
+      retired_reason: string;
+      version: number;
+      created_by: string | null;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      modified_at: string;
+    };
+    LicenseEntitlementAllocation: {
+      /** Format: uuid */
+      id: string;
+      entitlement: components["schemas"]["LicenseEntitlementRef"];
+      target: string;
+      asset: components["schemas"]["LicenseAssetRef"] | null;
+      user_name: string;
+      units: number;
+      note: string;
+      /** Format: date-time */
+      allocated_at: string;
+      allocated_by: string | null;
+      /** Format: date-time */
+      ended_at: string | null;
+      ended_by: string | null;
+      ended_reason: string;
+    };
+    LicenseEntitlementRef: {
+      /** Format: uuid */
+      id: string;
+      reference: string;
+      /** Format: uuid */
+      product_id: string;
+      product_label: string;
+    };
+    /**
+     * @description * `manual` - Manual
+     * * `import` - Import
+     * @enum {string}
+     */
+    LicenseEntitlementSourceEnum: "manual" | "import";
+    /**
+     * @description * `active` - active
+     * * `not_started` - not_started
+     * * `expired` - expired
+     * * `retired` - retired
+     * @enum {string}
+     */
+    LicenseEntitlementStatusEnum: "active" | "not_started" | "expired" | "retired";
+    LicenseEntitlementWriteRequest: {
+      /** Format: uuid */
+      product?: string;
+      reference: string;
+      quantity: number;
+      /** Format: date */
+      starts_on?: string | null;
+      /** Format: date */
+      ends_on?: string | null;
+      supplier?: string;
+      owner?: string;
+      note?: string;
+      reason?: string;
+    };
+    LicenseProduct: {
+      /** Format: uuid */
+      id: string;
+      publisher: string;
+      name: string;
+      sku: string;
+      metric: components["schemas"]["MetricEnum"];
+      software_product: components["schemas"]["LicenseSoftwareRef"] | null;
+      note: string;
+      is_active: boolean;
+      /** @description Units of entitlements in term (not retired, started, not ended) */
+      purchased: number;
+      /** @description Units allocated from entitlements in term (all sites) */
+      allocated: number;
+      /** @description Purchased minus allocated; negative when more is allocated than purchased */
+      available: number;
+      entitlements_in_term: number;
+      /** @description Assets in your sites with the linked software installed; null when not linked */
+      observed_assets: number | null;
+      version: number;
+      /** Format: date-time */
+      modified_at: string;
+    };
+    LicenseProductDetail: {
+      /** Format: uuid */
+      id: string;
+      publisher: string;
+      name: string;
+      sku: string;
+      metric: components["schemas"]["MetricEnum"];
+      software_product: components["schemas"]["LicenseSoftwareRef"] | null;
+      note: string;
+      is_active: boolean;
+      /** @description Units of entitlements in term (not retired, started, not ended) */
+      purchased: number;
+      /** @description Units allocated from entitlements in term (all sites) */
+      allocated: number;
+      /** @description Purchased minus allocated; negative when more is allocated than purchased */
+      available: number;
+      entitlements_in_term: number;
+      /** @description Assets in your sites with the linked software installed; null when not linked */
+      observed_assets: number | null;
+      version: number;
+      /** Format: date-time */
+      modified_at: string;
+      entitlements: readonly components["schemas"]["LicenseEntitlement"][];
+    };
+    LicenseProductRef: {
+      /** Format: uuid */
+      id: string;
+      label: string;
+      metric: string;
+    };
+    LicenseProductWriteRequest: {
+      publisher?: string;
+      name: string;
+      sku?: string;
+      metric?: components["schemas"]["MetricEnum"];
+      software_product?: number | null;
+      note?: string;
+      is_active?: boolean;
+    };
+    LicenseSoftwareRef: {
+      id: number;
+      publisher: string;
+      name: string;
     };
     LicenseSource: {
       /** Format: uuid */
@@ -2246,6 +2438,16 @@ export interface components {
       reason: string;
     };
     /**
+     * @description * `user` - Per user
+     * * `device` - Per device
+     * * `core` - Per core
+     * * `concurrent` - Concurrent users
+     * * `subscription` - Subscription
+     * * `other` - Other
+     * @enum {string}
+     */
+    MetricEnum: "user" | "device" | "core" | "concurrent" | "subscription" | "other";
+    /**
      * @description * `announcement` - End-of-life announcement
      * * `end_of_sale` - End of sale
      * * `end_of_maintenance` - End of maintenance (bug fixes)
@@ -2413,6 +2615,24 @@ export interface components {
     };
     PaginatedJobList: {
       items: components["schemas"]["Job"][];
+      next_cursor: string | null;
+      previous_cursor: string | null;
+      count: number;
+    };
+    PaginatedLicenseEntitlementAllocationList: {
+      items: components["schemas"]["LicenseEntitlementAllocation"][];
+      next_cursor: string | null;
+      previous_cursor: string | null;
+      count: number;
+    };
+    PaginatedLicenseEntitlementList: {
+      items: components["schemas"]["LicenseEntitlement"][];
+      next_cursor: string | null;
+      previous_cursor: string | null;
+      count: number;
+    };
+    PaginatedLicenseProductList: {
+      items: components["schemas"]["LicenseProduct"][];
       next_cursor: string | null;
       previous_cursor: string | null;
       count: number;
@@ -2595,6 +2815,29 @@ export interface components {
         [key: string]: string;
       };
       mode?: components["schemas"]["ImportModeEnum"];
+    };
+    PatchedLicenseEntitlementWriteRequest: {
+      /** Format: uuid */
+      product?: string;
+      reference?: string;
+      quantity?: number;
+      /** Format: date */
+      starts_on?: string | null;
+      /** Format: date */
+      ends_on?: string | null;
+      supplier?: string;
+      owner?: string;
+      note?: string;
+      reason?: string;
+    };
+    PatchedLicenseProductWriteRequest: {
+      publisher?: string;
+      name?: string;
+      sku?: string;
+      metric?: components["schemas"]["MetricEnum"];
+      software_product?: number | null;
+      note?: string;
+      is_active?: boolean;
     };
     PatchedLifecycleMilestoneUpdateRequest: {
       milestone_type?: components["schemas"]["MilestoneTypeEnum"];
@@ -3235,9 +3478,10 @@ export interface components {
      * * `location` - location
      * * `group` - group
      * * `group_membership` - group_membership
+     * * `license_entitlement` - license_entitlement
      * @enum {string}
      */
-    UploadFamilyEnum: "asset" | "location" | "group" | "group_membership";
+    UploadFamilyEnum: "asset" | "location" | "group" | "group_membership" | "license_entitlement";
     UploadRequest: {
       family: components["schemas"]["UploadFamilyEnum"];
       /** Format: binary */
@@ -4964,6 +5208,248 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["PaginatedAllocationList"];
+        };
+      };
+    };
+  };
+  licenses_entitlement_allocations_list: {
+    parameters: {
+      query?: {
+        asset?: string;
+        /** @description The pagination cursor value. */
+        cursor?: string;
+        entitlement?: string;
+        include_ended?: boolean;
+        /** @description Number of results to return per page. */
+        page_size?: number;
+        /** @description License product ID */
+        product?: string;
+        /** @description Asset name, user, product or reference */
+        q?: string;
+        target?: "asset" | "user";
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["PaginatedLicenseEntitlementAllocationList"];
+        };
+      };
+    };
+  };
+  licenses_entitlement_allocations_end_create: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ReasonRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["ReasonRequest"];
+        "multipart/form-data": components["schemas"]["ReasonRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["LicenseEntitlementAllocation"];
+        };
+      };
+    };
+  };
+  licenses_entitlements_list: {
+    parameters: {
+      query?: {
+        /** @description The pagination cursor value. */
+        cursor?: string;
+        /** @description Number of results to return per page. */
+        page_size?: number;
+        /** @description License product ID */
+        product?: string;
+        /** @description Reference, product, supplier or owner */
+        q?: string;
+        /** @description ending: in term and ending within 90 days */
+        status?: "active" | "ending" | "expired" | "not_started" | "retired";
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["PaginatedLicenseEntitlementList"];
+        };
+      };
+    };
+  };
+  licenses_entitlements_create: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LicenseEntitlementWriteRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["LicenseEntitlementWriteRequest"];
+        "multipart/form-data": components["schemas"]["LicenseEntitlementWriteRequest"];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          "application/json": components["schemas"]["LicenseEntitlement"];
+        };
+      };
+    };
+  };
+  licenses_entitlements_retrieve: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["LicenseEntitlement"];
+        };
+      };
+    };
+  };
+  licenses_entitlements_partial_update: {
+    parameters: {
+      header: {
+        "If-Match": string;
+      };
+      path: {
+        id: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["PatchedLicenseEntitlementWriteRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["PatchedLicenseEntitlementWriteRequest"];
+        "multipart/form-data": components["schemas"]["PatchedLicenseEntitlementWriteRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["LicenseEntitlement"];
+        };
+      };
+    };
+  };
+  licenses_entitlements_allocations_create: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["LicenseAllocateRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["LicenseAllocateRequest"];
+        "multipart/form-data": components["schemas"]["LicenseAllocateRequest"];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          "application/json": components["schemas"]["LicenseEntitlementAllocation"];
+        };
+      };
+    };
+  };
+  licenses_entitlements_retire_create: {
+    parameters: {
+      header: {
+        "If-Match": string;
+      };
+      path: {
+        id: string;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ReasonRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["ReasonRequest"];
+        "multipart/form-data": components["schemas"]["ReasonRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["LicenseEntitlement"];
+        };
+      };
+    };
+  };
+  licenses_products_list: {
+    parameters: {
+      query?: {
+        /** @description The pagination cursor value. */
+        cursor?: string;
+        include_inactive?: boolean;
+        /** @description Number of results to return per page. */
+        page_size?: number;
+        /** @description Publisher, name or SKU */
+        q?: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["PaginatedLicenseProductList"];
+        };
+      };
+    };
+  };
+  licenses_products_create: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LicenseProductWriteRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["LicenseProductWriteRequest"];
+        "multipart/form-data": components["schemas"]["LicenseProductWriteRequest"];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          "application/json": components["schemas"]["LicenseProductDetail"];
+        };
+      };
+    };
+  };
+  licenses_products_retrieve: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["LicenseProductDetail"];
+        };
+      };
+    };
+  };
+  licenses_products_partial_update: {
+    parameters: {
+      header: {
+        "If-Match": string;
+      };
+      path: {
+        id: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["PatchedLicenseProductWriteRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["PatchedLicenseProductWriteRequest"];
+        "multipart/form-data": components["schemas"]["PatchedLicenseProductWriteRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["LicenseProductDetail"];
         };
       };
     };

@@ -38,6 +38,13 @@ export type LicenseSubscription = Schemas['Subscription']
 export type LicenseSubscriptionDetail = Schemas['SubscriptionDetail']
 export type LicenseSnapshot = Schemas['Snapshot']
 export type LicenseAllocation = Schemas['Allocation']
+export type LicenseProduct = Schemas['LicenseProduct']
+export type LicenseProductDetail = Schemas['LicenseProductDetail']
+export type LicenseProductWrite = Schemas['LicenseProductWriteRequest']
+export type LicenseEntitlement = Schemas['LicenseEntitlement']
+export type LicenseEntitlementWrite = Schemas['LicenseEntitlementWriteRequest']
+export type EntitlementAllocation = Schemas['LicenseEntitlementAllocation']
+export type LicenseAllocate = Schemas['LicenseAllocateRequest']
 export type CategoryReview = Schemas['CategoryReview']
 export type BulkResult = Schemas['BulkResult']
 export type Assignee = Schemas['Assignee']
@@ -117,6 +124,7 @@ export const PERMISSIONS = {
   reconciliationDecide: 'reconciliation.decide',
   integrationsManage: 'integrations.manage',
   licensesView: 'licenses.view',
+  licensesManage: 'licenses.manage',
   groupsView: 'groups.view',
   groupsManage: 'groups.manage',
   groupsMembers: 'groups.members',

@@ -68,7 +68,13 @@ def setup(hq, branch, switch, laptop):
 
 def test_templates_and_download(admin):
     templates = {t["code"]: t for t in admin.get(f"{URL}templates/").json()}
-    assert set(templates) == {"asset", "location", "group", "group_membership"}
+    assert set(templates) == {
+        "asset",
+        "location",
+        "group",
+        "group_membership",
+        "license_entitlement",
+    }
     asset = templates["asset"]
     assert asset["version"] == 1 and asset["custom_columns"] is True and asset["allowed"] is True
     assert "never used for matching" in asset["match_help"]

@@ -7,7 +7,6 @@ import {
   FileUp,
   History,
   Library,
-  KeyRound,
   LayoutList,
   PlugZap,
   Radar,
@@ -24,6 +23,8 @@ export interface NavItem {
   label: string
   icon: LucideIcon
   permission?: string
+  /** Shown when the user holds any of these (areas combining several permissions). */
+  anyOf?: string[]
   /** Active only on this exact path (not on deeper routes owned by another entry). */
   end?: boolean
 }
@@ -41,9 +42,13 @@ export const SECTIONS: NavSection[] = [
     items: [
       { to: '/assets', label: 'Assets', icon: Boxes, permission: PERMISSIONS.assetsView },
       { to: '/groups', label: 'Groups', icon: LayoutList, permission: PERMISSIONS.groupsView },
-      { to: '/software', label: 'Software', icon: AppWindow, permission: PERMISSIONS.assetsView },
+      {
+        to: '/software',
+        label: 'Software & Licenses',
+        icon: AppWindow,
+        anyOf: [PERMISSIONS.assetsView, PERMISSIONS.licensesView],
+      },
       { to: '/lifecycle', label: 'Lifecycle', icon: History, permission: PERMISSIONS.lifecycleView, end: true },
-      { to: '/licenses', label: 'Licenses', icon: KeyRound, permission: PERMISSIONS.licensesView },
     ],
   },
   {

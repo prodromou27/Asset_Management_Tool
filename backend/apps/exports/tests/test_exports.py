@@ -77,15 +77,23 @@ def csv_rows(content: bytes) -> list[dict]:
 
 def test_families_describe_columns_related_and_personal_masking(admin, client_for, hq_reader):
     admin_families = {f["code"]: f for f in admin.get(f"{URL}families/").json()}
-    assert set(admin_families) == {"assets", "groups"}
+    assert set(admin_families) == {"assets", "groups", "license_entitlements"}
     assets = admin_families["assets"]
     assert assets["personal_data_allowed"] is True
-    assert {"hostnames", "interfaces", "ip_addresses", "groups", "lifecycle", "software"} == {
-        r["key"] for r in assets["related"]
-    }
+    assert {
+        "hostnames",
+        "interfaces",
+        "ip_addresses",
+        "groups",
+        "lifecycle",
+        "software",
+        "licenses",
+    } == {r["key"] for r in assets["related"]}
     assert "q" in assets["filter_keys"]
 
     reader = {f["code"]: f for f in client_for(hq_reader).get(f"{URL}families/").json()}
+    assert "license_entitlements" not in reader  # needs licenses.view
+    assert "licenses" not in {r["key"] for r in reader["assets"]["related"]}
     columns = {c["key"]: c for c in reader["assets"]["columns"]}
     assert reader["assets"]["personal_data_allowed"] is False
     assert columns["owner"]["personal"] is True and columns["owner"]["allowed"] is False

@@ -22,7 +22,7 @@ type Format = ExportJob['file_format']
 interface ExportDialogProps {
   open: boolean
   onClose: () => void
-  family: 'assets' | 'groups'
+  family: 'assets' | 'groups' | 'license_entitlements'
   /** Current list filters; offered as the "Current filters" scope. */
   filters?: Record<string, string>
   /** Specific records (for example one group); offered as the "Selected" scope. */

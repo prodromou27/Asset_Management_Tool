@@ -1,4 +1,58 @@
-# Current Task: 016a | Software catalogue, installations and software lifecycle
+# Current Task: 016b | License entitlements/allocations + Software & Licenses area
+
+Status: **Complete locally; awaiting CI** (2026-11-04, branch DEV). Owner decisions from 016a
+apply (two slices; this is the second). No live sources or credentials used.
+
+**Read:** AGENTS.md, docs/00, 03 (licensing tables), 04 (/licenses endpoints), 06 (software and
+license model), 08 (§6 Software & Licenses), 09 (roles), 11 (license import template), 17
+(ASM-29, ASM-52, ASM-54).
+
+**Previous:** 016a software inventory (CI run 41842547955 green).
+
+## Outcome (ASM-55)
+
+- **Models** (`licensing.0003_license_entitlements`): `LicenseProduct`, `LicenseEntitlement`,
+  `EntitlementAllocation` (asset or named user). Retire/end with reasons; nothing deleted.
+- **Permission** `licenses.manage` (`accounts.0010_license_manage_permission`): System Admin,
+  ITAM Manager. Reading stays `licenses.view`.
+- **Totals:** purchased (entitlements in term), allocated (all sites), available (negative shown
+  as "N more allocated than purchased"), installed assets in your sites from linked software.
+  Labelled as arithmetic, never compliance.
+- **API:** products, entitlements (filters: product, q, status incl. "ending" within 90 days),
+  retire, allocate, allocation list (site-scoped for assets) and end. If-Match on edits;
+  everything audited.
+- **Bulk:** import family `license_entitlement` (create/update, auto-creates the product,
+  rollback); export family `license_entitlements` + `allocations`; asset export table `licenses`.
+- **Frontend:** sidebar "Software & Licenses" (one entry, shown with `assets.view` or
+  `licenses.view`); tabs Installed software, Installations, Entitlements, Allocations,
+  Microsoft 365. License product page with totals, entitlements (record, edit, allocate,
+  retire) and allocations (end). `/licenses` and `/licenses/subscriptions/{id}` redirect.
+
+## Verification (workstation; SQLite test-only fallback)
+
+- Backend **730 passed, 6 skipped (PostgreSQL/Redis-only)**. New: 10 licensing tests (permissions; product uniqueness and
+  If-Match; entitlement rules, status filters and in-term totals; allocations with site scope,
+  duplicates, over-allocation, listing hides other sites, end and audit; expired/retired
+  entitlements end allocations; installed assets from linked software, site-scoped; import
+  create/update/conflict/errors/rollback; import needs `licenses.manage`; export hides other
+  sites' allocations; last day of term). Family-list tests updated for the new families.
+- Migrations applied, reversed (`licensing 0002`, `accounts 0009`) and reapplied; no drift.
+  OpenAPI validates with `--fail-on-warn`; types regenerated. Ruff clean.
+- Frontend: typecheck, oxlint, **164 tests** (4 new; 3 updated for the combined area) and
+  build pass. Screenshots (mocked API) of Entitlements, Allocations and the product page led to
+  section spacing and link-style fixes.
+- Not run: Docker stack, live sources.
+
+**Open (ASM-55):** role grants for `licenses.view`/`licenses.manage` beyond the defaults;
+allocation to directory users/asset owners instead of free text; per-site entitlements;
+renewal notifications (Task 018).
+
+Proposed next task: **017 | Domain and TLS certificate inventory/expiry** (tasks/BACKLOG.md).
+Do not start automatically.
+
+---
+
+# Previous record: Task 016a | Software catalogue, installations and software lifecycle
 
 Status: **Complete (CI run 41842547955 green)** (2026-11-04, branch DEV). Owner decisions: split
 Task 016 into 016a (this) and 016b (entitlements, allocations, Software & Licenses area with
@@ -56,9 +110,6 @@ M365); connector software reads for both Endpoint Central and Intune, off by def
 
 **Open (ASM-54):** sanitized EC/Graph captures (DEC-06/07); request volume with real tenants;
 software CSV import family; Software & Licenses area and entitlements (016b).
-
-Proposed next task: **016b | License entitlements/allocations + Software & Licenses area**
-(tasks/BACKLOG.md). Do not start automatically.
 
 ---
 

@@ -90,6 +90,7 @@ const ALL_ADMIN = [
   'discovery.view',
   'integrations.manage',
   'licenses.view',
+  'licenses.manage',
   'groups.view',
   'groups.manage',
   'groups.members',

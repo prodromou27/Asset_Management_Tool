@@ -391,7 +391,7 @@ function Health({ instance: i }: { instance: IntegrationInstance }) {
           <div className="meta-grid__pair">
             <dt>Results</dt>
             <dd>
-              <Link to="/licenses">Licenses</Link>
+              <Link to="/software?tab=m365">Microsoft 365 subscriptions</Link>
               <span className="cell-secondary">No device records: nothing is matched to assets.</span>
             </dd>
           </div>

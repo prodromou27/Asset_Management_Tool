@@ -3,17 +3,17 @@ import { Link } from 'react-router-dom'
 import { fetchSubscriptions, licenseKeys } from '../../shared/api/licenses'
 import type { LicenseSubscription } from '../../shared/api/types'
 import { formatDateTime } from '../../shared/format'
-import { PageHeader } from '../../shared/ui/PageHeader'
 import { EmptyState, LoadingState, QueryErrorState } from '../../shared/ui/States'
 import { StatusBadge } from '../../shared/ui/StatusBadge'
 import { CAPABILITY, count } from './labels'
 
-export function LicensesPage() {
+/** Microsoft 365 tab of Software & Licenses: tenant inventory, never mixed with recorded
+ * entitlements (docs/06: Graph tenant inventory is not a billing agreement). */
+export function M365Subscriptions() {
   const subscriptions = useQuery({ queryKey: licenseKeys.subscriptions, queryFn: fetchSubscriptions })
 
   return (
-    <div className="page page--wide">
-      <PageHeader title="Licenses" meta="Microsoft 365 subscriptions" />
+    <div>
       <p className="inline-note">
         Tenant inventory as reported by Microsoft 365: purchased and consumed units, and the users ITAM counts as
         assigned. This is not a billing agreement and not a license compliance assessment.
@@ -66,7 +66,7 @@ function Row({ s }: { s: LicenseSubscription }) {
   return (
     <tr>
       <td>
-        <Link to={`/licenses/subscriptions/${s.id}`}>{s.sku_part_number || s.sku_id}</Link>
+        <Link to={`/software/m365/${s.id}`}>{s.sku_part_number || s.sku_id}</Link>
         {!s.subscribed && <span className="cell-secondary">Assigned but not in the tenant&apos;s subscriptions</span>}
         {s.missing_since && (
           <span className="cell-secondary">No longer listed since {formatDateTime(s.missing_since)}</span>

@@ -6,33 +6,52 @@ import { formatDate } from '../../shared/format'
 import { Button } from '../../shared/ui/Button'
 import { SelectField, TextField } from '../../shared/ui/Field'
 import { PageHeader } from '../../shared/ui/PageHeader'
-import { EmptyState, LoadingState, QueryErrorState } from '../../shared/ui/States'
+import { DeniedState, EmptyState, LoadingState, QueryErrorState } from '../../shared/ui/States'
 import { StatusBadge } from '../../shared/ui/StatusBadge'
 import { Tabs } from '../../shared/ui/Tabs'
+import { useSession } from '../../app/useSession'
+import { PERMISSIONS } from '../../shared/api/types'
+import { AllocationsTab, EntitlementsTab } from '../licenses/EntitlementsTab'
+import { M365Subscriptions } from '../licenses/LicensesPage'
 import { LIFECYCLE_STATUS } from '../lifecycle/labels'
 
 export function SoftwarePage() {
   const [params, setParams] = useSearchParams()
-  const tab = params.get('tab') ?? 'products'
+  const { can } = useSession()
+  const tabs = [
+    ...(can(PERMISSIONS.assetsView)
+      ? [
+          { id: 'products', label: 'Installed software', content: <Products /> },
+          { id: 'installations', label: 'Installations', content: <Installations /> },
+        ]
+      : []),
+    ...(can(PERMISSIONS.licensesView)
+      ? [
+          { id: 'entitlements', label: 'Entitlements', content: <EntitlementsTab /> },
+          { id: 'allocations', label: 'Allocations', content: <AllocationsTab /> },
+          { id: 'm365', label: 'Microsoft 365', content: <M365Subscriptions /> },
+        ]
+      : []),
+  ]
+  const first = tabs[0]?.id ?? 'products'
+  const tab = params.get('tab') ?? first
+  if (tabs.length === 0) return <DeniedState what="software and licenses" />
   return (
     <div className="page page--wide">
       <PageHeader
-        title="Software"
-        meta="Installed software reported by Endpoint Central and Intune (when enabled per integration) or recorded by hand. Counts are observed installations in your sites, not licences."
+        title="Software & Licenses"
+        meta="Observed installations, recorded purchases and allocations, and Microsoft 365 tenant subscriptions are different totals and are kept apart."
       />
       <Tabs
-        label="Software sections"
+        label="Software and license sections"
         selected={tab}
         onSelect={(next) => {
           const search = new URLSearchParams(params)
-          if (next === 'products') search.delete('tab')
+          if (next === first) search.delete('tab')
           else search.set('tab', next)
           setParams(search, { replace: true })
         }}
-        tabs={[
-          { id: 'products', label: 'Products', content: <Products /> },
-          { id: 'installations', label: 'Installations', content: <Installations /> },
-        ]}
+        tabs={tabs}
       />
     </div>
   )
@@ -51,6 +70,10 @@ function Products() {
   const items = products.data?.pages.flatMap((p) => p.items) ?? []
   return (
     <section aria-label="Software products">
+      <p className="inline-note">
+        Software reported by Endpoint Central and Intune (when enabled per integration) or recorded by hand. Counts are
+        observed installations in your sites, not licenses.
+      </p>
       <div className="toolbar">
         <TextField label="Search" name="software-q" value={q} onChange={(e) => setQ(e.target.value)} />
         <SelectField

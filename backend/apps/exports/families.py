@@ -223,6 +223,20 @@ ASSET_RELATED: tuple[Related, ...] = (
             ),
         ),
     ),
+    Related(
+        "licenses",
+        "License allocations",
+        "asset_id",
+        (
+            _ASSET_ID,
+            Column("entitlement_id", "Entitlement ID", lambda a, c: str(a.entitlement_id)),
+            Column("product", "License product", lambda a, c: str(a.entitlement.product)),
+            Column("reference", "Reference", lambda a, c: a.entitlement.reference),
+            Column("units", "Units", lambda a, c: a.units),
+            Column("allocated_at", "Allocated at", lambda a, c: _iso(a.allocated_at)),
+        ),
+        permission=catalog.LICENSES_VIEW,
+    ),
 )
 
 
@@ -264,6 +278,14 @@ def _asset_related_rows(key: str, asset_ids: list) -> Iterator:
         return sorted(
             installations_for_assets(asset_ids),
             key=lambda p: (str(p[0]), p[1].version.product.name_key, p[1].version.version_key),
+        )
+    if key == "licenses":
+        from apps.licensing.models import EntitlementAllocation
+
+        return (
+            EntitlementAllocation.objects.filter(asset_id__in=asset_ids, ended_at__isnull=True)
+            .select_related("entitlement__product")
+            .order_by("asset_id", "allocated_at")
         )
     if key == "lifecycle":
         from apps.lifecycle.models import LifecycleAssessment
@@ -318,6 +340,55 @@ GROUP_RELATED: tuple[Related, ...] = (
 )
 
 
+# --- License entitlements ---------------------------------------------------------------------
+
+ENTITLEMENT_COLUMNS: tuple[Column, ...] = (
+    Column("id", "Entitlement ID", lambda e, c: str(e.pk)),
+    Column("publisher", "Publisher", lambda e, c: e.product.publisher),
+    Column("product", "License product", lambda e, c: e.product.name),
+    Column("sku", "Vendor SKU", lambda e, c: e.product.sku),
+    Column("metric", "Metric", lambda e, c: e.product.metric),
+    Column("reference", "Reference", lambda e, c: e.reference),
+    Column("quantity", "Purchased units", lambda e, c: e.quantity),
+    Column("allocated", "Allocated units (all sites)", lambda e, c: c["allocated"].get(e.pk, 0)),
+    Column("starts_on", "Starts", lambda e, c: _iso(e.starts_on)),
+    Column("ends_on", "Ends", lambda e, c: _iso(e.ends_on)),
+    Column("status", "Status", lambda e, c: e.status(c["today"])),
+    Column("supplier", "Supplier", lambda e, c: e.supplier),
+    Column("owner", "Owner", lambda e, c: e.owner, personal=True),
+    Column("note", "Note", lambda e, c: e.note),
+    Column("source", "Entered by", lambda e, c: e.source),
+    Column("retired_at", "Retired at", lambda e, c: _iso(e.retired_at)),
+    Column("retired_reason", "Retired because", lambda e, c: e.retired_reason),
+    Column("created_at", "Created at", lambda e, c: _iso(e.created_at)),
+    Column("modified_at", "Modified at", lambda e, c: _iso(e.modified_at)),
+    Column("version", "Version", lambda e, c: e.version),
+)
+
+ENTITLEMENT_RELATED: tuple[Related, ...] = (
+    Related(
+        "allocations",
+        "Allocations",
+        "entitlement_id",
+        (
+            Column("entitlement_id", "Entitlement ID", lambda a, c: str(a.entitlement_id)),
+            Column("allocation_id", "Allocation ID", lambda a, c: str(a.pk)),
+            Column("target", "Allocated to", lambda a, c: a.target),
+            Column("asset_id", "Asset ID", lambda a, c: str(a.asset_id or "")),
+            Column("asset_name", "Asset", lambda a, c: a.asset.name if a.asset_id else ""),
+            Column("site", "Site code", lambda a, c: a.asset.site.code if a.asset_id else ""),
+            Column("user_name", "User", lambda a, c: a.user_name, personal=True),
+            Column("units", "Units", lambda a, c: a.units),
+            Column("allocated_at", "Allocated at", lambda a, c: _iso(a.allocated_at)),
+            Column(
+                "allocated_by", "Allocated by", lambda a, c: _user(a.allocated_by), personal=True
+            ),
+            Column("note", "Note", lambda a, c: a.note),
+        ),
+    ),
+)
+
+
 # --- Registry ---------------------------------------------------------------------------------
 
 
@@ -333,6 +404,8 @@ class Family:
     def columns(self) -> list[Column]:
         if self.code == "assets":
             return [*ASSET_COLUMNS, *_custom_columns()]
+        if self.code == "license_entitlements":
+            return list(ENTITLEMENT_COLUMNS)
         return list(GROUP_COLUMNS)
 
 
@@ -353,6 +426,15 @@ FAMILIES: dict[str, Family] = {
         "Groups with their members; members outside your sites are never included.",
         (),
         GROUP_RELATED,
+    ),
+    "license_entitlements": Family(
+        "license_entitlements",
+        "License entitlements",
+        catalog.LICENSES_VIEW,
+        "Purchased entitlements with their allocations; allocations to assets outside your "
+        "sites are left out (the allocated total still counts them).",
+        (),
+        ENTITLEMENT_RELATED,
     ),
 }
 
@@ -376,6 +458,9 @@ def build(job, user, max_rows: int) -> ExportData:
 
     if family.code == "assets":
         qs = _asset_queryset(user, job.scope, job.filters, job.ids).order_by("name", "pk")
+    elif family.code == "license_entitlements":
+        qs = _entitlement_queryset(job.scope, job.ids)
+        ctx.update(_entitlement_context())
     else:
         qs = _group_queryset(user, job.scope, job.ids).order_by("name", "pk")
     if qs.count() > max_rows:
@@ -412,6 +497,24 @@ def build(job, user, max_rows: int) -> ExportData:
     )
 
 
+def _entitlement_queryset(scope: str, ids: list):
+    from apps.licensing.models import LicenseEntitlement
+
+    qs = LicenseEntitlement.objects.select_related("product").order_by(
+        "product__name", "reference", "pk"
+    )
+    return qs.filter(pk__in=ids) if scope == "selected" else qs
+
+
+def _entitlement_context() -> dict:
+    from apps.licensing.entitlements import allocated_units
+    from apps.licensing.models import EntitlementAllocation
+    from apps.lifecycle.services import today_utc
+
+    ids = EntitlementAllocation.objects.values_list("entitlement_id", flat=True).distinct()
+    return {"today": today_utc(), "allocated": allocated_units(list(ids))}
+
+
 def _group_queryset(user, scope: str, ids: list):
     from apps.groups.views import visible_groups
 
@@ -424,6 +527,14 @@ def _fill_related(family, user, related, tables, parent_ids, ctx) -> None:
         table = tables[rel.key]
         if family.code == "assets":
             rows = _asset_related_rows(rel.key, parent_ids)
+        elif family.code == "license_entitlements":
+            from apps.licensing.entitlements import visible_allocations
+
+            rows = (
+                visible_allocations(user)
+                .filter(entitlement_id__in=parent_ids, ended_at__isnull=True)
+                .order_by("entitlement_id", "allocated_at")
+            )
         else:
             visible = visible_assets(user).filter(archived_at__isnull=True).values("pk")
             rows = (

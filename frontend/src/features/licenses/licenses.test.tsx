@@ -117,7 +117,9 @@ describe('Licenses', () => {
     expect(within(pbi).getByText('Warning')).toBeInTheDocument()
     expect(within(pbi).getByText('Unknown')).toBeInTheDocument() // count not available
     expect(screen.getByText(/not a billing agreement and not a license compliance/)).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Licenses' })).toHaveAttribute('href', '/licenses')
+    expect(screen.getByRole('link', { name: 'Software & Licenses' })).toHaveAttribute('href', '/software')
+    expect(screen.getByRole('tab', { name: 'Microsoft 365' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.queryByRole('tab', { name: 'Installed software' })).not.toBeInTheDocument() // no assets.view
   })
 
   it('shows a SKU drilldown with history and filterable assignments', async () => {
@@ -191,6 +193,9 @@ describe('Licenses', () => {
     const health = screen.getByRole('region', { name: 'Health' })
     expect(within(health).getByText('Licensed users in last run')).toBeInTheDocument()
     expect(within(health).queryByText('Assets matched')).not.toBeInTheDocument()
-    expect(within(health).getByRole('link', { name: 'Licenses' })).toHaveAttribute('href', '/licenses')
+    expect(within(health).getByRole('link', { name: 'Microsoft 365 subscriptions' })).toHaveAttribute(
+      'href',
+      '/software?tab=m365',
+    )
   })
 })

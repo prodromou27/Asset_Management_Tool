@@ -24,6 +24,7 @@ export const SCOPE_LABEL: Record<ExportJob['scope'], string> = {
 export const FAMILY_LABEL: Record<string, string> = {
   assets: 'Assets',
   groups: 'Asset groups',
+  license_entitlements: 'License entitlements',
 }
 
 export function formatBytes(size: number): string {

@@ -135,9 +135,14 @@ scripts/compose.sh dev exec api python manage.py load_observations \
 - Matching: the Entra device ID links a Defender machine to the asset of an Intune device from the **same tenant** when a hostname or MAC corroborates it and nothing conflicts (ADR-014); otherwise it is a review candidate. Hostname or IP alone never links.
 - Security facts (onboarding, sensor health, exposure, risk, tags, first/last seen, original values) are stored apart from asset fields and shown on the asset's **Security** tab (requires `discovery.view` and site access). "Last report received" is not an online status, and a machine missing from Defender's list is flagged, never treated as deleted. Sanitized fixtures: `fixtures/defender/api/README.md`.
 
+### Software & Licenses (Task 016b)
+
+- **Software & Licenses** (Inventory) brings installed software, installations, **Entitlements**, **Allocations** and **Microsoft 365** subscriptions together; each total is labelled separately (observed installations, purchased units, allocated units, tenant-reported units) and ITAM never states license compliance.
+- People with `licenses.manage` (System Admin, ITAM Manager) record license products, purchases (reference, quantity, term, supplier, owner) and allocations to assets in their sites or to named users. Entitlements are retired and allocations ended with a reason, never deleted; all changes are audited. Entitlements can be imported (Imports → License entitlements) and exported with their allocations.
+
 ### Software inventory (Task 016a)
 
-- **Software** (Inventory): products with versions and observed installation counts in your sites, an installations list, and per-version lifecycle status from the lifecycle catalogue (with a review step for builds and unconfirmed publishers). Each asset has a **Software** tab; people who may edit the asset can record or remove software by hand.
+- **Software & Licenses → Installed software**: products with versions and observed installation counts in your sites, an installations list, and per-version lifecycle status from the lifecycle catalogue (with a review step for builds and unconfirmed publishers). Each asset has a **Software** tab; people who may edit the asset can record or remove software by hand.
 - Endpoint Central and Intune can read installed software when **Collect installed software** is switched on for the integration (off by default; it adds read-only requests, see docs/17 ASM-54). Software is removed from an asset only after a complete read no longer reports it. Counts are installations, not licences; entitlements arrive with Task 016b.
 
 ### Lifecycle / EOL (Task 015)

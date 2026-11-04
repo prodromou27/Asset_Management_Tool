@@ -23,6 +23,7 @@ DISCOVERY_VIEW = "discovery.view"
 RECONCILIATION_DECIDE = "reconciliation.decide"
 INTEGRATIONS_MANAGE = "integrations.manage"
 LICENSES_VIEW = "licenses.view"
+LICENSES_MANAGE = "licenses.manage"
 GROUPS_VIEW = "groups.view"
 GROUPS_MANAGE = "groups.manage"
 GROUPS_MEMBERS = "groups.members"
@@ -55,6 +56,7 @@ PERMISSIONS: dict[str, str] = {
     RECONCILIATION_DECIDE: "Approve, reject or hold reconciliation candidates; unlink sources",
     INTEGRATIONS_MANAGE: "Configure integration instances and field authority",
     LICENSES_VIEW: "View license subscriptions, quantities and user license assignments",
+    LICENSES_MANAGE: "Maintain license products, entitlements and allocations",
     GROUPS_VIEW: "View asset groups and their members in permitted sites",
     GROUPS_MANAGE: "Create, edit and archive asset groups and dynamic group rules",
     GROUPS_MEMBERS: "Add and remove static group members in permitted sites",
@@ -91,6 +93,7 @@ ROLES: list[tuple[str, str, str, list[str]]] = [
             DISCOVERY_VIEW,
             RECONCILIATION_DECIDE,
             LICENSES_VIEW,
+            LICENSES_MANAGE,
             GROUPS_VIEW,
             GROUPS_MANAGE,
             GROUPS_MEMBERS,

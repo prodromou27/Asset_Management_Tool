@@ -1,6 +1,6 @@
 import { QueryClientProvider, type QueryClient } from '@tanstack/react-query'
 import { useState, type ReactNode } from 'react'
-import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes, useParams } from 'react-router-dom'
 import { AuditLogPage } from '../features/admin-audit/AuditLogPage'
 import { CategoriesPage } from '../features/admin-categories/CategoriesPage'
 import { IntegrationDetailPage } from '../features/admin-integrations/IntegrationDetailPage'
@@ -16,7 +16,7 @@ import { GroupDetailPage } from '../features/groups/GroupDetailPage'
 import { GroupsPage } from '../features/groups/GroupsPage'
 import { ImportJobPage } from '../features/imports/ImportJobPage'
 import { ImportsPage } from '../features/imports/ImportsPage'
-import { LicensesPage } from '../features/licenses/LicensesPage'
+import { LicenseProductPage } from '../features/licenses/LicenseProductPage'
 import { SubscriptionPage } from '../features/licenses/SubscriptionPage'
 import { DiscoveryPage } from '../features/discovery/DiscoveryPage'
 import { SitesPage } from '../features/admin-sites/SitesPage'
@@ -133,7 +133,7 @@ export function AppRoutes() {
       <Route
         path="/software"
         element={
-          <Protected permission={PERMISSIONS.assetsView} what="software">
+          <Protected what="software and licenses">
             <SoftwarePage />
           </Protected>
         }
@@ -202,19 +202,21 @@ export function AppRoutes() {
           </Protected>
         }
       />
+      <Route path="/licenses" element={<Navigate to="/software?tab=m365" replace />} />
+      <Route path="/licenses/subscriptions/:id" element={<SubscriptionRedirect />} />
       <Route
-        path="/licenses"
+        path="/software/m365/:id"
         element={
           <Protected permission={PERMISSIONS.licensesView} what="licenses">
-            <LicensesPage />
+            <SubscriptionPage />
           </Protected>
         }
       />
       <Route
-        path="/licenses/subscriptions/:id"
+        path="/software/licenses/:id"
         element={
           <Protected permission={PERMISSIONS.licensesView} what="licenses">
-            <SubscriptionPage />
+            <LicenseProductPage />
           </Protected>
         }
       />
@@ -311,4 +313,10 @@ export function App({ client }: { client?: QueryClient }) {
       </BrowserRouter>
     </QueryClientProvider>
   )
+}
+
+/** Old Microsoft 365 subscription links (before Software & Licenses, Task 016b). */
+function SubscriptionRedirect() {
+  const { id = '' } = useParams()
+  return <Navigate to={`/software/m365/${id}`} replace />
 }

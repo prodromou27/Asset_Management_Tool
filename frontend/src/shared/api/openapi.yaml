@@ -2738,6 +2738,413 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedAllocationList'
           description: ''
+  /api/v1/licenses/entitlement-allocations/:
+    get:
+      operationId: licenses_entitlement_allocations_list
+      parameters:
+      - in: query
+        name: asset
+        schema:
+          type: string
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - in: query
+        name: entitlement
+        schema:
+          type: string
+      - in: query
+        name: include_ended
+        schema:
+          type: boolean
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: product
+        schema:
+          type: string
+        description: License product ID
+      - in: query
+        name: q
+        schema:
+          type: string
+        description: Asset name, user, product or reference
+      - in: query
+        name: target
+        schema:
+          type: string
+          enum:
+          - asset
+          - user
+      tags:
+      - licenses
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedLicenseEntitlementAllocationList'
+          description: ''
+  /api/v1/licenses/entitlement-allocations/{id}/end/:
+    post:
+      operationId: licenses_entitlement_allocations_end_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - licenses
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LicenseEntitlementAllocation'
+          description: ''
+  /api/v1/licenses/entitlements/:
+    get:
+      operationId: licenses_entitlements_list
+      parameters:
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: product
+        schema:
+          type: string
+        description: License product ID
+      - in: query
+        name: q
+        schema:
+          type: string
+        description: Reference, product, supplier or owner
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - active
+          - ending
+          - expired
+          - not_started
+          - retired
+        description: 'ending: in term and ending within 90 days'
+      tags:
+      - licenses
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedLicenseEntitlementList'
+          description: ''
+    post:
+      operationId: licenses_entitlements_create
+      tags:
+      - licenses
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LicenseEntitlementWriteRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LicenseEntitlementWriteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LicenseEntitlementWriteRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LicenseEntitlement'
+          description: ''
+  /api/v1/licenses/entitlements/{id}/:
+    get:
+      operationId: licenses_entitlements_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - licenses
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LicenseEntitlement'
+          description: ''
+    patch:
+      operationId: licenses_entitlements_partial_update
+      parameters:
+      - in: header
+        name: If-Match
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - licenses
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedLicenseEntitlementWriteRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedLicenseEntitlementWriteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedLicenseEntitlementWriteRequest'
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LicenseEntitlement'
+          description: ''
+  /api/v1/licenses/entitlements/{id}/allocations/:
+    post:
+      operationId: licenses_entitlements_allocations_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - licenses
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LicenseAllocateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LicenseAllocateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LicenseAllocateRequest'
+      security:
+      - sessionAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LicenseEntitlementAllocation'
+          description: ''
+  /api/v1/licenses/entitlements/{id}/retire/:
+    post:
+      operationId: licenses_entitlements_retire_create
+      parameters:
+      - in: header
+        name: If-Match
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - licenses
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LicenseEntitlement'
+          description: ''
+  /api/v1/licenses/products/:
+    get:
+      operationId: licenses_products_list
+      parameters:
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - in: query
+        name: include_inactive
+        schema:
+          type: boolean
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: q
+        schema:
+          type: string
+        description: Publisher, name or SKU
+      tags:
+      - licenses
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedLicenseProductList'
+          description: ''
+    post:
+      operationId: licenses_products_create
+      tags:
+      - licenses
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LicenseProductWriteRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LicenseProductWriteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LicenseProductWriteRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LicenseProductDetail'
+          description: ''
+  /api/v1/licenses/products/{id}/:
+    get:
+      operationId: licenses_products_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - licenses
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LicenseProductDetail'
+          description: ''
+    patch:
+      operationId: licenses_products_partial_update
+      parameters:
+      - in: header
+        name: If-Match
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - licenses
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedLicenseProductWriteRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedLicenseProductWriteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedLicenseProductWriteRequest'
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LicenseProductDetail'
+          description: ''
   /api/v1/licenses/subscriptions/:
     get:
       operationId: licenses_subscriptions_list
@@ -6922,10 +7329,12 @@ components:
       enum:
       - assets
       - groups
+      - license_entitlements
       type: string
       description: |-
         * `assets` - assets
         * `groups` - groups
+        * `license_entitlements` - license_entitlements
     ExportCreateRequest:
       type: object
       properties:
@@ -8394,6 +8803,483 @@ components:
       - totals
       - version
       - warnings
+    LicenseAllocateRequest:
+      type: object
+      properties:
+        asset:
+          type: string
+          format: uuid
+          nullable: true
+        user_name:
+          type: string
+          maxLength: 320
+        units:
+          type: integer
+          maximum: 1000000
+          minimum: 1
+        note:
+          type: string
+          maxLength: 500
+    LicenseAssetRef:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        site_code:
+          type: string
+      required:
+      - id
+      - name
+      - site_code
+    LicenseEntitlement:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        product:
+          allOf:
+          - $ref: '#/components/schemas/LicenseProductRef'
+          readOnly: true
+        reference:
+          type: string
+          readOnly: true
+        quantity:
+          type: integer
+          readOnly: true
+        starts_on:
+          type: string
+          format: date
+          readOnly: true
+          nullable: true
+        ends_on:
+          type: string
+          format: date
+          readOnly: true
+          nullable: true
+        supplier:
+          type: string
+          readOnly: true
+        owner:
+          type: string
+          readOnly: true
+        note:
+          type: string
+          readOnly: true
+        source:
+          allOf:
+          - $ref: '#/components/schemas/LicenseEntitlementSourceEnum'
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/LicenseEntitlementStatusEnum'
+          readOnly: true
+        allocated:
+          type: integer
+          readOnly: true
+          description: Units in open allocations
+        available:
+          type: integer
+          readOnly: true
+          description: Quantity minus allocated
+        retired_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        retired_by:
+          type: string
+          readOnly: true
+          nullable: true
+        retired_reason:
+          type: string
+          readOnly: true
+        version:
+          type: integer
+          readOnly: true
+        created_by:
+          type: string
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        modified_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - allocated
+      - available
+      - created_at
+      - created_by
+      - ends_on
+      - id
+      - modified_at
+      - note
+      - owner
+      - product
+      - quantity
+      - reference
+      - retired_at
+      - retired_by
+      - retired_reason
+      - source
+      - starts_on
+      - status
+      - supplier
+      - version
+    LicenseEntitlementAllocation:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        entitlement:
+          allOf:
+          - $ref: '#/components/schemas/LicenseEntitlementRef'
+          readOnly: true
+        target:
+          type: string
+          readOnly: true
+        asset:
+          allOf:
+          - $ref: '#/components/schemas/LicenseAssetRef'
+          nullable: true
+          readOnly: true
+        user_name:
+          type: string
+          readOnly: true
+        units:
+          type: integer
+          readOnly: true
+        note:
+          type: string
+          readOnly: true
+        allocated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        allocated_by:
+          type: string
+          readOnly: true
+          nullable: true
+        ended_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        ended_by:
+          type: string
+          readOnly: true
+          nullable: true
+        ended_reason:
+          type: string
+          readOnly: true
+      required:
+      - allocated_at
+      - allocated_by
+      - asset
+      - ended_at
+      - ended_by
+      - ended_reason
+      - entitlement
+      - id
+      - note
+      - target
+      - units
+      - user_name
+    LicenseEntitlementRef:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        reference:
+          type: string
+        product_id:
+          type: string
+          format: uuid
+        product_label:
+          type: string
+      required:
+      - id
+      - product_id
+      - product_label
+      - reference
+    LicenseEntitlementSourceEnum:
+      enum:
+      - manual
+      - import
+      type: string
+      description: |-
+        * `manual` - Manual
+        * `import` - Import
+    LicenseEntitlementStatusEnum:
+      enum:
+      - active
+      - not_started
+      - expired
+      - retired
+      type: string
+      description: |-
+        * `active` - active
+        * `not_started` - not_started
+        * `expired` - expired
+        * `retired` - retired
+    LicenseEntitlementWriteRequest:
+      type: object
+      properties:
+        product:
+          type: string
+          format: uuid
+        reference:
+          type: string
+          minLength: 1
+          maxLength: 120
+        quantity:
+          type: integer
+          maximum: 10000000
+          minimum: 1
+        starts_on:
+          type: string
+          format: date
+          nullable: true
+        ends_on:
+          type: string
+          format: date
+          nullable: true
+        supplier:
+          type: string
+          maxLength: 200
+        owner:
+          type: string
+          maxLength: 200
+        note:
+          type: string
+          maxLength: 2000
+        reason:
+          type: string
+          maxLength: 500
+      required:
+      - quantity
+      - reference
+    LicenseProduct:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        publisher:
+          type: string
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+        sku:
+          type: string
+          readOnly: true
+        metric:
+          allOf:
+          - $ref: '#/components/schemas/MetricEnum'
+          readOnly: true
+        software_product:
+          allOf:
+          - $ref: '#/components/schemas/LicenseSoftwareRef'
+          nullable: true
+          readOnly: true
+        note:
+          type: string
+          readOnly: true
+        is_active:
+          type: boolean
+          readOnly: true
+        purchased:
+          type: integer
+          readOnly: true
+          description: Units of entitlements in term (not retired, started, not ended)
+        allocated:
+          type: integer
+          readOnly: true
+          description: Units allocated from entitlements in term (all sites)
+        available:
+          type: integer
+          readOnly: true
+          description: Purchased minus allocated; negative when more is allocated
+            than purchased
+        entitlements_in_term:
+          type: integer
+          readOnly: true
+        observed_assets:
+          type: integer
+          nullable: true
+          readOnly: true
+          description: Assets in your sites with the linked software installed; null
+            when not linked
+        version:
+          type: integer
+          readOnly: true
+        modified_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - allocated
+      - available
+      - entitlements_in_term
+      - id
+      - is_active
+      - metric
+      - modified_at
+      - name
+      - note
+      - observed_assets
+      - publisher
+      - purchased
+      - sku
+      - software_product
+      - version
+    LicenseProductDetail:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        publisher:
+          type: string
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+        sku:
+          type: string
+          readOnly: true
+        metric:
+          allOf:
+          - $ref: '#/components/schemas/MetricEnum'
+          readOnly: true
+        software_product:
+          allOf:
+          - $ref: '#/components/schemas/LicenseSoftwareRef'
+          nullable: true
+          readOnly: true
+        note:
+          type: string
+          readOnly: true
+        is_active:
+          type: boolean
+          readOnly: true
+        purchased:
+          type: integer
+          readOnly: true
+          description: Units of entitlements in term (not retired, started, not ended)
+        allocated:
+          type: integer
+          readOnly: true
+          description: Units allocated from entitlements in term (all sites)
+        available:
+          type: integer
+          readOnly: true
+          description: Purchased minus allocated; negative when more is allocated
+            than purchased
+        entitlements_in_term:
+          type: integer
+          readOnly: true
+        observed_assets:
+          type: integer
+          nullable: true
+          readOnly: true
+          description: Assets in your sites with the linked software installed; null
+            when not linked
+        version:
+          type: integer
+          readOnly: true
+        modified_at:
+          type: string
+          format: date-time
+          readOnly: true
+        entitlements:
+          type: array
+          items:
+            $ref: '#/components/schemas/LicenseEntitlement'
+          readOnly: true
+      required:
+      - allocated
+      - available
+      - entitlements
+      - entitlements_in_term
+      - id
+      - is_active
+      - metric
+      - modified_at
+      - name
+      - note
+      - observed_assets
+      - publisher
+      - purchased
+      - sku
+      - software_product
+      - version
+    LicenseProductRef:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        label:
+          type: string
+        metric:
+          type: string
+      required:
+      - id
+      - label
+      - metric
+    LicenseProductWriteRequest:
+      type: object
+      properties:
+        publisher:
+          type: string
+          maxLength: 200
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        sku:
+          type: string
+          maxLength: 120
+        metric:
+          $ref: '#/components/schemas/MetricEnum'
+        software_product:
+          type: integer
+          nullable: true
+        note:
+          type: string
+          maxLength: 2000
+        is_active:
+          type: boolean
+      required:
+      - name
+    LicenseSoftwareRef:
+      type: object
+      properties:
+        id:
+          type: integer
+        publisher:
+          type: string
+        name:
+          type: string
+      required:
+      - id
+      - name
+      - publisher
     LicenseSource:
       type: object
       properties:
@@ -9914,6 +10800,22 @@ components:
       required:
       - reason
       - source_asset
+    MetricEnum:
+      enum:
+      - user
+      - device
+      - core
+      - concurrent
+      - subscription
+      - other
+      type: string
+      description: |-
+        * `user` - Per user
+        * `device` - Per device
+        * `core` - Per core
+        * `concurrent` - Concurrent users
+        * `subscription` - Subscription
+        * `other` - Other
     MilestoneTypeEnum:
       enum:
       - announcement
@@ -10356,6 +11258,66 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Job'
+        next_cursor:
+          type: string
+          nullable: true
+        previous_cursor:
+          type: string
+          nullable: true
+        count:
+          type: integer
+    PaginatedLicenseEntitlementAllocationList:
+      type: object
+      required:
+      - items
+      - next_cursor
+      - previous_cursor
+      - count
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/LicenseEntitlementAllocation'
+        next_cursor:
+          type: string
+          nullable: true
+        previous_cursor:
+          type: string
+          nullable: true
+        count:
+          type: integer
+    PaginatedLicenseEntitlementList:
+      type: object
+      required:
+      - items
+      - next_cursor
+      - previous_cursor
+      - count
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/LicenseEntitlement'
+        next_cursor:
+          type: string
+          nullable: true
+        previous_cursor:
+          type: string
+          nullable: true
+        count:
+          type: integer
+    PaginatedLicenseProductList:
+      type: object
+      required:
+      - items
+      - next_cursor
+      - previous_cursor
+      - count
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/LicenseProduct'
         next_cursor:
           type: string
           nullable: true
@@ -10875,6 +11837,63 @@ components:
             type: string
         mode:
           $ref: '#/components/schemas/ImportModeEnum'
+    PatchedLicenseEntitlementWriteRequest:
+      type: object
+      properties:
+        product:
+          type: string
+          format: uuid
+        reference:
+          type: string
+          minLength: 1
+          maxLength: 120
+        quantity:
+          type: integer
+          maximum: 10000000
+          minimum: 1
+        starts_on:
+          type: string
+          format: date
+          nullable: true
+        ends_on:
+          type: string
+          format: date
+          nullable: true
+        supplier:
+          type: string
+          maxLength: 200
+        owner:
+          type: string
+          maxLength: 200
+        note:
+          type: string
+          maxLength: 2000
+        reason:
+          type: string
+          maxLength: 500
+    PatchedLicenseProductWriteRequest:
+      type: object
+      properties:
+        publisher:
+          type: string
+          maxLength: 200
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        sku:
+          type: string
+          maxLength: 120
+        metric:
+          $ref: '#/components/schemas/MetricEnum'
+        software_product:
+          type: integer
+          nullable: true
+        note:
+          type: string
+          maxLength: 2000
+        is_active:
+          type: boolean
     PatchedLifecycleMilestoneUpdateRequest:
       type: object
       properties:
@@ -12595,12 +13614,14 @@ components:
       - location
       - group
       - group_membership
+      - license_entitlement
       type: string
       description: |-
         * `asset` - asset
         * `location` - location
         * `group` - group
         * `group_membership` - group_membership
+        * `license_entitlement` - license_entitlement
     UploadRequest:
       type: object
       properties:
