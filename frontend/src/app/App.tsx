@@ -19,6 +19,7 @@ import { ImportsPage } from '../features/imports/ImportsPage'
 import { LicenseProductPage } from '../features/licenses/LicenseProductPage'
 import { CertificatePage } from '../features/domains/CertificatePage'
 import { DomainsPage } from '../features/domains/DomainsPage'
+import { SmtpPage } from '../features/admin-smtp/SmtpPage'
 import { SubscriptionPage } from '../features/licenses/SubscriptionPage'
 import { DiscoveryPage } from '../features/discovery/DiscoveryPage'
 import { SitesPage } from '../features/admin-sites/SitesPage'
@@ -201,6 +202,14 @@ export function AppRoutes() {
         element={
           <Protected permission={PERMISSIONS.importsRun} what="imports">
             <ImportJobPage />
+          </Protected>
+        }
+      />
+      <Route
+        path="/admin/smtp"
+        element={
+          <Protected permission={PERMISSIONS.notificationsView} what="SMTP and notifications">
+            <SmtpPage />
           </Protected>
         }
       />

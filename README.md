@@ -135,6 +135,11 @@ scripts/compose.sh dev exec api python manage.py load_observations \
 - Matching: the Entra device ID links a Defender machine to the asset of an Intune device from the **same tenant** when a hostname or MAC corroborates it and nothing conflicts (ADR-014); otherwise it is a review candidate. Hostname or IP alone never links.
 - Security facts (onboarding, sensor health, exposure, risk, tags, first/last seen, original values) are stored apart from asset fields and shown on the asset's **Security** tab (requires `discovery.view` and site access). "Last report received" is not an online status, and a machine missing from Defender's list is flagged, never treated as deleted. Sanitized fixtures: `fixtures/defender/api/README.md`.
 
+### SMTP & notifications (Task 018a)
+
+- **Administration → SMTP & notifications**: relay host, port, STARTTLS or implicit TLS (never downgraded), optional sign-in with the password given as a server-side reference (`env:ITAM_SMTP_PASSWORD` in `.env`, or `file:<name>`), sender and Reply-To. Mail starts disabled. *Test connection* signs in without sending; *Send test email* goes only to your own address.
+- Messages go through a database outbox: retries with backoff for temporary failures, a visible dead letter for bounces or repeated failures, retry/cancel in the **Delivery queue** tab, and an alert on the page and on System health. Templates (subject, text, HTML) are editable with preview. Alert rules (certificate, domain, EOL, integration failures) follow in Task 018b.
+
 ### Domains & Certificates (Task 017)
 
 - **Domains & Certificates** (Inventory): owned domains with registrar, owner and registration expiry (Unknown until recorded with its evidence, never taken from a certificate); TLS certificates with SANs, issuer, SHA-256 fingerprint and days left (90/60/30/14/7-day thresholds); and the **approved TLS endpoints** ITAM reads certificates from, with rotation history per endpoint. Assets show their endpoints on a **Certificates** tab.

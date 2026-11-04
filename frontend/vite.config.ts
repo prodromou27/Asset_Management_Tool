@@ -16,6 +16,8 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
+    // Above the 5 s Testing Library wait (src/test/setup.ts) so slow runs fail with a clear query error.
+    testTimeout: 20000,
     exclude: ['e2e/**', 'node_modules/**'],
   },
 })

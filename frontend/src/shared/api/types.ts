@@ -53,6 +53,12 @@ export type CertificateDetail = Schemas['CertificateDetail']
 export type CertificateDeployment = Schemas['Deployment']
 export type TlsEndpoint = Schemas['TlsEndpoint']
 export type TlsEndpointWrite = Schemas['TlsEndpointWriteRequest']
+export type SmtpProfile = Schemas['SmtpProfile']
+export type SmtpProfileWrite = Schemas['PatchedSmtpProfileWriteRequest']
+export type OutboxMessage = Schemas['OutboxMessage']
+export type OutboxStats = Schemas['OutboxStats']
+export type NotificationTemplate = Schemas['NotificationTemplate']
+export type TemplatePreview = Schemas['TemplatePreview']
 export type CategoryReview = Schemas['CategoryReview']
 export type BulkResult = Schemas['BulkResult']
 export type Assignee = Schemas['Assignee']
@@ -144,4 +150,6 @@ export const PERMISSIONS = {
   lifecycleApprove: 'lifecycle.approve',
   certificatesView: 'certificates.view',
   certificatesManage: 'certificates.manage',
+  notificationsView: 'notifications.view',
+  notificationsManage: 'notifications.manage',
 } as const

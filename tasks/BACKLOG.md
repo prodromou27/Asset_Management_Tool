@@ -22,7 +22,8 @@ This file is a sequencing index, **not permission to implement everything in one
 | 016a | Software catalogue, installations, connector reads, software lifecycle | 010–011, 015 | 06,08,03,05 |
 | 016b | License entitlements/allocations + Software & Licenses area with M365 | 016a | 06,08,03,11 |
 | 017 | Domain and TLS certificate inventory/expiry | 003 | 06,08,14 |
-| 018 | SMTP config UI, template engine, outbox and test mail | 002 | 10,09,14,15 |
+| 018a | SMTP config UI, template engine, outbox and test mail | 002 | 10,09,14,15 |
+| 018b | Notification rules: certificate/domain/EOL thresholds, integration failures, recipients, dedup | 015,017,018a | 10,06,09 |
 | 019 | Backups, off-host encryption and isolated restore | 001,002 | 12,13,14,15 |
 | 020 | Admin settings/integration catalogue/health screens | 002,006 | 08,09,20 |
 | 021 | Lifecycle/coverage/asset/group reports and digests | 012,014–018 | 08,10,11 |

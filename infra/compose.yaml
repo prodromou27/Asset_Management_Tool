@@ -34,6 +34,9 @@ x-backend-env: &backend-env
   ITAM_INTEGRATION_INTUNE_CLIENT_SECRET: ${ITAM_INTEGRATION_INTUNE_CLIENT_SECRET:-}
   # Microsoft 365 licenses (Task 010): fallback client secret; prefer a certificate file.
   ITAM_INTEGRATION_M365_CLIENT_SECRET: ${ITAM_INTEGRATION_M365_CLIENT_SECRET:-}
+  # SMTP password (Task 018a), referenced in Administration → SMTP & notifications as
+  # env:ITAM_SMTP_PASSWORD; never stored in the DB or shown.
+  ITAM_SMTP_PASSWORD: ${ITAM_SMTP_PASSWORD:-}
   # Imports (Task 013): Fernet key for retained original files (derived from the Django
   # secret key when empty) and their retention in days.
   ITAM_IMPORT_ENCRYPTION_KEY: ${ITAM_IMPORT_ENCRYPTION_KEY:-}
@@ -49,6 +52,8 @@ x-backend-env: &backend-env
   ITAM_CERT_WARNING_DAYS: ${ITAM_CERT_WARNING_DAYS:-90,60,30,14,7}
   ITAM_TLS_CHECK_INTERVAL_HOURS: ${ITAM_TLS_CHECK_INTERVAL_HOURS:-24}
   ITAM_TLS_CHECK_TIMEOUT_SECONDS: ${ITAM_TLS_CHECK_TIMEOUT_SECONDS:-5}
+  ITAM_NOTIFICATION_EXPIRY_HOURS: ${ITAM_NOTIFICATION_EXPIRY_HOURS:-72}
+  ITAM_NOTIFICATION_BODY_RETENTION_DAYS: ${ITAM_NOTIFICATION_BODY_RETENTION_DAYS:-14}
 
 x-backend-depends: &backend-depends
   postgres:

@@ -81,7 +81,7 @@ Provide .env.example with **non-secret** keys only, and typed validation at star
 | DB | POSTGRES_DB, POSTGRES_HOST, POSTGRES_PORT; credentials by secret reference |
 | Redis | REDIS_URL, separate auth secret if used |
 | Django | DJANGO_SECRET_KEY, OIDC settings, CSRF trusted origins, secure cookie/TLS settings |
-| Email | SMTP_HOST, SMTP_PORT, SMTP_SECURITY, SMTP_FROM; secret reference for username/password |
+| Email | Set in Administration → SMTP & notifications (Task 018a). SMTP_HOST, SMTP_PORT, SMTP_SECURITY, SMTP_FROM only pre-fill the first profile. Password: `ITAM_SMTP_PASSWORD=` in `.env` (then restart) referenced as `env:ITAM_SMTP_PASSWORD`, or a file in the secrets directory referenced as `file:<name>`; internal CA as `file:<name>` |
 | Storage | STORAGE_DRIVER, STORAGE_BUCKET_OR_PATH; separate credentials secret |
 | Backup | BACKUP_TARGET, BACKUP_SCHEDULE, BACKUP_RETENTION, BACKUP_ENCRYPTION_KEY_REF |
 | Integrations | LIBRENMS_BASE_URL, ENDPOINT_CENTRAL_BASE_URL; tokens stored securely, tenant settings in admin DB |

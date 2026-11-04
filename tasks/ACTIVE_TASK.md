@@ -1,4 +1,59 @@
-# Current Task: 017 | Domain and TLS certificate inventory/expiry
+# Current Task: 018a | SMTP config UI, template engine, outbox and test mail
+
+Status: **Complete locally; awaiting CI** (2026-11-04, branch DEV). Owner decisions: split
+Task 018 into 018a (this) and 018b (alert rules, recipients, dedup); SMTP password as a
+secret reference. No real mail server contacted: tests use a local SMTP server with a
+generated test CA.
+
+**Read:** AGENTS.md, docs/00, 03 (Operations), 04 (settings, /smtp/test), 09, 10, 12 (Email),
+14 (audit, logging, mail), 15 (A17, A18), 17 (ADR-011, DEC-08, DEC-14).
+
+**Previous:** 017 domains and certificates (CI run 41877536180 green).
+
+## Outcome (ASM-57)
+
+- **App `apps.notifications`** (`notifications.0001`, `0002` seeds the `smtp_test`
+  template): SMTP profile (single, disabled by default), versioned templates, outbox.
+- **Permissions** (`accounts.0012`): `notifications.manage` System Admin;
+  `notifications.view` System Admin and Auditor.
+- **SMTP:** STARTTLS required/never downgraded or implicit TLS; credentials only over TLS;
+  certificate and host name validated (optional internal CA `file:`); password as
+  `env:ITAM_SMTP_<NAME>`/`file:` reference (secret helper now takes a prefix); Compose passes
+  `ITAM_SMTP_PASSWORD`. Test connection (no send) and test email to the admin only.
+- **Outbox:** one row per recipient, dedup key, after-commit hand-off, worker every minute,
+  rate limit, 4xx/connection retries with backoff and jitter, 5xx dead letter, 6 attempts,
+  config errors wait without using attempts, disabled mail waits then expires (72 h), body
+  purge after 14 days, retry/cancel.
+- **Templates:** whitelisted tags/filters, HTML escaping, header-safe subjects, preview.
+- **Frontend:** Administration → SMTP & notifications (Settings, Templates, Delivery queue)
+  with a delivery alert; System health shows mail delivery. Vitest test timeout 20 s (above
+  the 5 s query wait) so slow runs fail with a clear message.
+
+## Verification (workstation; SQLite test-only fallback)
+
+- Backend **757 passed, 6 skipped (PostgreSQL/Redis-only)**. New: 13 tests (profile rules and no credential values, defaults
+  from environment, connection test sends nothing and reports login failure, no STARTTLS
+  downgrade and untrusted certificate refused, test email to the admin only over TLS with
+  login and correct headers, A17 outage → retries with backoff → dead letter → retry →
+  delivered once, 4xx deferral vs 5xx bounce, dedup/disabled/expiry/cancel, configuration
+  error keeps attempts, body purge, escaping and forbidden template constructs, template
+  preview/versioning, permissions).
+- Migrations applied, reversed (`notifications zero`, `accounts 0011`) and reapplied; no
+  drift. OpenAPI validates with `--fail-on-warn`; types regenerated. Ruff clean.
+- Frontend: typecheck, oxlint, **177 tests** (6 new) and build pass. Screenshots (mocked
+  API) of settings, templates, queue and System health led to shorter security labels and the
+  template layout.
+- Not run: Docker stack with Mailpit, A18 against the real relay (needs DEC-08).
+
+**Open (ASM-57):** alert rules and recipients (018b); OAuth SMTP; production relay and
+sender (DEC-08); recipients and escalation (DEC-14).
+
+Proposed next task: **018b | Notification rules** (tasks/BACKLOG.md). Do not start
+automatically.
+
+---
+
+# Previous record: Task 017 | Domain and TLS certificate inventory/expiry
 
 Status: **Complete (CI run 41877536180 green)** (2026-11-04, branch DEV). No real hosts contacted:
 checks were tested against a local TLS server on 127.0.0.1 with generated test certificates.
@@ -48,9 +103,6 @@ A12), 17.
 **Open (ASM-56):** chain validation against an internal CA bundle; manage rights for
 Security Analyst; registrar/WHOIS lookups (none: Unknown stays Unknown); domain/certificate
 export family; firewall rules for the outbound checks; expiry notifications (Task 018).
-
-Proposed next task: **018 | SMTP config UI, template engine, outbox and test mail**
-(tasks/BACKLOG.md). Do not start automatically.
 
 ---
 

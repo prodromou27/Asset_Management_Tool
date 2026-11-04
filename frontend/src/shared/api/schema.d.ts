@@ -416,6 +416,29 @@ export interface paths {
   "/api/v1/merges/{id}/revert/": {
     post: operations["merges_revert_create"];
   };
+  "/api/v1/notifications/outbox/": {
+    get: operations["notifications_outbox_list"];
+  };
+  "/api/v1/notifications/outbox/{id}/cancel/": {
+    post: operations["notifications_outbox_cancel_create"];
+  };
+  "/api/v1/notifications/outbox/{id}/retry/": {
+    post: operations["notifications_outbox_retry_create"];
+  };
+  "/api/v1/notifications/outbox/stats/": {
+    get: operations["notifications_outbox_stats_retrieve"];
+  };
+  "/api/v1/notifications/templates/": {
+    get: operations["notifications_templates_list"];
+  };
+  "/api/v1/notifications/templates/{code}/": {
+    get: operations["notifications_templates_retrieve"];
+    patch: operations["notifications_templates_partial_update"];
+  };
+  "/api/v1/notifications/templates/{code}/preview/": {
+    /** @description Render the saved template, or an unsaved draft, with example values. */
+    post: operations["notifications_templates_preview_create"];
+  };
   "/api/v1/permissions/": {
     get: operations["permissions_list"];
   };
@@ -473,6 +496,10 @@ export interface paths {
     get: operations["settings_security_retrieve"];
     patch: operations["settings_security_partial_update"];
   };
+  "/api/v1/settings/smtp/": {
+    get: operations["settings_smtp_retrieve"];
+    patch: operations["settings_smtp_partial_update"];
+  };
   "/api/v1/sites/": {
     get: operations["sites_list"];
     post: operations["sites_create"];
@@ -480,6 +507,14 @@ export interface paths {
   "/api/v1/sites/{id}/": {
     get: operations["sites_retrieve"];
     patch: operations["sites_partial_update"];
+  };
+  "/api/v1/smtp/test/": {
+    /** @description Connect, TLS and login only; sends nothing. */
+    post: operations["smtp_test_create"];
+  };
+  "/api/v1/smtp/test-email/": {
+    /** @description Send one test message to the signed-in administrator's own address. */
+    post: operations["smtp_test_email_create"];
   };
   "/api/v1/software/installations/": {
     get: operations["software_installations_list"];
@@ -2679,6 +2714,20 @@ export interface components {
      * @enum {string}
      */
     NeighborEvidenceKindEnum: "fdb" | "lldp" | "cdp" | "other";
+    NotificationTemplate: {
+      id: number;
+      code: string;
+      name: string;
+      description: string;
+      variables: readonly components["schemas"]["TemplateVariable"][];
+      subject: string;
+      body_text: string;
+      body_html: string;
+      version: number;
+      modified_by: string | null;
+      /** Format: date-time */
+      modified_at: string;
+    };
     ObservationDetail: {
       /** Format: uuid */
       id: string;
@@ -2734,6 +2783,53 @@ export interface components {
      * @enum {string}
      */
     OrderingEnum: "name" | "-name" | "asset_tag" | "-asset_tag" | "modified_at" | "-modified_at" | "created_at" | "-created_at";
+    OutboxMessage: {
+      /** Format: uuid */
+      id: string;
+      event_type: string;
+      template_code: string;
+      template_version: number;
+      /** Format: email */
+      to_address: string;
+      subject: string;
+      message_id: string;
+      status: components["schemas"]["OutboxStatusEnum"];
+      attempts: number;
+      max_attempts: number;
+      /** Format: date-time */
+      next_attempt_at: string;
+      last_error: string;
+      /** Format: date-time */
+      queued_at: string;
+      /** Format: date-time */
+      sent_at: string | null;
+      /** Format: date-time */
+      finished_at: string | null;
+      /** Format: date-time */
+      expires_at: string;
+    };
+    OutboxStats: {
+      counts: {
+        [key: string]: number;
+      };
+      /** Format: date-time */
+      oldest_waiting_at: string | null;
+      dead_last_24h: number;
+      problems: string[];
+      enabled: boolean;
+      configured: boolean;
+    };
+    /**
+     * @description * `queued` - Queued
+     * * `sending` - Sending
+     * * `retrying` - Waiting to retry
+     * * `sent` - Sent
+     * * `dead` - Failed (dead letter)
+     * * `cancelled` - Cancelled
+     * * `expired` - Expired
+     * @enum {string}
+     */
+    OutboxStatusEnum: "queued" | "sending" | "retrying" | "sent" | "dead" | "cancelled" | "expired";
     /**
      * @description * `success` - Success
      * * `failure` - Failure
@@ -2875,6 +2971,12 @@ export interface components {
     };
     PaginatedObservationSummaryList: {
       items: components["schemas"]["ObservationSummary"][];
+      next_cursor: string | null;
+      previous_cursor: string | null;
+      count: number;
+    };
+    PaginatedOutboxMessageList: {
+      items: components["schemas"]["OutboxMessage"][];
       next_cursor: string | null;
       previous_cursor: string | null;
       count: number;
@@ -3119,6 +3221,25 @@ export interface components {
       parent?: string | null;
       description?: string;
       is_active?: boolean;
+    };
+    PatchedSmtpProfileWriteRequest: {
+      enabled?: boolean;
+      host?: string;
+      port?: number;
+      security?: components["schemas"]["SmtpSecurityEnum"];
+      username?: string;
+      password_ref?: string;
+      ca_bundle_ref?: string;
+      from_address?: string;
+      from_name?: string;
+      reply_to?: string;
+      timeout_seconds?: number;
+      max_per_minute?: number;
+    };
+    PatchedTemplateWriteRequest: {
+      subject?: string;
+      body_text?: string;
+      body_html?: string;
     };
     PatchedTlsEndpointWriteRequest: {
       host?: string;
@@ -3397,6 +3518,41 @@ export interface components {
       sku_id: string;
       sku_part_number: string;
     };
+    SmtpProfile: {
+      enabled: boolean;
+      host: string;
+      port: number;
+      security: components["schemas"]["SmtpSecurityEnum"];
+      username: string;
+      password_ref: string;
+      /** @description not_set | invalid | missing | configured (never the value) */
+      password_status: string;
+      ca_bundle_ref: string;
+      /** Format: email */
+      from_address: string;
+      from_name: string;
+      /** Format: email */
+      reply_to: string;
+      timeout_seconds: number;
+      max_per_minute: number;
+      /** Format: date-time */
+      last_test_at: string | null;
+      last_test_ok: boolean | null;
+      last_test_error: string;
+      /** Format: date-time */
+      last_test_email_at: string | null;
+      version: number;
+      modified_by: string | null;
+      /** Format: date-time */
+      modified_at: string;
+    };
+    /**
+     * @description * `starttls` - STARTTLS (required)
+     * * `tls` - Implicit TLS
+     * * `none` - None (approved internal relay without credentials)
+     * @enum {string}
+     */
+    SmtpSecurityEnum: "starttls" | "tls" | "none";
     Snapshot: {
       /** Format: uuid */
       id: string;
@@ -3701,6 +3857,21 @@ export interface components {
       columns: components["schemas"]["Column"][];
       custom_columns: boolean;
       allowed: boolean;
+    };
+    TemplatePreview: {
+      subject: string;
+      body_text: string;
+      body_html: string;
+    };
+    TemplateVariable: {
+      name: string;
+      description: string;
+      example?: string;
+    };
+    TemplateWriteRequest: {
+      subject?: string;
+      body_text?: string;
+      body_html?: string;
     };
     TlsAssetRef: {
       /** Format: uuid */
@@ -6592,6 +6763,133 @@ export interface operations {
       };
     };
   };
+  notifications_outbox_list: {
+    parameters: {
+      query?: {
+        /** @description The pagination cursor value. */
+        cursor?: string;
+        /** @description Number of results to return per page. */
+        page_size?: number;
+        /** @description Recipient or subject */
+        q?: string;
+        /** @description Comma-separated statuses */
+        status?: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["PaginatedOutboxMessageList"];
+        };
+      };
+    };
+  };
+  notifications_outbox_cancel_create: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["OutboxMessage"];
+        };
+      };
+    };
+  };
+  notifications_outbox_retry_create: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["OutboxMessage"];
+        };
+      };
+    };
+  };
+  notifications_outbox_stats_retrieve: {
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["OutboxStats"];
+        };
+      };
+    };
+  };
+  notifications_templates_list: {
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["NotificationTemplate"][];
+        };
+      };
+    };
+  };
+  notifications_templates_retrieve: {
+    parameters: {
+      path: {
+        code: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["NotificationTemplate"];
+        };
+      };
+    };
+  };
+  notifications_templates_partial_update: {
+    parameters: {
+      header: {
+        "If-Match": string;
+      };
+      path: {
+        code: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["PatchedTemplateWriteRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["PatchedTemplateWriteRequest"];
+        "multipart/form-data": components["schemas"]["PatchedTemplateWriteRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["NotificationTemplate"];
+        };
+      };
+    };
+  };
+  /** @description Render the saved template, or an unsaved draft, with example values. */
+  notifications_templates_preview_create: {
+    parameters: {
+      path: {
+        code: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["TemplateWriteRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["TemplateWriteRequest"];
+        "multipart/form-data": components["schemas"]["TemplateWriteRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["TemplatePreview"];
+        };
+      };
+    };
+  };
   permissions_list: {
     responses: {
       200: {
@@ -6945,6 +7243,36 @@ export interface operations {
       };
     };
   };
+  settings_smtp_retrieve: {
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["SmtpProfile"];
+        };
+      };
+    };
+  };
+  settings_smtp_partial_update: {
+    parameters: {
+      header: {
+        "If-Match": string;
+      };
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["PatchedSmtpProfileWriteRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["PatchedSmtpProfileWriteRequest"];
+        "multipart/form-data": components["schemas"]["PatchedSmtpProfileWriteRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["SmtpProfile"];
+        };
+      };
+    };
+  };
   sites_list: {
     responses: {
       200: {
@@ -7004,6 +7332,26 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["Site"];
+        };
+      };
+    };
+  };
+  /** @description Connect, TLS and login only; sends nothing. */
+  smtp_test_create: {
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["SmtpProfile"];
+        };
+      };
+    };
+  };
+  /** @description Send one test message to the signed-in administrator's own address. */
+  smtp_test_email_create: {
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["OutboxMessage"];
         };
       };
     };

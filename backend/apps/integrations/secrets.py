@@ -2,8 +2,9 @@
 not plaintext in the DB; docs/14: never in responses or logs).
 
 Accepted references:
-- ``env:ITAM_INTEGRATION_<NAME>`` — an environment variable injected by the deployment.
-  The prefix is mandatory so a reference can never point at unrelated process secrets
+- ``env:ITAM_INTEGRATION_<NAME>`` (``env:ITAM_SMTP_<NAME>`` for the SMTP profile): an
+  environment variable injected by the deployment. The prefix is mandatory so a
+  reference can never point at unrelated process secrets
   (e.g. DJANGO_SECRET_KEY) and send them to a configurable URL.
 - ``file:<name>`` — a file directly inside ITAM_SECRETS_DIR (Docker/Compose secrets).
   No path separators or traversal.
@@ -17,7 +18,9 @@ from pathlib import Path
 
 from django.conf import settings
 
-ENV_PATTERN = re.compile(r"^ITAM_INTEGRATION_[A-Z0-9_]{1,60}$")
+INTEGRATION = "ITAM_INTEGRATION_"
+SMTP = "ITAM_SMTP_"
+NAME_PATTERN = re.compile(r"^[A-Z0-9_]{1,60}$")
 FILE_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,99}$")
 MAX_SECRET_BYTES = 8192
 
@@ -26,18 +29,17 @@ class SecretError(Exception):
     """Unresolvable reference. The message never contains a secret value."""
 
 
-def validate_ref(ref: str) -> str:
+def validate_ref(ref: str, prefix: str = INTEGRATION) -> str:
     ref = ref.strip()
     if not ref:
         return ""
     kind, _, name = ref.partition(":")
-    if kind == "env" and ENV_PATTERN.match(name):
+    if kind == "env" and name.startswith(prefix) and NAME_PATTERN.match(name[len(prefix) :]):
         return ref
     if kind == "file" and FILE_PATTERN.match(name) and ".." not in name:
         return ref
     raise SecretError(
-        "Use env:ITAM_INTEGRATION_<NAME> or file:<name> "
-        "(a file in the deployment secrets directory)."
+        f"Use env:{prefix}<NAME> or file:<name> (a file in the deployment secrets directory)."
     )
 
 
@@ -45,8 +47,8 @@ def _secrets_dir() -> Path:
     return Path(getattr(settings, "ITAM_SECRETS_DIR", "/run/secrets")).resolve()
 
 
-def resolve(ref: str) -> str:
-    ref = validate_ref(ref)
+def resolve(ref: str, prefix: str = INTEGRATION) -> str:
+    ref = validate_ref(ref, prefix)
     if not ref:
         raise SecretError("No credential reference is configured.")
     kind, _, name = ref.partition(":")
@@ -68,12 +70,12 @@ def resolve(ref: str) -> str:
     return value
 
 
-def status(ref: str) -> str:
+def status(ref: str, prefix: str = INTEGRATION) -> str:
     """not_set | invalid | missing | configured — safe to show in the UI."""
     if not ref:
         return "not_set"
     try:
-        resolve(ref)
+        resolve(ref, prefix)
     except SecretError as exc:
         return "invalid" if "Use env:" in str(exc) else "missing"
     return "configured"

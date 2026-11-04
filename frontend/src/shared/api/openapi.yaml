@@ -4522,6 +4522,202 @@ paths:
               schema:
                 $ref: '#/components/schemas/AssetMerge'
           description: ''
+  /api/v1/notifications/outbox/:
+    get:
+      operationId: notifications_outbox_list
+      parameters:
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - in: query
+        name: q
+        schema:
+          type: string
+        description: Recipient or subject
+      - in: query
+        name: status
+        schema:
+          type: string
+        description: Comma-separated statuses
+      tags:
+      - notifications
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedOutboxMessageList'
+          description: ''
+  /api/v1/notifications/outbox/{id}/cancel/:
+    post:
+      operationId: notifications_outbox_cancel_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - notifications
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OutboxMessage'
+          description: ''
+  /api/v1/notifications/outbox/{id}/retry/:
+    post:
+      operationId: notifications_outbox_retry_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - notifications
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OutboxMessage'
+          description: ''
+  /api/v1/notifications/outbox/stats/:
+    get:
+      operationId: notifications_outbox_stats_retrieve
+      tags:
+      - notifications
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OutboxStats'
+          description: ''
+  /api/v1/notifications/templates/:
+    get:
+      operationId: notifications_templates_list
+      tags:
+      - notifications
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NotificationTemplate'
+          description: ''
+  /api/v1/notifications/templates/{code}/:
+    get:
+      operationId: notifications_templates_retrieve
+      parameters:
+      - in: path
+        name: code
+        schema:
+          type: string
+        required: true
+      tags:
+      - notifications
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationTemplate'
+          description: ''
+    patch:
+      operationId: notifications_templates_partial_update
+      parameters:
+      - in: header
+        name: If-Match
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: code
+        schema:
+          type: string
+        required: true
+      tags:
+      - notifications
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedTemplateWriteRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedTemplateWriteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedTemplateWriteRequest'
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationTemplate'
+          description: ''
+  /api/v1/notifications/templates/{code}/preview/:
+    post:
+      operationId: notifications_templates_preview_create
+      description: Render the saved template, or an unsaved draft, with example values.
+      parameters:
+      - in: path
+        name: code
+        schema:
+          type: string
+        required: true
+      tags:
+      - notifications
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TemplateWriteRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TemplateWriteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TemplateWriteRequest'
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TemplatePreview'
+          description: ''
   /api/v1/permissions/:
     get:
       operationId: permissions_list
@@ -5100,6 +5296,50 @@ paths:
               schema:
                 $ref: '#/components/schemas/SecuritySettings'
           description: ''
+  /api/v1/settings/smtp/:
+    get:
+      operationId: settings_smtp_retrieve
+      tags:
+      - settings
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SmtpProfile'
+          description: ''
+    patch:
+      operationId: settings_smtp_partial_update
+      parameters:
+      - in: header
+        name: If-Match
+        schema:
+          type: string
+        required: true
+      tags:
+      - settings
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedSmtpProfileWriteRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedSmtpProfileWriteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedSmtpProfileWriteRequest'
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SmtpProfile'
+          description: ''
   /api/v1/sites/:
     get:
       operationId: sites_list
@@ -5197,6 +5437,36 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Site'
+          description: ''
+  /api/v1/smtp/test/:
+    post:
+      operationId: smtp_test_create
+      description: Connect, TLS and login only; sends nothing.
+      tags:
+      - smtp
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SmtpProfile'
+          description: ''
+  /api/v1/smtp/test-email/:
+    post:
+      operationId: smtp_test_email_create
+      description: Send one test message to the signed-in administrator's own address.
+      tags:
+      - smtp
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OutboxMessage'
           description: ''
   /api/v1/software/installations/:
     get:
@@ -11885,6 +12155,59 @@ components:
         * `lldp` - LLDP neighbour
         * `cdp` - CDP neighbour
         * `other` - Other neighbour protocol
+    NotificationTemplate:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        code:
+          type: string
+          readOnly: true
+          pattern: ^[-a-zA-Z0-9_]+$
+        name:
+          type: string
+          readOnly: true
+        description:
+          type: string
+          readOnly: true
+        variables:
+          type: array
+          items:
+            $ref: '#/components/schemas/TemplateVariable'
+          readOnly: true
+        subject:
+          type: string
+          readOnly: true
+        body_text:
+          type: string
+          readOnly: true
+        body_html:
+          type: string
+          readOnly: true
+        version:
+          type: integer
+          readOnly: true
+        modified_by:
+          type: string
+          readOnly: true
+          nullable: true
+        modified_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - body_html
+      - body_text
+      - code
+      - description
+      - id
+      - modified_at
+      - modified_by
+      - name
+      - subject
+      - variables
+      - version
     ObservationDetail:
       type: object
       properties:
@@ -11999,6 +12322,130 @@ components:
       description: "* `` - \n* `name` - name\n* `-name` - -name\n* `asset_tag` - asset_tag\n*
         `-asset_tag` - -asset_tag\n* `modified_at` - modified_at\n* `-modified_at`
         - -modified_at\n* `created_at` - created_at\n* `-created_at` - -created_at"
+    OutboxMessage:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        event_type:
+          type: string
+          readOnly: true
+        template_code:
+          type: string
+          readOnly: true
+        template_version:
+          type: integer
+          readOnly: true
+        to_address:
+          type: string
+          format: email
+          readOnly: true
+        subject:
+          type: string
+          readOnly: true
+        message_id:
+          type: string
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/OutboxStatusEnum'
+          readOnly: true
+        attempts:
+          type: integer
+          readOnly: true
+        max_attempts:
+          type: integer
+          readOnly: true
+        next_attempt_at:
+          type: string
+          format: date-time
+          readOnly: true
+        last_error:
+          type: string
+          readOnly: true
+        queued_at:
+          type: string
+          format: date-time
+          readOnly: true
+        sent_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        finished_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        expires_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - attempts
+      - event_type
+      - expires_at
+      - finished_at
+      - id
+      - last_error
+      - max_attempts
+      - message_id
+      - next_attempt_at
+      - queued_at
+      - sent_at
+      - status
+      - subject
+      - template_code
+      - template_version
+      - to_address
+    OutboxStats:
+      type: object
+      properties:
+        counts:
+          type: object
+          additionalProperties:
+            type: integer
+        oldest_waiting_at:
+          type: string
+          format: date-time
+          nullable: true
+        dead_last_24h:
+          type: integer
+        problems:
+          type: array
+          items:
+            type: string
+        enabled:
+          type: boolean
+        configured:
+          type: boolean
+      required:
+      - configured
+      - counts
+      - dead_last_24h
+      - enabled
+      - oldest_waiting_at
+      - problems
+    OutboxStatusEnum:
+      enum:
+      - queued
+      - sending
+      - retrying
+      - sent
+      - dead
+      - cancelled
+      - expired
+      type: string
+      description: |-
+        * `queued` - Queued
+        * `sending` - Sending
+        * `retrying` - Waiting to retry
+        * `sent` - Sent
+        * `dead` - Failed (dead letter)
+        * `cancelled` - Cancelled
+        * `expired` - Expired
     OutcomeEnum:
       enum:
       - success
@@ -12461,6 +12908,26 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ObservationSummary'
+        next_cursor:
+          type: string
+          nullable: true
+        previous_cursor:
+          type: string
+          nullable: true
+        count:
+          type: integer
+    PaginatedOutboxMessageList:
+      type: object
+      required:
+      - items
+      - next_cursor
+      - previous_cursor
+      - count
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OutboxMessage'
         next_cursor:
           type: string
           nullable: true
@@ -13099,6 +13566,67 @@ components:
           maxLength: 500
         is_active:
           type: boolean
+    PatchedSmtpProfileWriteRequest:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        host:
+          type: string
+          maxLength: 253
+        port:
+          type: integer
+          maximum: 65535
+          minimum: 1
+        security:
+          $ref: '#/components/schemas/SmtpSecurityEnum'
+        username:
+          type: string
+          maxLength: 254
+        password_ref:
+          type: string
+          maxLength: 120
+        ca_bundle_ref:
+          type: string
+          maxLength: 120
+        from_address:
+          oneOf:
+          - type: string
+            format: email
+          - type: string
+            maxLength: 0
+        from_name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        reply_to:
+          oneOf:
+          - type: string
+            format: email
+          - type: string
+            maxLength: 0
+        timeout_seconds:
+          type: integer
+          maximum: 120
+          minimum: 3
+        max_per_minute:
+          type: integer
+          maximum: 1000
+          minimum: 1
+    PatchedTemplateWriteRequest:
+      type: object
+      properties:
+        subject:
+          type: string
+          minLength: 1
+          maxLength: 300
+        body_text:
+          type: string
+          minLength: 1
+          maxLength: 20000
+        body_html:
+          type: string
+          maxLength: 50000
     PatchedTlsEndpointWriteRequest:
       type: object
       properties:
@@ -13800,6 +14328,111 @@ components:
       - id
       - sku_id
       - sku_part_number
+    SmtpProfile:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+          readOnly: true
+        host:
+          type: string
+          readOnly: true
+        port:
+          type: integer
+          readOnly: true
+        security:
+          allOf:
+          - $ref: '#/components/schemas/SmtpSecurityEnum'
+          readOnly: true
+        username:
+          type: string
+          readOnly: true
+        password_ref:
+          type: string
+          readOnly: true
+        password_status:
+          type: string
+          readOnly: true
+          description: not_set | invalid | missing | configured (never the value)
+        ca_bundle_ref:
+          type: string
+          readOnly: true
+        from_address:
+          type: string
+          format: email
+          readOnly: true
+        from_name:
+          type: string
+          readOnly: true
+        reply_to:
+          type: string
+          format: email
+          readOnly: true
+        timeout_seconds:
+          type: integer
+          readOnly: true
+        max_per_minute:
+          type: integer
+          readOnly: true
+        last_test_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        last_test_ok:
+          type: boolean
+          readOnly: true
+          nullable: true
+        last_test_error:
+          type: string
+          readOnly: true
+        last_test_email_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        version:
+          type: integer
+          readOnly: true
+        modified_by:
+          type: string
+          readOnly: true
+          nullable: true
+        modified_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - ca_bundle_ref
+      - enabled
+      - from_address
+      - from_name
+      - host
+      - last_test_at
+      - last_test_email_at
+      - last_test_error
+      - last_test_ok
+      - max_per_minute
+      - modified_at
+      - modified_by
+      - password_ref
+      - password_status
+      - port
+      - reply_to
+      - security
+      - timeout_seconds
+      - username
+      - version
+    SmtpSecurityEnum:
+      enum:
+      - starttls
+      - tls
+      - none
+      type: string
+      description: |-
+        * `starttls` - STARTTLS (required)
+        * `tls` - Implicit TLS
+        * `none` - None (approved internal relay without credentials)
     Snapshot:
       type: object
       properties:
@@ -14692,6 +15325,45 @@ components:
       - label
       - match_help
       - version
+    TemplatePreview:
+      type: object
+      properties:
+        subject:
+          type: string
+        body_text:
+          type: string
+        body_html:
+          type: string
+      required:
+      - body_html
+      - body_text
+      - subject
+    TemplateVariable:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        example:
+          type: string
+      required:
+      - description
+      - name
+    TemplateWriteRequest:
+      type: object
+      properties:
+        subject:
+          type: string
+          minLength: 1
+          maxLength: 300
+        body_text:
+          type: string
+          minLength: 1
+          maxLength: 20000
+        body_html:
+          type: string
+          maxLength: 50000
     TlsAssetRef:
       type: object
       properties:

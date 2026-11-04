@@ -102,6 +102,8 @@ const ALL_ADMIN = [
   'lifecycle.approve',
   'certificates.view',
   'certificates.manage',
+  'notifications.view',
+  'notifications.manage',
   'reconciliation.decide',
   'audit.view',
   'categories.manage',

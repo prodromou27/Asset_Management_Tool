@@ -35,6 +35,8 @@ LIFECYCLE_MANAGE = "lifecycle.manage"
 LIFECYCLE_APPROVE = "lifecycle.approve"
 CERTIFICATES_VIEW = "certificates.view"
 CERTIFICATES_MANAGE = "certificates.manage"
+NOTIFICATIONS_VIEW = "notifications.view"
+NOTIFICATIONS_MANAGE = "notifications.manage"
 
 PERMISSIONS: dict[str, str] = {
     USERS_VIEW: "View user accounts, role assignments and access review data",
@@ -71,6 +73,10 @@ PERMISSIONS: dict[str, str] = {
     CERTIFICATES_VIEW: "View domains, TLS certificates and approved TLS endpoints",
     CERTIFICATES_MANAGE: (
         "Maintain domains, upload certificates and approve, check or retire TLS endpoints"
+    ),
+    NOTIFICATIONS_VIEW: "View SMTP settings (without credentials), templates and the mail queue",
+    NOTIFICATIONS_MANAGE: (
+        "Change SMTP settings and templates, test mail and retry or cancel queued messages"
     ),
 }
 
@@ -176,6 +182,7 @@ ROLES: list[tuple[str, str, str, list[str]]] = [
             EXPORTS_RUN,
             LIFECYCLE_VIEW,
             CERTIFICATES_VIEW,
+            NOTIFICATIONS_VIEW,
         ],
     ),
     (

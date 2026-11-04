@@ -12,6 +12,8 @@ from apps.domains.urls import (
     endpoint_urlpatterns,
 )
 from apps.lifecycle.urls import asset_urlpatterns as lifecycle_asset_urlpatterns
+from apps.notifications.urls import settings_urlpatterns as smtp_settings_urlpatterns
+from apps.notifications.urls import smtp_urlpatterns
 from apps.organizations.urls import (
     department_urlpatterns,
     location_urlpatterns,
@@ -63,6 +65,9 @@ urlpatterns = [
     path("api/v1/certificates/", include(certificate_urlpatterns)),
     path("api/v1/tls-endpoints/", include(endpoint_urlpatterns)),
     path("api/v1/assets/", include(certificate_asset_urlpatterns)),
+    path("api/v1/settings/", include(smtp_settings_urlpatterns)),
+    path("api/v1/smtp/", include(smtp_urlpatterns)),
+    path("api/v1/notifications/", include("apps.notifications.urls")),
     path("api/v1/saved-views/", saved_views.SavedViewListCreateView.as_view(), name="saved-views"),
     path(
         "api/v1/saved-views/<uuid:pk>/",

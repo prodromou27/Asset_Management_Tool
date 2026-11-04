@@ -1,4 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
+import { Link } from 'react-router-dom'
+import { useSession } from '../../app/useSession'
+import { fetchOutboxStats, notificationKeys } from '../../shared/api/notifications'
+import { PERMISSIONS } from '../../shared/api/types'
 import { fetchReadiness } from '../../shared/api/health'
 import { PageHeader } from '../../shared/ui/PageHeader'
 import { EmptyState, LoadingState, QueryErrorState } from '../../shared/ui/States'
@@ -49,6 +53,38 @@ export function SystemHealthPage() {
           </ul>
         )}
       </section>
+      <MailDelivery />
     </div>
+  )
+}
+
+/** Mail delivery health (docs/14: alert on notification queue backlog). Not part of
+ * readiness: a mail outage must not mark the application down. */
+function MailDelivery() {
+  const { can } = useSession()
+  const allowed = can(PERMISSIONS.notificationsView)
+  const stats = useQuery({ queryKey: notificationKeys.stats, queryFn: fetchOutboxStats, enabled: allowed })
+  if (!allowed || !stats.data) return null
+  const s = stats.data
+  const tone = s.problems.length ? 'danger' : !s.enabled ? 'warning' : 'success'
+  const label = s.problems.length ? 'Needs attention' : !s.configured ? 'Setup incomplete' : s.enabled ? 'OK' : 'Disabled'
+  return (
+    <section className="panel" aria-label="Mail delivery">
+      <ul className="dependency-list">
+        <li className="dependency-list__row">
+          <div>
+            <div className="dependency-list__name">
+              <Link to="/admin/smtp?tab=queue">Mail delivery</Link>
+            </div>
+            <div className="dependency-list__detail">
+              {s.problems.length
+                ? s.problems.join(' ')
+                : `${s.counts.queued + s.counts.retrying} waiting, ${s.counts.sent} sent.`}
+            </div>
+          </div>
+          <StatusBadge tone={tone} label={label} />
+        </li>
+      </ul>
+    </section>
   )
 }

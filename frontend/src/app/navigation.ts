@@ -9,6 +9,7 @@ import {
   History,
   Library,
   LayoutList,
+  Mail,
   PlugZap,
   Radar,
   ScrollText,
@@ -86,6 +87,7 @@ export const SECTIONS: NavSection[] = [
       { to: '/admin/users', label: 'Users & roles', icon: Users, permission: PERMISSIONS.usersView },
       { to: '/admin/audit', label: 'Audit log', icon: ScrollText, permission: PERMISSIONS.auditView },
       { to: '/admin/security', label: 'Security policy', icon: ShieldCheck, permission: PERMISSIONS.securityView },
+      { to: '/admin/smtp', label: 'SMTP & notifications', icon: Mail, permission: PERMISSIONS.notificationsView },
     ],
   },
   {

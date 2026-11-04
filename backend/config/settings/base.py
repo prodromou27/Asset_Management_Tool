@@ -34,6 +34,12 @@ env = environ.Env(
     ITAM_CERT_WARNING_DAYS=(list, [90, 60, 30, 14, 7]),
     ITAM_TLS_CHECK_INTERVAL_HOURS=(int, 24),
     ITAM_TLS_CHECK_TIMEOUT_SECONDS=(int, 5),
+    ITAM_NOTIFICATION_EXPIRY_HOURS=(int, 72),
+    SMTP_HOST=(str, ""),
+    SMTP_PORT=(int, 587),
+    SMTP_SECURITY=(str, "starttls"),
+    SMTP_FROM=(str, ""),
+    ITAM_NOTIFICATION_BODY_RETENTION_DAYS=(int, 14),
 )
 
 env_file = BASE_DIR / ".env"
@@ -71,6 +77,7 @@ INSTALLED_APPS = [
     "apps.lifecycle",
     "apps.software",
     "apps.domains",
+    "apps.notifications",
 ]
 
 AUTH_USER_MODEL = "accounts.User"
@@ -212,6 +219,8 @@ SPECTACULAR_SETTINGS = {
         "MilestoneVerificationEnum": "apps.lifecycle.models.LifecycleMilestone.Verification",
         "CertificateSourceEnum": "apps.domains.models.Certificate.Source",
         "TlsCheckStatusEnum": "apps.domains.models.TlsEndpoint.CheckStatus",
+        "SmtpSecurityEnum": "apps.notifications.models.SmtpProfile.Security",
+        "OutboxStatusEnum": "apps.notifications.models.OutboxMessage.Status",
         "LifecycleMatchStateEnum": "apps.lifecycle.models.AssetLifecycleMatch.State",
         "LifecycleMatchMethodEnum": "apps.lifecycle.models.AssetLifecycleMatch.Method",
         "SupportLevelEnum": "apps.lifecycle.models.LifecycleAssessment.SupportLevel",
@@ -256,6 +265,14 @@ CELERY_BEAT_SCHEDULE = {
         "task": "lifecycle.reassess_all",
         "schedule": 3600.0,
     },
+    "deliver-mail": {
+        "task": "notifications.deliver_due",
+        "schedule": 60.0,
+    },
+    "purge-mail-bodies": {
+        "task": "notifications.purge",
+        "schedule": 86400.0,
+    },
     "check-tls-endpoints": {
         "task": "domains.check_endpoints",
         "schedule": 900.0,  # picks endpoints whose last check is older than the interval
@@ -295,6 +312,19 @@ ITAM_TLS_CHECK_INTERVAL_HOURS = env("ITAM_TLS_CHECK_INTERVAL_HOURS")
 ITAM_TLS_CHECK_TIMEOUT_SECONDS = env("ITAM_TLS_CHECK_TIMEOUT_SECONDS")
 # Loopback targets are refused outside tests (SSRF, docs/14).
 ITAM_TLS_ALLOW_LOOPBACK = False
+
+# Mail outbox (Task 018a): queued messages expire when mail stays disabled or unreachable;
+# bodies of finished messages are cleared after the retention period.
+ITAM_NOTIFICATION_EXPIRY_HOURS = env("ITAM_NOTIFICATION_EXPIRY_HOURS")
+ITAM_NOTIFICATION_BODY_RETENTION_DAYS = env("ITAM_NOTIFICATION_BODY_RETENTION_DAYS")
+# Initial values for the SMTP profile when it is first created (docs/12 "Email" row). The
+# profile itself is edited in Administration and starts disabled.
+ITAM_SMTP_DEFAULTS = {
+    "host": env("SMTP_HOST"),
+    "port": env("SMTP_PORT"),
+    "security": env("SMTP_SECURITY"),
+    "from_address": env("SMTP_FROM"),
+}
 # Deployment-level kill switch: no connector contacts a live source unless true,
 # in addition to the per-instance approval recorded by an administrator.
 ITAM_ALLOW_LIVE_INTEGRATIONS = env("ITAM_ALLOW_LIVE_INTEGRATIONS")
