@@ -25,6 +25,7 @@ import { SelectField, TextAreaField, TextField } from '../../shared/ui/Field'
 import { PageHeader } from '../../shared/ui/PageHeader'
 import { EmptyState, LoadingState, QueryErrorState } from '../../shared/ui/States'
 import { ReasonDialog } from '../discovery/ReasonDialog'
+import { ExportDialog } from '../exports/ExportDialog'
 import { RuleBuilder } from './RuleBuilder'
 import { describeRule, ruleComplete } from './ruleUtils'
 import { RulePreview } from './RulePreview'
@@ -38,6 +39,7 @@ export function GroupDetailPage() {
   const fields = useQuery({ queryKey: groupKeys.fields, queryFn: fetchRuleFields })
   const [editing, setEditing] = useState(false)
   const [archiving, setArchiving] = useState(false)
+  const [exporting, setExporting] = useState(false)
   const refresh = () => queryClient.invalidateQueries({ queryKey: groupKeys.all })
   const evaluate = useMutation({ mutationFn: () => evaluateGroup(id), onSuccess: refresh })
   const archive = useMutation({
@@ -70,20 +72,32 @@ export function GroupDetailPage() {
         title={g.name}
         meta={`${g.kind === 'dynamic' ? 'Dynamic' : 'Static'} group · ${g.member_count} members in your sites`}
         actions={
-          manage && (
-            <>
-              {g.kind === 'dynamic' && (
-                <Button busy={evaluate.isPending} onClick={() => evaluate.mutate()}>
-                  Re-evaluate now
+          <>
+            {can(PERMISSIONS.exportsRun) && (
+              <Button onClick={() => setExporting(true)}>Export members</Button>
+            )}
+            {manage && (
+              <>
+                {g.kind === 'dynamic' && (
+                  <Button busy={evaluate.isPending} onClick={() => evaluate.mutate()}>
+                    Re-evaluate now
+                  </Button>
+                )}
+                <Button onClick={() => setEditing(true)}>Edit details</Button>
+                <Button variant="danger" onClick={() => setArchiving(true)}>
+                  Archive…
                 </Button>
-              )}
-              <Button onClick={() => setEditing(true)}>Edit details</Button>
-              <Button variant="danger" onClick={() => setArchiving(true)}>
-                Archive…
-              </Button>
-            </>
-          )
+              </>
+            )}
+          </>
         }
+      />
+      <ExportDialog
+        open={exporting}
+        onClose={() => setExporting(false)}
+        family="groups"
+        selected={{ ids: [g.id], label: `This group (${g.name})` }}
+        defaultRelated={['members']}
       />
       {evaluate.data && (
         <p className="inline-success" role="status">

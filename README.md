@@ -135,6 +135,12 @@ scripts/compose.sh dev exec api python manage.py load_observations \
 - Matching: the Entra device ID links a Defender machine to the asset of an Intune device from the **same tenant** when a hostname or MAC corroborates it and nothing conflicts (ADR-014); otherwise it is a review candidate. Hostname or IP alone never links.
 - Security facts (onboarding, sensor health, exposure, risk, tags, first/last seen, original values) are stored apart from asset fields and shown on the asset's **Security** tab (requires `discovery.view` and site access). "Last report received" is not an online status, and a machine missing from Defender's list is flagged, never treated as deleted. Sanitized fixtures: `fixtures/defender/api/README.md`.
 
+### Exports (Task 014)
+
+- **Export** on the Assets list (current filters or everything you can see) and **Export members** on a group page. Choose CSV, Excel (XLSX) or JSON, related data (hostnames, interfaces/MACs, IP addresses, group memberships; or group members) and columns. Related data stays in separate tables keyed by ID: a ZIP of CSV files, one sheet per table in XLSX (split across numbered sheets beyond Excel's row limit), or nested lists in a versioned JSON document (`"format": "itam.export", "version": 1`).
+- Exports run in the background (**Exports** page in the sidebar shows progress). The file is built from your own site-scoped view when the job runs, stored encrypted, downloadable only by you for 24 hours (`ITAM_EXPORT_RETENTION_HOURS`), then deleted; exports over `ITAM_EXPORT_MAX_ROWS` (100,000) are refused. Spreadsheet cells that look like formulas are escaped. Every export, completion, failure and download is in the audit log; auditors see export records but cannot download other people's files.
+- Permissions: `exports.run` (every role, always limited to the user's sites) and `exports.personal` (owner and user names; System Admin, ITAM Manager, Asset Operator). Without it those columns are left out and the file says so (ASM-52).
+
 ### Imports (Task 013)
 
 - **Imports** (sidebar, and Import on the Assets page): choose what to import (assets, locations, groups, static group members), download the versioned CSV template, upload a CSV or XLSX file (up to 5 MB / 10,000 rows), map columns, choose create only / update matched / create and update, and run a dry run that shows Create/Update/Skip/Conflict/Error per row before anything changes.

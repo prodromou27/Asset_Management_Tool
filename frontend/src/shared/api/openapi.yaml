@@ -1527,6 +1527,117 @@ paths:
                 items:
                   $ref: '#/components/schemas/DiscoverySource'
           description: ''
+  /api/v1/exports/:
+    get:
+      operationId: exports_list
+      parameters:
+      - name: cursor
+        required: false
+        in: query
+        description: The pagination cursor value.
+        schema:
+          type: string
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      tags:
+      - exports
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedExportJobList'
+          description: ''
+    post:
+      operationId: exports_create
+      tags:
+      - exports
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExportCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ExportCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ExportCreateRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '202':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExportJob'
+          description: ''
+  /api/v1/exports/{id}/:
+    get:
+      operationId: exports_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - exports
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExportJob'
+          description: ''
+  /api/v1/exports/{id}/download/:
+    get:
+      operationId: exports_download_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - exports
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+          description: ''
+  /api/v1/exports/families/:
+    get:
+      operationId: exports_families_list
+      tags:
+      - exports
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ExportFamily'
+          description: ''
   /api/v1/groups/:
     get:
       operationId: groups_list
@@ -5497,18 +5608,261 @@ components:
         * `defender` - Defender
         * `import` - Import
         * `fixture` - Fixture import
-    FamilyEnum:
+    ExportColumn:
+      type: object
+      properties:
+        key:
+          type: string
+        label:
+          type: string
+        personal:
+          type: boolean
+        allowed:
+          type: boolean
+      required:
+      - allowed
+      - key
+      - label
+      - personal
+    ExportCreateFamilyEnum:
       enum:
-      - asset
-      - location
-      - group
-      - group_membership
+      - assets
+      - groups
       type: string
       description: |-
-        * `asset` - asset
-        * `location` - location
-        * `group` - group
-        * `group_membership` - group_membership
+        * `assets` - assets
+        * `groups` - groups
+    ExportCreateRequest:
+      type: object
+      properties:
+        family:
+          $ref: '#/components/schemas/ExportCreateFamilyEnum'
+        format:
+          $ref: '#/components/schemas/ExportFormatEnum'
+        scope:
+          $ref: '#/components/schemas/ExportScopeEnum'
+        filters:
+          type: object
+          additionalProperties:
+            type: string
+        ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        columns:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 60
+          maxItems: 200
+        related:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 40
+          maxItems: 20
+      required:
+      - family
+      - format
+      - scope
+    ExportFamily:
+      type: object
+      properties:
+        code:
+          type: string
+        label:
+          type: string
+        description:
+          type: string
+        allowed:
+          type: boolean
+        filter_keys:
+          type: array
+          items:
+            type: string
+        columns:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExportColumn'
+        related:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExportRelated'
+        personal_data_allowed:
+          type: boolean
+      required:
+      - allowed
+      - code
+      - columns
+      - description
+      - filter_keys
+      - label
+      - personal_data_allowed
+      - related
+    ExportFormatEnum:
+      enum:
+      - csv
+      - xlsx
+      - json
+      type: string
+      description: |-
+        * `csv` - CSV
+        * `xlsx` - Excel (XLSX)
+        * `json` - JSON
+    ExportJob:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        family:
+          type: string
+          readOnly: true
+        file_format:
+          allOf:
+          - $ref: '#/components/schemas/ExportFormatEnum'
+          readOnly: true
+        scope:
+          allOf:
+          - $ref: '#/components/schemas/ExportScopeEnum'
+          readOnly: true
+        filters:
+          type: object
+          additionalProperties:
+            type: string
+          readOnly: true
+        selected_count:
+          type: integer
+          readOnly: true
+        columns:
+          type: array
+          items:
+            type: string
+          readOnly: true
+        related:
+          type: array
+          items:
+            type: string
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/ExportJobStatusEnum'
+          readOnly: true
+        row_count:
+          type: integer
+          readOnly: true
+        related_counts:
+          type: object
+          additionalProperties:
+            type: integer
+          readOnly: true
+        masked_columns:
+          type: array
+          items:
+            type: string
+          readOnly: true
+        filename:
+          type: string
+          readOnly: true
+        size_bytes:
+          type: integer
+          readOnly: true
+        checksum:
+          type: string
+          readOnly: true
+        error_message:
+          type: string
+          readOnly: true
+        created_by:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        completed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        expires_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        download_count:
+          type: integer
+          readOnly: true
+        last_downloaded_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        downloadable:
+          type: boolean
+          readOnly: true
+      required:
+      - checksum
+      - columns
+      - completed_at
+      - created_at
+      - created_by
+      - download_count
+      - downloadable
+      - error_message
+      - expires_at
+      - family
+      - file_format
+      - filename
+      - filters
+      - id
+      - last_downloaded_at
+      - masked_columns
+      - related
+      - related_counts
+      - row_count
+      - scope
+      - selected_count
+      - size_bytes
+      - status
+    ExportJobStatusEnum:
+      enum:
+      - queued
+      - running
+      - completed
+      - failed
+      - expired
+      type: string
+      description: |-
+        * `queued` - Queued
+        * `running` - Preparing
+        * `completed` - Ready
+        * `failed` - Failed
+        * `expired` - Expired
+    ExportRelated:
+      type: object
+      properties:
+        key:
+          type: string
+        label:
+          type: string
+      required:
+      - key
+      - label
+    ExportScopeEnum:
+      enum:
+      - filtered
+      - selected
+      - all
+      type: string
+      description: |-
+        * `filtered` - Current filters
+        * `selected` - Selected records
+        * `all` - All records I can see
     FieldAdded:
       type: object
       properties:
@@ -7439,6 +7793,26 @@ components:
           nullable: true
         count:
           type: integer
+    PaginatedExportJobList:
+      type: object
+      required:
+      - items
+      - next_cursor
+      - previous_cursor
+      - count
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExportJob'
+        next_cursor:
+          type: string
+          nullable: true
+        previous_cursor:
+          type: string
+          nullable: true
+        count:
+          type: integer
     PaginatedFieldConflictList:
       type: object
       required:
@@ -9269,11 +9643,23 @@ components:
       - label
       - match_help
       - version
+    UploadFamilyEnum:
+      enum:
+      - asset
+      - location
+      - group
+      - group_membership
+      type: string
+      description: |-
+        * `asset` - asset
+        * `location` - location
+        * `group` - group
+        * `group_membership` - group_membership
     UploadRequest:
       type: object
       properties:
         family:
-          $ref: '#/components/schemas/FamilyEnum'
+          $ref: '#/components/schemas/UploadFamilyEnum'
         file:
           type: string
           format: binary

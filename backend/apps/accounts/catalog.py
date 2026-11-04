@@ -27,6 +27,8 @@ GROUPS_VIEW = "groups.view"
 GROUPS_MANAGE = "groups.manage"
 GROUPS_MEMBERS = "groups.members"
 IMPORTS_RUN = "imports.run"
+EXPORTS_RUN = "exports.run"
+EXPORTS_PERSONAL = "exports.personal"
 
 PERMISSIONS: dict[str, str] = {
     USERS_VIEW: "View user accounts, role assignments and access review data",
@@ -54,6 +56,8 @@ PERMISSIONS: dict[str, str] = {
     GROUPS_MANAGE: "Create, edit and archive asset groups and dynamic group rules",
     GROUPS_MEMBERS: "Add and remove static group members in permitted sites",
     IMPORTS_RUN: "Upload, preview and commit CSV/XLSX imports (plus the family's own permission)",
+    EXPORTS_RUN: "Export data you can view (site-scoped) to CSV, XLSX or JSON",
+    EXPORTS_PERSONAL: "Include personal data (owner and user names) in exports",
 }
 
 SYSTEM_ADMIN = "system_admin"
@@ -85,25 +89,43 @@ ROLES: list[tuple[str, str, str, list[str]]] = [
             GROUPS_MANAGE,
             GROUPS_MEMBERS,
             IMPORTS_RUN,
+            EXPORTS_RUN,
+            EXPORTS_PERSONAL,
         ],
     ),
     (
         "infrastructure_engineer",
         "Infrastructure Engineer",
         "Technical comments, match proposals and source diagnostics.",
-        [ASSETS_VIEW, ASSETS_EDIT_TECHNICAL, DISCOVERY_VIEW, GROUPS_VIEW, GROUPS_MEMBERS],
+        [
+            ASSETS_VIEW,
+            ASSETS_EDIT_TECHNICAL,
+            DISCOVERY_VIEW,
+            GROUPS_VIEW,
+            GROUPS_MEMBERS,
+            EXPORTS_RUN,
+        ],
     ),
     (
         "security_analyst",
         "Security Analyst",
         "Read and investigate assets; flag high-risk lifecycle findings.",
-        [ASSETS_VIEW, DISCOVERY_VIEW, GROUPS_VIEW],
+        [ASSETS_VIEW, DISCOVERY_VIEW, GROUPS_VIEW, EXPORTS_RUN],
     ),
     (
         "asset_operator",
         "Asset Operator",
         "Maintains authorized business fields and static group membership.",
-        [ASSETS_VIEW, ASSETS_CREATE, ASSETS_EDIT, GROUPS_VIEW, GROUPS_MEMBERS, IMPORTS_RUN],
+        [
+            ASSETS_VIEW,
+            ASSETS_CREATE,
+            ASSETS_EDIT,
+            GROUPS_VIEW,
+            GROUPS_MEMBERS,
+            IMPORTS_RUN,
+            EXPORTS_RUN,
+            EXPORTS_PERSONAL,
+        ],
     ),
     (
         "auditor",
@@ -118,13 +140,14 @@ ROLES: list[tuple[str, str, str, list[str]]] = [
             DISCOVERY_VIEW,
             LICENSES_VIEW,
             GROUPS_VIEW,
+            EXPORTS_RUN,
         ],
     ),
     (
         "read_only",
         "Read Only",
         "Site-scoped read access.",
-        [ASSETS_VIEW, GROUPS_VIEW],
+        [ASSETS_VIEW, GROUPS_VIEW, EXPORTS_RUN],
     ),
 ]
 

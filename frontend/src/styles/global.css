@@ -1767,3 +1767,47 @@ code,
   background: var(--color-page-bg);
   font-size: 13px;
 }
+
+/* ---- Task 014: exports ------------------------------------------------------- */
+
+.row--highlight td {
+  background: var(--color-brand-soft);
+}
+
+.radio-list--inline {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+
+.export-columns > summary {
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 550;
+  color: var(--color-link);
+}
+
+.export-columns[open] > summary {
+  margin-bottom: var(--space-2);
+}
+
+.export-columns .checkbox-list {
+  max-height: 240px;
+  overflow-y: auto;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+}
+
+/* Dialogs never exceed the viewport; their content scrolls. */
+.dialog {
+  max-height: calc(100dvh - 48px);
+  overflow-y: auto;
+}
+
+.dialog .checkbox-list {
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: var(--space-1) var(--space-2);
+}
+
+.dialog .checkbox {
+  padding: 6px var(--space-2);
+}

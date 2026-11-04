@@ -25,6 +25,7 @@ import { Button } from '../../shared/ui/Button'
 import { Dialog } from '../../shared/ui/Dialog'
 import { CheckboxGroup, SelectField, TextField } from '../../shared/ui/Field'
 import { PageHeader } from '../../shared/ui/PageHeader'
+import { ExportDialog } from '../exports/ExportDialog'
 import { EmptyState, LoadingState, QueryErrorState } from '../../shared/ui/States'
 import { COLUMNS, loadColumns, normalizeColumns, saveColumns } from './columns'
 import {
@@ -73,6 +74,7 @@ export function AssetsListPage() {
   // Unsaved column edits while a saved view is applied (kept per view id).
   const [viewDraft, setViewDraft] = useState<{ id: string; columns: AssetColumn[] } | null>(null)
   const [dialog, setDialog] = useState<'save' | 'delete' | 'columns' | null>(null)
+  const [exporting, setExporting] = useState(false)
 
   const categories = useQuery({ queryKey: assetKeys.categories, queryFn: fetchCategories })
   const sites = useQuery({ queryKey: assetKeys.sites, queryFn: fetchSites })
@@ -173,6 +175,9 @@ export function AssetsListPage() {
                 Import
               </Link>
             )}
+            {can(PERMISSIONS.exportsRun) && (
+              <Button onClick={() => setExporting(true)}>Export</Button>
+            )}
             {can(PERMISSIONS.assetsCreate) && (
               <Link className="button button--primary" to="/assets/new">
                 Add asset
@@ -180,6 +185,14 @@ export function AssetsListPage() {
             )}
           </>
         }
+      />
+      <ExportDialog
+        open={exporting}
+        onClose={() => setExporting(false)}
+        family="assets"
+        filters={Object.fromEntries(
+          FILTER_KEYS.flatMap((key) => (filters[key] ? [[key, filters[key] as string]] : [])),
+        )}
       />
 
       <div className="view-bar">

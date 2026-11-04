@@ -94,6 +94,8 @@ const ALL_ADMIN = [
   'groups.manage',
   'groups.members',
   'imports.run',
+  'exports.run',
+  'exports.personal',
   'reconciliation.decide',
   'audit.view',
   'categories.manage',

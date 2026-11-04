@@ -54,6 +54,9 @@ export type ImportJob = Schemas['JobDetail']
 export type ImportJobSummary = Schemas['Job']
 export type ImportRow = Schemas['Row']
 export type ImportTemplate = Schemas['Template']
+export type ExportJob = Schemas['ExportJob']
+export type ExportFamily = Schemas['ExportFamily']
+export type ExportCreate = Schemas['ExportCreateRequest']
 export type FieldConflict = Schemas['FieldConflict']
 export type AssetEvidence = Schemas['AssetEvidence']
 export type FieldEvidence = Schemas['FieldEvidence']
@@ -95,4 +98,6 @@ export const PERMISSIONS = {
   groupsManage: 'groups.manage',
   groupsMembers: 'groups.members',
   importsRun: 'imports.run',
+  exportsRun: 'exports.run',
+  exportsPersonal: 'exports.personal',
 } as const

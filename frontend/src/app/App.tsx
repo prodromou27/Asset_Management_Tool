@@ -6,6 +6,7 @@ import { CategoriesPage } from '../features/admin-categories/CategoriesPage'
 import { IntegrationDetailPage } from '../features/admin-integrations/IntegrationDetailPage'
 import { IntegrationsPage } from '../features/admin-integrations/IntegrationsPage'
 import { CandidatePage } from '../features/discovery/CandidatePage'
+import { ExportsPage } from '../features/exports/ExportsPage'
 import { GroupDetailPage } from '../features/groups/GroupDetailPage'
 import { GroupsPage } from '../features/groups/GroupsPage'
 import { ImportJobPage } from '../features/imports/ImportJobPage'
@@ -121,6 +122,14 @@ export function AppRoutes() {
         element={
           <Protected permission={PERMISSIONS.groupsView} what="groups">
             <GroupDetailPage />
+          </Protected>
+        }
+      />
+      <Route
+        path="/exports"
+        element={
+          <Protected permission={PERMISSIONS.exportsRun} what="exports">
+            <ExportsPage />
           </Protected>
         }
       />

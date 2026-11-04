@@ -38,6 +38,9 @@ x-backend-env: &backend-env
   # secret key when empty) and their retention in days.
   ITAM_IMPORT_ENCRYPTION_KEY: ${ITAM_IMPORT_ENCRYPTION_KEY:-}
   ITAM_IMPORT_RETENTION_DAYS: ${ITAM_IMPORT_RETENTION_DAYS:-90}
+  # Exports (Task 014): hours a finished export stays downloadable, and the record limit.
+  ITAM_EXPORT_RETENTION_HOURS: ${ITAM_EXPORT_RETENTION_HOURS:-24}
+  ITAM_EXPORT_MAX_ROWS: ${ITAM_EXPORT_MAX_ROWS:-100000}
 
 x-backend-depends: &backend-depends
   postgres:

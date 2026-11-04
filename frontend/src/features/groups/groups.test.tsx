@@ -163,6 +163,50 @@ describe('Groups list and creation', () => {
 })
 
 describe('Group detail', () => {
+  it('exports this group with its members', async () => {
+    const { calls } = mockApi({
+      'GET /auth/me/': { body: makeMe() },
+      ...reference,
+      'GET /groups/': { body: [makeGroup()] },
+      [`GET /groups/${GROUP_ID}/`]: { body: makeGroup() },
+      [`GET /groups/${GROUP_ID}/assets/`]: { body: page([membership()]) },
+      [`GET /groups/${GROUP_ID}/rule-versions/`]: { body: [] },
+      'GET /exports/families/': {
+        body: [
+          {
+            code: 'groups',
+            label: 'Asset groups',
+            description: '',
+            allowed: true,
+            filter_keys: [],
+            columns: [{ key: 'id', label: 'Group ID', personal: false, allowed: true }],
+            related: [{ key: 'members', label: 'Members' }],
+            personal_data_allowed: true,
+          },
+        ],
+      },
+      'POST /exports/': { status: 202, body: { id: 'x1' } },
+      'GET /exports/': { body: page([]) },
+    })
+    renderApp(`/groups/${GROUP_ID}`)
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Export members' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Export asset groups' })
+    expect(await within(dialog).findByLabelText('This group (Cisco switches)')).toBeChecked()
+    expect(within(dialog).getByLabelText('Members')).toBeChecked()
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Start export' }))
+
+    await waitFor(() => {
+      const post = calls.find((c) => c.method === 'POST' && c.path === '/exports/')!
+      expect(post.body).toMatchObject({
+        family: 'groups',
+        scope: 'selected',
+        ids: [GROUP_ID],
+        related: ['members'],
+      })
+    })
+  })
+
   it('edits a dynamic rule with a membership diff and a reason', async () => {
     const { calls } = mockApi({
       'GET /auth/me/': { body: makeMe() },

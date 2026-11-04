@@ -26,6 +26,8 @@ env = environ.Env(
     ITAM_ALLOW_LIVE_INTEGRATIONS=(bool, False),
     ITAM_IMPORT_ENCRYPTION_KEY=(str, ""),
     ITAM_IMPORT_RETENTION_DAYS=(int, 90),
+    ITAM_EXPORT_RETENTION_HOURS=(int, 24),
+    ITAM_EXPORT_MAX_ROWS=(int, 100_000),
 )
 
 env_file = BASE_DIR / ".env"
@@ -59,6 +61,7 @@ INSTALLED_APPS = [
     "apps.quality",
     "apps.groups",
     "apps.imports",
+    "apps.exports",
 ]
 
 AUTH_USER_MODEL = "accounts.User"
@@ -187,6 +190,9 @@ SPECTACULAR_SETTINGS = {
         "RuleFieldKindEnum": ["text", "enum", "ref", "date"],
         "ImportJobStatusEnum": "apps.imports.models.ImportJob.Status",
         "ImportModeEnum": "apps.imports.models.ImportJob.Mode",
+        "ExportJobStatusEnum": "apps.exports.models.ExportJob.Status",
+        "ExportFormatEnum": "apps.exports.models.ExportJob.Format",
+        "ExportScopeEnum": "apps.exports.models.ExportJob.Scope",
         "SyncRunModeEnum": "apps.integrations.models.SyncRun.Mode",
     },
 }
@@ -219,6 +225,10 @@ CELERY_BEAT_SCHEDULE = {
         "task": "imports.purge_originals",
         "schedule": 86400.0,
     },
+    "purge-exports": {
+        "task": "exports.purge",
+        "schedule": 3600.0,
+    },
 }
 
 LOGGING = {
@@ -238,6 +248,9 @@ ITAM_SECRETS_DIR = env("ITAM_SECRETS_DIR")
 # and how long originals are kept.
 ITAM_IMPORT_ENCRYPTION_KEY = env("ITAM_IMPORT_ENCRYPTION_KEY")
 ITAM_IMPORT_RETENTION_DAYS = env("ITAM_IMPORT_RETENTION_DAYS")
+# Exports (Task 014): hours a finished export can be downloaded, and the record limit.
+ITAM_EXPORT_RETENTION_HOURS = env("ITAM_EXPORT_RETENTION_HOURS")
+ITAM_EXPORT_MAX_ROWS = env("ITAM_EXPORT_MAX_ROWS")
 # Deployment-level kill switch: no connector contacts a live source unless true,
 # in addition to the per-instance approval recorded by an administrator.
 ITAM_ALLOW_LIVE_INTEGRATIONS = env("ITAM_ALLOW_LIVE_INTEGRATIONS")

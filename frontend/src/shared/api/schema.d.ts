@@ -137,6 +137,19 @@ export interface paths {
   "/api/v1/discovery/sources/": {
     get: operations["discovery_sources_list"];
   };
+  "/api/v1/exports/": {
+    get: operations["exports_list"];
+    post: operations["exports_create"];
+  };
+  "/api/v1/exports/{id}/": {
+    get: operations["exports_retrieve"];
+  };
+  "/api/v1/exports/{id}/download/": {
+    get: operations["exports_download_retrieve"];
+  };
+  "/api/v1/exports/families/": {
+    get: operations["exports_families_list"];
+  };
   "/api/v1/groups/": {
     get: operations["groups_list"];
     post: operations["groups_create"];
@@ -1024,14 +1037,100 @@ export interface components {
      * @enum {string}
      */
     EvidenceSourceEnum: "manual" | "librenms" | "endpoint_central" | "intune" | "defender" | "import" | "fixture";
+    ExportColumn: {
+      key: string;
+      label: string;
+      personal: boolean;
+      allowed: boolean;
+    };
     /**
-     * @description * `asset` - asset
-     * * `location` - location
-     * * `group` - group
-     * * `group_membership` - group_membership
+     * @description * `assets` - assets
+     * * `groups` - groups
      * @enum {string}
      */
-    FamilyEnum: "asset" | "location" | "group" | "group_membership";
+    ExportCreateFamilyEnum: "assets" | "groups";
+    ExportCreateRequest: {
+      family: components["schemas"]["ExportCreateFamilyEnum"];
+      format: components["schemas"]["ExportFormatEnum"];
+      scope: components["schemas"]["ExportScopeEnum"];
+      filters?: {
+        [key: string]: string;
+      };
+      ids?: string[];
+      columns?: string[];
+      related?: string[];
+    };
+    ExportFamily: {
+      code: string;
+      label: string;
+      description: string;
+      allowed: boolean;
+      filter_keys: string[];
+      columns: components["schemas"]["ExportColumn"][];
+      related: components["schemas"]["ExportRelated"][];
+      personal_data_allowed: boolean;
+    };
+    /**
+     * @description * `csv` - CSV
+     * * `xlsx` - Excel (XLSX)
+     * * `json` - JSON
+     * @enum {string}
+     */
+    ExportFormatEnum: "csv" | "xlsx" | "json";
+    ExportJob: {
+      /** Format: uuid */
+      id: string;
+      family: string;
+      file_format: components["schemas"]["ExportFormatEnum"];
+      scope: components["schemas"]["ExportScopeEnum"];
+      filters: {
+        [key: string]: string;
+      };
+      selected_count: number;
+      columns: readonly string[];
+      related: readonly string[];
+      status: components["schemas"]["ExportJobStatusEnum"];
+      row_count: number;
+      related_counts: {
+        [key: string]: number;
+      };
+      masked_columns: readonly string[];
+      filename: string;
+      size_bytes: number;
+      checksum: string;
+      error_message: string;
+      created_by: string;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      completed_at: string | null;
+      /** Format: date-time */
+      expires_at: string | null;
+      download_count: number;
+      /** Format: date-time */
+      last_downloaded_at: string | null;
+      downloadable: boolean;
+    };
+    /**
+     * @description * `queued` - Queued
+     * * `running` - Preparing
+     * * `completed` - Ready
+     * * `failed` - Failed
+     * * `expired` - Expired
+     * @enum {string}
+     */
+    ExportJobStatusEnum: "queued" | "running" | "completed" | "failed" | "expired";
+    ExportRelated: {
+      key: string;
+      label: string;
+    };
+    /**
+     * @description * `filtered` - Current filters
+     * * `selected` - Selected records
+     * * `all` - All records I can see
+     * @enum {string}
+     */
+    ExportScopeEnum: "filtered" | "selected" | "all";
     FieldAdded: {
       key: string;
       label: string;
@@ -1714,6 +1813,12 @@ export interface components {
     };
     PaginatedCategoryReviewList: {
       items: components["schemas"]["CategoryReview"][];
+      next_cursor: string | null;
+      previous_cursor: string | null;
+      count: number;
+    };
+    PaginatedExportJobList: {
+      items: components["schemas"]["ExportJob"][];
       next_cursor: string | null;
       previous_cursor: string | null;
       count: number;
@@ -2405,8 +2510,16 @@ export interface components {
       custom_columns: boolean;
       allowed: boolean;
     };
+    /**
+     * @description * `asset` - asset
+     * * `location` - location
+     * * `group` - group
+     * * `group_membership` - group_membership
+     * @enum {string}
+     */
+    UploadFamilyEnum: "asset" | "location" | "group" | "group_membership";
     UploadRequest: {
-      family: components["schemas"]["FamilyEnum"];
+      family: components["schemas"]["UploadFamilyEnum"];
       /** Format: binary */
       file: string;
     };
@@ -3346,6 +3459,76 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["DiscoverySource"][];
+        };
+      };
+    };
+  };
+  exports_list: {
+    parameters: {
+      query?: {
+        /** @description The pagination cursor value. */
+        cursor?: string;
+        /** @description Number of results to return per page. */
+        page_size?: number;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["PaginatedExportJobList"];
+        };
+      };
+    };
+  };
+  exports_create: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ExportCreateRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["ExportCreateRequest"];
+        "multipart/form-data": components["schemas"]["ExportCreateRequest"];
+      };
+    };
+    responses: {
+      202: {
+        content: {
+          "application/json": components["schemas"]["ExportJob"];
+        };
+      };
+    };
+  };
+  exports_retrieve: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["ExportJob"];
+        };
+      };
+    };
+  };
+  exports_download_retrieve: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/octet-stream": string;
+        };
+      };
+    };
+  };
+  exports_families_list: {
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["ExportFamily"][];
         };
       };
     };

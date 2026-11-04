@@ -1,4 +1,78 @@
-# Current Task: UI redesign - application shell and visual system (before 014)
+# Current Task: 014 | CSV/XLSX/JSON exports with RBAC and async jobs
+
+Status: **Complete locally; awaiting CI** (2026-11-04, branch DEV).
+
+**Read:** AGENTS.md, docs/00, 04 (Import/export endpoints, async 202), 07 (ExportDialog), 08
+(section 10 Import/Export Center), 09 (role matrix), 11 (Export), 14 (formula injection, data
+exfiltration, separate personal-data export permission), 15 (A14, A15), 17.
+
+**Previous:** UI redesign (CI run 41819113769 green).
+
+## Scope
+
+Export framework (async job, encrypted artifact, short-lived download, audit, RBAC/site
+masking at query time) for the families that exist: assets (with related tables) and
+groups (with members). Other families arrive with their tasks; scheduled report delivery
+needs SMTP (Task 018); report endpoints are Task 021.
+
+## Outcome (ASM-52)
+
+- **App `apps.exports`:** `ExportJob` (status queued/running/completed/failed/expired, family,
+  format, scope, filters, ids, columns, related, counts, masked columns, encrypted file,
+  checksum, expiry, download count).
+- **Families** (`families.py`): assets (29 columns + `cf.<key>`; related hostnames,
+  interfaces/MACs, IP addresses, group memberships) and groups (related members, only assets
+  in the viewer's sites). Rows start from `visible_assets` / `visible_groups`; personal columns
+  (owner, owner name, modified by, group owner, added by) need `exports.personal`, otherwise
+  they are dropped and listed.
+- **Writers:** CSV (UTF-8 BOM; ZIP of tables + `about.csv` when related data is chosen), XLSX
+  (sheet per table, numbered sheets beyond the row limit, `about` sheet, numbers stay
+  numbers), JSON (`itam.export` v1, related lists nested). Formula-looking text escaped in CSV
+  and XLSX.
+- **Jobs:** POST returns 202; worker re-checks permissions and scope; max 3 active per user
+  (429); max `ITAM_EXPORT_MAX_ROWS` records; file Fernet-encrypted (separate key context from
+  imports); creator-only download until `ITAM_EXPORT_RETENTION_HOURS` (24), then purged by an
+  hourly beat task that also fails jobs stuck over 60 minutes. Audit `exports.create`,
+  `exports.complete`, `exports.fail`, `exports.download`. `audit.view` sees all job records,
+  never other people's files.
+- **Permissions** (`accounts.0008`): `exports.run` for every role; `exports.personal` for System
+  Admin, ITAM Manager, Asset Operator.
+- **API:** `GET /exports/families/`, `GET|POST /exports/`, `GET /exports/{id}/`,
+  `GET /exports/{id}/download/` (no-store, attachment).
+- **Frontend:** Export dialog (records, format, related data, columns, privacy note) on the
+  Assets list and "Export members" on group pages; Exports page (sidebar, Sources) with
+  status, polling while preparing, counts, expiry, download link, failure reasons. Dialogs
+  now scroll within the viewport.
+- **Config:** `ITAM_EXPORT_RETENTION_HOURS`, `ITAM_EXPORT_MAX_ROWS` in settings, Compose,
+  `.env.example` and `install.sh`. CI reverses the `exports` migration. README and docs/17.
+
+## Verification (workstation; SQLite test-only fallback)
+
+- Backend **638 passed, 6 skipped** (PostgreSQL/Redis-only). 25 new tests in
+  `apps/exports/tests/test_exports.py`: families and masking; role grants; no permission;
+  validation (422); 3-job limit; filtered CSV with formula escaping; **A15** cross-site
+  (all/selected/filtered never leak); masked personal columns; **A14** related tables with
+  stable IDs; XLSX sheets, escaping, numbers; XLSX segmentation; JSON nesting; column choice;
+  groups with in-scope members only; creator-only download, auditor visibility; expiry 410
+  and purge; encryption at rest; permission removed before run; row limit; stuck jobs;
+  audit trail.
+- Migrations applied, reversed (`exports zero`, `accounts 0007`) and reapplied; grants checked.
+- OpenAPI schema validates (`--fail-on-warn`); frontend types regenerated. Ruff clean.
+- Frontend: typecheck, oxlint, **142 tests** (8 new) and build pass. Screenshots at 1440x900
+  of the dialog and Exports page (mocked API); the first showed an over-tall dialog and an
+  unformatted count, both fixed.
+- Not run: Docker stack, live PostgreSQL (CI covers), Playwright e2e against a real backend.
+
+**Open:** ASM-52 role grants (Auditor/Security Analyst personal data) and retention to
+confirm; EOL evidence IDs in exports with Task 015; asset-list row selection for "Selected
+records" (the API supports it).
+
+Proposed next task: **015 | EOL source/model catalogue + evidence and assessment**
+(tasks/BACKLOG.md). Do not start automatically.
+
+---
+
+# Previous record: UI redesign
 
 Status: **Complete (CI run 41819113769 green)** (2026-11-04, branch DEV). Owner feedback: "I
 don't like the UI" - plain/dated, colours, layout/navigation. Owner chose the dark navy
@@ -41,9 +115,6 @@ sidebar direction, light mode only, and to redesign before Task 014.
   Compose config and production image builds (fonts and icons bundle in Docker) pass.
 - Not done: page-by-page restyle beyond shared components (pages use the shared classes);
   dark mode (deferred by owner).
-
-Proposed next task: **014 | CSV/XLSX/JSON exports with RBAC and async jobs**
-(tasks/BACKLOG.md). Do not start automatically.
 
 ---
 

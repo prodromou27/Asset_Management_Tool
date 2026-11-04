@@ -2,6 +2,7 @@ import {
   Activity,
   Boxes,
   Building2,
+  FileDown,
   FileUp,
   KeyRound,
   LayoutList,
@@ -44,6 +45,7 @@ export const SECTIONS: NavSection[] = [
     items: [
       { to: '/discovery', label: 'Discovery', icon: Radar, permission: PERMISSIONS.discoveryView },
       { to: '/imports', label: 'Imports', icon: FileUp, permission: PERMISSIONS.importsRun },
+      { to: '/exports', label: 'Exports', icon: FileDown, permission: PERMISSIONS.exportsRun },
     ],
   },
   {
