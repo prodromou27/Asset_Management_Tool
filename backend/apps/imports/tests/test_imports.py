@@ -480,3 +480,25 @@ def test_other_users_cannot_touch_my_job(admin, setup, client_for, make_user):
     other = client_for(operator)
     assert other.get(f"{URL}{job['id']}/").status_code == 404
     assert other.post(f"{URL}{job['id']}/preview/", HTTP_IF_MATCH='"1"').status_code == 404
+
+
+def test_membership_target_fits_the_column():
+    """Regression (CI on PostgreSQL): "<group uuid>:<asset uuid>" is 73 characters."""
+    from apps.imports.models import ImportRow
+
+    composite = "6d1f0c2e-5a7b-4c3d-9e8f-0a1b2c3d4e5f:3b9a7c1d-2e4f-4a6b-8c0d-1e2f3a4b5c6d"
+    assert ImportRow._meta.get_field("target_id").max_length >= len(composite)
+
+
+def test_unexpected_preview_failure_does_not_leave_the_job_stuck(admin, setup, monkeypatch):
+    from apps.imports.families import FAMILIES
+
+    def boom(*args, **kwargs):
+        raise RuntimeError("unexpected")
+
+    monkeypatch.setattr(FAMILIES["asset"], "plan", boom)
+    job = upload(admin, "asset", csv_bytes([["name"], ["x"]])).json()
+
+    after = admin.post(f"{URL}{job['id']}/preview/", HTTP_IF_MATCH=f'"{job["version"]}"').json()
+
+    assert after["status"] == "uploaded" and "RuntimeError" in after["error_message"]

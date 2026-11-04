@@ -204,6 +204,14 @@ def run_preview(job_id) -> ImportJob:
         )
         job.refresh_from_db()
         return job
+    except Exception as exc:
+        # Never leave a job stuck in "previewing": report and let the user retry.
+        ImportJob.objects.filter(pk=job.pk).update(
+            status=ImportJob.Status.UPLOADED,
+            error_message=f"The check failed unexpectedly ({type(exc).__name__}); try again.",
+            version=F("version") + 1,
+        )
+        raise
 
 
 def _preview(job: ImportJob) -> ImportJob:

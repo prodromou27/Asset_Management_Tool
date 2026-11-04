@@ -75,6 +75,7 @@ read-only to `audit.view` holders.
 
 **Migrations (reversible; CI reverses `imports`):**
 - `imports.0001_import_jobs`
+- `imports.0002_widen_row_target`: a CI fix, see below
 - `accounts.0007_import_permission`
 
 **APIs:**
@@ -112,7 +113,7 @@ read-only to `audit.view` holders.
 
 ## Verification (workstation; SQLite test-only fallback, no Docker/PostgreSQL here)
 
-- **Backend: 604 passed, 6 skipped** (the 6 skips are PostgreSQL/Redis-only). 22 new tests
+- **Backend: 606 passed, 6 skipped** (the 6 skips are PostgreSQL/Redis-only). 22 new tests
   in `apps/imports/tests/test_imports.py`:
   - templates and download;
   - format, encoding and mapping detection with encrypted storage and audit;
@@ -133,6 +134,13 @@ read-only to `audit.view` holders.
 - Ruff check and format are clean; no migration drift; the OpenAPI schema validates with
   `--fail-on-warn` and matches the committed file.
 - Frontend: typecheck, oxlint, **122 tests** (6 new) and the build all pass.
+- First CI run 41797061711 on `424e924` **failed** on PostgreSQL. Membership rows store
+  `<group id>:<asset id>` (73 characters) in `ImportRow.target_id`, which was 40
+  characters wide. SQLite does not enforce lengths, so the workstation run passed. The
+  failed check also left the job in "previewing".
+  - Fix: widen the column to 100 (`imports.0002_widen_row_target`), and any unexpected
+    preview failure now returns the job to "uploaded" with a message.
+  - Regression tests added for both; backend now 606 passed locally.
 - Not run: Docker stack, Playwright, browser review at 1440×900 and 390×844.
 
 **Open:**

@@ -101,7 +101,8 @@ class ImportRow(models.Model):
     row_number = models.PositiveIntegerField()  # 1-based data row (header excluded)
     action = models.CharField(max_length=10, choices=Action.choices)
     key = models.CharField(max_length=300, blank=True)
-    target_id = models.CharField(max_length=40, blank=True)
+    # A record ID, or a composite such as "<group id>:<asset id>" for memberships.
+    target_id = models.CharField(max_length=100, blank=True)
     target_label = models.CharField(max_length=200, blank=True)
     messages = models.JSONField(default=list)
     values = models.JSONField(default=dict)  # mapped raw values (template field -> text)
