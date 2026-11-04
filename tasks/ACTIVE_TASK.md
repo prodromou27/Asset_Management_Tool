@@ -1,6 +1,6 @@
 # Current Task: UI redesign - application shell and visual system (before 014)
 
-Status: **Complete locally; awaiting CI** (2026-11-04, branch DEV). Owner feedback: "I
+Status: **Complete (CI run 41819113769 green)** (2026-11-04, branch DEV). Owner feedback: "I
 don't like the UI" - plain/dated, colours, layout/navigation. Owner chose the dark navy
 sidebar direction, light mode only, and to redesign before Task 014.
 
@@ -37,6 +37,8 @@ sidebar direction, light mode only, and to redesign before Task 014.
   first round showed wrapped asset rows, fixed to one line.
 - Contrast computed for every token pair: all text >= 4.5:1; badge text 5.3-6.2:1 after the fix.
 - Bundle +11 kB JS (the pre-existing >500 kB chunk warning is unchanged); fonts are separate files.
+- GitHub CI run 41819113769 on `a0555f7`: frontend 134, backend 619 passed (0 skipped),
+  Compose config and production image builds (fonts and icons bundle in Docker) pass.
 - Not done: page-by-page restyle beyond shared components (pages use the shared classes);
   dark mode (deferred by owner).
 
