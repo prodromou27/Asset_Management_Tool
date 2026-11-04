@@ -4615,6 +4615,161 @@ paths:
               schema:
                 $ref: '#/components/schemas/OutboxStats'
           description: ''
+  /api/v1/notifications/recipients/:
+    get:
+      operationId: notifications_recipients_list
+      description: Active ITAM users who can be chosen as recipients (no addresses
+        are returned).
+      tags:
+      - notifications
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Recipient'
+          description: ''
+  /api/v1/notifications/rules/:
+    get:
+      operationId: notifications_rules_list
+      tags:
+      - notifications
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NotificationRule'
+          description: ''
+    post:
+      operationId: notifications_rules_create
+      tags:
+      - notifications
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationRuleWriteRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/NotificationRuleWriteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/NotificationRuleWriteRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationRule'
+          description: ''
+  /api/v1/notifications/rules/{id}/:
+    get:
+      operationId: notifications_rules_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - notifications
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationRule'
+          description: ''
+    patch:
+      operationId: notifications_rules_partial_update
+      parameters:
+      - in: header
+        name: If-Match
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - notifications
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedNotificationRuleWriteRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedNotificationRuleWriteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedNotificationRuleWriteRequest'
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationRule'
+          description: ''
+    delete:
+      operationId: notifications_rules_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - notifications
+      security:
+      - sessionAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/notifications/rules/{id}/preview/:
+    post:
+      operationId: notifications_rules_preview_create
+      description: 'Dry run: what each recipient would be told on the next run (nothing
+        is sent).'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - notifications
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RulePreview'
+          description: ''
   /api/v1/notifications/templates/:
     get:
       operationId: notifications_templates_list
@@ -8465,6 +8620,18 @@ components:
       - added
       - members
       - removed
+    EventEnum:
+      enum:
+      - certificate_expiry
+      - domain_expiry
+      - lifecycle_eol
+      - integration_failure
+      type: string
+      description: |-
+        * `certificate_expiry` - TLS certificate expiry
+        * `domain_expiry` - Domain registration expiry
+        * `lifecycle_eol` - Verified end of life / support
+        * `integration_failure` - Integration failures and stale syncs
     EvidenceQualityEnum:
       enum:
       - vendor
@@ -12155,6 +12322,110 @@ components:
         * `lldp` - LLDP neighbour
         * `cdp` - CDP neighbour
         * `other` - Other neighbour protocol
+    NotificationRule:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+        event:
+          allOf:
+          - $ref: '#/components/schemas/EventEnum'
+          readOnly: true
+        enabled:
+          type: boolean
+          readOnly: true
+        thresholds:
+          type: array
+          items:
+            type: integer
+          readOnly: true
+        include_expired:
+          type: boolean
+          readOnly: true
+        failure_count:
+          type: integer
+          readOnly: true
+        recipients:
+          type: array
+          items:
+            $ref: '#/components/schemas/Recipient'
+          readOnly: true
+        sites:
+          type: array
+          items:
+            $ref: '#/components/schemas/RuleSite'
+          readOnly: true
+        version:
+          type: integer
+          readOnly: true
+        last_run_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        last_run_summary:
+          type: string
+          readOnly: true
+        modified_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - enabled
+      - event
+      - failure_count
+      - id
+      - include_expired
+      - last_run_at
+      - last_run_summary
+      - modified_at
+      - name
+      - recipients
+      - sites
+      - thresholds
+      - version
+    NotificationRuleWriteRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        event:
+          $ref: '#/components/schemas/EventEnum'
+        enabled:
+          type: boolean
+        thresholds:
+          type: array
+          items:
+            type: integer
+            maximum: 3650
+            minimum: 1
+          maxItems: 10
+        include_expired:
+          type: boolean
+        failure_count:
+          type: integer
+          maximum: 50
+          minimum: 1
+        recipients:
+          type: array
+          items:
+            type: string
+            format: uuid
+        sites:
+          type: array
+          items:
+            type: string
+            format: uuid
+      required:
+      - event
+      - name
     NotificationTemplate:
       type: object
       properties:
@@ -13510,6 +13781,40 @@ components:
           $ref: '#/components/schemas/LocationKindEnum'
         is_active:
           type: boolean
+    PatchedNotificationRuleWriteRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        event:
+          $ref: '#/components/schemas/EventEnum'
+        enabled:
+          type: boolean
+        thresholds:
+          type: array
+          items:
+            type: integer
+            maximum: 3650
+            minimum: 1
+          maxItems: 10
+        include_expired:
+          type: boolean
+        failure_count:
+          type: integer
+          maximum: 50
+          minimum: 1
+        recipients:
+          type: array
+          items:
+            type: string
+            format: uuid
+        sites:
+          type: array
+          items:
+            type: string
+            format: uuid
     PatchedSavedViewWriteRequest:
       type: object
       properties:
@@ -13801,6 +14106,23 @@ components:
           maxLength: 500
       required:
       - reason
+    Recipient:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        display_name:
+          type: string
+        has_email:
+          type: boolean
+      required:
+      - display_name
+      - has_email
+      - id
+      - username
     Ref:
       type: object
       properties:
@@ -14041,6 +14363,66 @@ components:
         * `enum` - enum
         * `ref` - ref
         * `date` - date
+    RulePreview:
+      type: object
+      properties:
+        mail_enabled:
+          type: boolean
+        recipients:
+          type: array
+          items:
+            $ref: '#/components/schemas/RulePreviewRecipient'
+      required:
+      - mail_enabled
+      - recipients
+    RulePreviewItem:
+      type: object
+      properties:
+        title:
+          type: string
+        detail:
+          type: string
+        date:
+          type: string
+        status:
+          type: string
+      required:
+      - date
+      - detail
+      - status
+      - title
+    RulePreviewRecipient:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/Recipient'
+        eligible:
+          type: boolean
+        reason:
+          type: string
+        pending:
+          type: integer
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/RulePreviewItem'
+      required:
+      - eligible
+      - items
+      - pending
+      - reason
+      - user
+    RuleSite:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+      required:
+      - code
+      - id
     RuleVersion:
       type: object
       properties:

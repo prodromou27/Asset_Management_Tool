@@ -135,6 +135,10 @@ scripts/compose.sh dev exec api python manage.py load_observations \
 - Matching: the Entra device ID links a Defender machine to the asset of an Intune device from the **same tenant** when a hostname or MAC corroborates it and nothing conflicts (ADR-014); otherwise it is a review candidate. Hostname or IP alone never links.
 - Security facts (onboarding, sensor health, exposure, risk, tags, first/last seen, original values) are stored apart from asset fields and shown on the asset's **Security** tab (requires `discovery.view` and site access). "Last report received" is not an online status, and a machine missing from Defender's list is flagged, never treated as deleted. Sanitized fixtures: `fixtures/defender/api/README.md`.
 
+### Notification rules (Task 018b)
+
+- **SMTP & notifications → Rules**: alert ITAM users about certificate and domain expiry (90/60/30/14/7 days and expired), verified lifecycle milestones (365/180/90/30/7 days) and integrations that keep failing or go stale. Each item is announced once per threshold and recipient, in one summary message per run; lifecycle alerts only cover assets in the recipient's sites. *Preview* shows what the next hourly run would send. Rules only run while mail is enabled.
+
 ### SMTP & notifications (Task 018a)
 
 - **Administration → SMTP & notifications**: relay host, port, STARTTLS or implicit TLS (never downgraded), optional sign-in with the password given as a server-side reference (`env:ITAM_SMTP_PASSWORD` in `.env`, or `file:<name>`), sender and Reply-To. Mail starts disabled. *Test connection* signs in without sending; *Send test email* goes only to your own address.

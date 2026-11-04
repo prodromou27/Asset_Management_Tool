@@ -202,8 +202,29 @@ def update_template(request, template: NotificationTemplate, data: dict, expecte
     return template
 
 
+SAMPLE_ITEMS = [
+    {
+        "title": "intranet.example.org",
+        "detail": "intranet.example.org:443",
+        "date": "2026-12-01",
+        "status": "27 days left",
+        "url": "https://itam.example.org/certificates/1",
+    },
+    {
+        "title": "sw-core-01 (HQ)",
+        "detail": "Hardware: Example Switch 9000 · End of support",
+        "date": "2027-03-31",
+        "status": "147 days left",
+        "url": "https://itam.example.org/assets/1",
+    },
+]
+
+
 def sample_context(template: NotificationTemplate) -> dict:
-    return {v["name"]: v.get("example", f"<{v['name']}>") for v in template.variables}
+    values = {v["name"]: v.get("example", f"<{v['name']}>") for v in template.variables}
+    if "items" in values:
+        values.update(items=SAMPLE_ITEMS, count=len(SAMPLE_ITEMS), more=0)
+    return values
 
 
 def preview(template: NotificationTemplate, draft: dict) -> render.Rendered:
@@ -506,3 +527,102 @@ def stats() -> dict:
         "enabled": profile.enabled,
         "configured": bool(profile.host and profile.from_address),
     }
+
+
+# --- Rules (Task 018b) ------------------------------------------------------------------------
+
+RULE_FIELDS = ("name", "event", "enabled", "thresholds", "include_expired", "failure_count")
+
+
+def _rule_snapshot(rule) -> dict:
+    data = {f: getattr(rule, f) for f in RULE_FIELDS}
+    data["recipients"] = sorted(str(u) for u in rule.recipients.values_list("username", flat=True))
+    data["sites"] = sorted(str(s) for s in rule.sites.values_list("code", flat=True))
+    return data
+
+
+def _clean_thresholds(values) -> list[int]:
+    cleaned = sorted({int(v) for v in values or []}, reverse=True)
+    if len(cleaned) > 10 or any(v < 1 or v > 3650 for v in cleaned):
+        raise _invalid("thresholds", "Use up to 10 whole numbers of days between 1 and 3650.")
+    return cleaned
+
+
+def _apply_rule(rule, data: dict) -> None:
+    from .models import NotificationRule
+
+    for name in RULE_FIELDS:
+        if name in data:
+            setattr(rule, name, data[name])
+    if rule.event != NotificationRule.Event.INTEGRATION_FAILURE:
+        rule.thresholds = _clean_thresholds(rule.thresholds)
+        if not rule.thresholds and not rule.include_expired:
+            raise _invalid("thresholds", "Choose at least one threshold or include expired items.")
+    else:
+        rule.thresholds = []
+        if not 1 <= rule.failure_count <= 50:
+            raise _invalid("failure_count", "Use 1 to 50 failed runs.")
+
+
+@transaction.atomic
+def create_rule(request, data: dict):
+    from .models import NotificationRule
+
+    data = dict(data)
+    recipients, sites = data.pop("recipients", []), data.pop("sites", [])
+    if "thresholds" not in data:
+        data["thresholds"] = list(NotificationRule.DEFAULT_THRESHOLDS[data["event"]])
+    rule = NotificationRule(created_by=request.user, modified_by=request.user)
+    _apply_rule(rule, data)
+    rule.save()
+    rule.recipients.set(recipients)
+    rule.sites.set(sites)
+    _record(
+        request, "rule.create", "notification_rule", rule.pk, rule.name, after=_rule_snapshot(rule)
+    )
+    return rule
+
+
+@transaction.atomic
+def update_rule(request, rule, data: dict, expected):
+    from .models import NotificationRule
+
+    rule = NotificationRule.objects.select_for_update().get(pk=rule.pk)
+    check_version(rule, expected)
+    before = _rule_snapshot(rule)
+    data = dict(data)
+    data.pop("event", None)  # the event of a rule is fixed
+    recipients, sites = data.pop("recipients", None), data.pop("sites", None)
+    policy_before = (rule.thresholds, rule.include_expired, rule.failure_count)
+    sites_before = set(rule.sites.values_list("pk", flat=True))
+    _apply_rule(rule, data)
+    if policy_before != (rule.thresholds, rule.include_expired, rule.failure_count) or (
+        sites is not None and {s.pk for s in sites} != sites_before
+    ):
+        rule.policy_version = F("policy_version") + 1
+    rule.modified_by = request.user
+    rule.version = F("version") + 1
+    rule.save()
+    rule.refresh_from_db()
+    if recipients is not None:
+        rule.recipients.set(recipients)
+    if sites is not None:
+        rule.sites.set(sites)
+    _record(
+        request,
+        "rule.update",
+        "notification_rule",
+        rule.pk,
+        rule.name,
+        before=before,
+        after=_rule_snapshot(rule),
+    )
+    return rule
+
+
+@transaction.atomic
+def delete_rule(request, rule) -> None:
+    snapshot = _rule_snapshot(rule)
+    pk, name = rule.pk, rule.name
+    rule.delete()
+    _record(request, "rule.delete", "notification_rule", pk, name, before=snapshot)

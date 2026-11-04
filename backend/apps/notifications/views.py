@@ -3,19 +3,23 @@ docs/10 admin buttons). Reading needs ``notifications.view``; changes, tests, re
 cancels need ``notifications.manage``. No credential value is ever returned: only the
 reference and whether it resolves."""
 
+from django.contrib.auth import get_user_model
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
-from drf_spectacular.utils import OpenApiParameter, extend_schema
+from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_field
 from rest_framework import generics, serializers
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.accounts import catalog
 from apps.accounts.permissions import HasPermission
+from apps.organizations.models import Site
 from config.api import ItemsCursorPagination
 
-from . import services
-from .models import NotificationTemplate, OutboxMessage, SmtpProfile
+from . import rules, services
+from .models import NotificationRule, NotificationTemplate, OutboxMessage, SmtpProfile
+
+User = get_user_model()
 
 View = HasPermission(catalog.NOTIFICATIONS_VIEW)
 Manage = HasPermission(catalog.NOTIFICATIONS_VIEW, catalog.NOTIFICATIONS_MANAGE)
@@ -317,3 +321,203 @@ class TemplatePreviewView(APIView):
                 "body_html": rendered.body_html,
             }
         )
+
+
+# --- Rules (Task 018b) ------------------------------------------------------------------------
+
+
+def _recipient(user) -> dict:
+    return {
+        "id": user.pk,
+        "username": user.username,
+        "display_name": user.display_name,
+        "has_email": bool(user.email),
+    }
+
+
+class RecipientSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    username = serializers.CharField()
+    display_name = serializers.CharField()
+    has_email = serializers.BooleanField()
+
+
+class RuleSiteSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    code = serializers.CharField()
+
+
+class NotificationRuleSerializer(serializers.ModelSerializer):
+    recipients = serializers.SerializerMethodField()
+    sites = serializers.SerializerMethodField()
+    thresholds = serializers.ListField(child=serializers.IntegerField(), read_only=True)
+
+    class Meta:
+        model = NotificationRule
+        fields = [
+            "id",
+            "name",
+            "event",
+            "enabled",
+            "thresholds",
+            "include_expired",
+            "failure_count",
+            "recipients",
+            "sites",
+            "version",
+            "last_run_at",
+            "last_run_summary",
+            "modified_at",
+        ]
+        read_only_fields = fields
+
+    @extend_schema_field(RecipientSerializer(many=True))
+    def get_recipients(self, obj):
+        return [_recipient(u) for u in obj.recipients.all()]
+
+    @extend_schema_field(RuleSiteSerializer(many=True))
+    def get_sites(self, obj):
+        return [{"id": s.pk, "code": s.code} for s in obj.sites.all()]
+
+
+class NotificationRuleWriteSerializer(serializers.Serializer):
+    name = serializers.CharField(max_length=120)
+    event = serializers.ChoiceField(choices=NotificationRule.Event.choices)
+    enabled = serializers.BooleanField(required=False)
+    thresholds = serializers.ListField(
+        child=serializers.IntegerField(min_value=1, max_value=3650), required=False, max_length=10
+    )
+    include_expired = serializers.BooleanField(required=False)
+    failure_count = serializers.IntegerField(min_value=1, max_value=50, required=False)
+    recipients = serializers.PrimaryKeyRelatedField(
+        many=True, queryset=User.objects.filter(is_active=True), required=False
+    )
+    sites = serializers.PrimaryKeyRelatedField(
+        many=True, queryset=Site.objects.all(), required=False
+    )
+
+
+class RulePreviewItemSerializer(serializers.Serializer):
+    title = serializers.CharField()
+    detail = serializers.CharField()
+    date = serializers.CharField()
+    status = serializers.CharField()
+
+
+class RulePreviewRecipientSerializer(serializers.Serializer):
+    user = RecipientSerializer()
+    eligible = serializers.BooleanField()
+    reason = serializers.CharField()
+    pending = serializers.IntegerField()
+    items = RulePreviewItemSerializer(many=True)
+
+
+class RulePreviewSerializer(serializers.Serializer):
+    mail_enabled = serializers.BooleanField()
+    recipients = RulePreviewRecipientSerializer(many=True)
+
+
+def _rules():
+    return NotificationRule.objects.prefetch_related("recipients", "sites")
+
+
+def _rule_response(rule, http_status=200):
+    rule = _rules().get(pk=rule.pk)
+    return Response(
+        NotificationRuleSerializer(rule).data,
+        status=http_status,
+        headers={"ETag": f'"{rule.version}"'},
+    )
+
+
+class RuleListView(APIView):
+    def get_permissions(self):
+        return [(Manage if self.request.method == "POST" else View)()]
+
+    @extend_schema(responses=NotificationRuleSerializer(many=True))
+    def get(self, request):
+        return Response(NotificationRuleSerializer(_rules(), many=True).data)
+
+    @extend_schema(
+        request=NotificationRuleWriteSerializer, responses={201: NotificationRuleSerializer}
+    )
+    def post(self, request):
+        data = NotificationRuleWriteSerializer(data=request.data)
+        data.is_valid(raise_exception=True)
+        return _rule_response(services.create_rule(request, data.validated_data), 201)
+
+
+class RuleDetailView(APIView):
+    def get_permissions(self):
+        return [(View if self.request.method == "GET" else Manage)()]
+
+    @extend_schema(responses=NotificationRuleSerializer)
+    def get(self, request, pk):
+        return _rule_response(get_object_or_404(NotificationRule, pk=pk))
+
+    @extend_schema(
+        request=NotificationRuleWriteSerializer,
+        responses=NotificationRuleSerializer,
+        parameters=[IF_MATCH],
+    )
+    def patch(self, request, pk):
+        rule = get_object_or_404(NotificationRule, pk=pk)
+        data = NotificationRuleWriteSerializer(data=request.data, partial=True)
+        data.is_valid(raise_exception=True)
+        return _rule_response(
+            services.update_rule(request, rule, data.validated_data, _if_match(request))
+        )
+
+    @extend_schema(request=None, responses={204: None})
+    def delete(self, request, pk):
+        services.delete_rule(request, get_object_or_404(NotificationRule, pk=pk))
+        return Response(status=204)
+
+
+class RulePreviewView(APIView):
+    """Dry run: what each recipient would be told on the next run (nothing is sent)."""
+
+    permission_classes = [Manage]
+
+    @extend_schema(request=None, responses=RulePreviewSerializer)
+    def post(self, request, pk):
+        rule = get_object_or_404(_rules(), pk=pk)
+        recipients = []
+        for user in rule.recipients.all():
+            if not rules.eligible(rule, user):
+                reason = "No e-mail address" if not user.email else "Lacks access to these findings"
+                recipients.append(
+                    {
+                        "user": _recipient(user),
+                        "eligible": False,
+                        "reason": reason,
+                        "pending": 0,
+                        "items": [],
+                    }
+                )
+                continue
+            found = rules.pending(rule, user)
+            recipients.append(
+                {
+                    "user": _recipient(user),
+                    "eligible": True,
+                    "reason": "",
+                    "pending": len(found),
+                    "items": [
+                        {"title": f.title, "detail": f.detail, "date": f.when, "status": f.status}
+                        for f in found[:20]
+                    ],
+                }
+            )
+        return Response({"mail_enabled": services.get_profile().enabled, "recipients": recipients})
+
+
+class RecipientListView(APIView):
+    """Active ITAM users who can be chosen as recipients (no addresses are returned)."""
+
+    permission_classes = [Manage]
+
+    @extend_schema(responses=RecipientSerializer(many=True))
+    def get(self, request):
+        users = User.objects.filter(is_active=True).order_by("display_name", "username")
+        return Response([_recipient(u) for u in users[:500]])

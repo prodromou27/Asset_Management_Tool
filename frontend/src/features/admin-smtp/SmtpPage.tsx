@@ -25,6 +25,7 @@ import { PageHeader } from '../../shared/ui/PageHeader'
 import { EmptyState, ErrorSummary, LoadingState, QueryErrorState } from '../../shared/ui/States'
 import { StatusBadge, type StatusTone } from '../../shared/ui/StatusBadge'
 import { Tabs } from '../../shared/ui/Tabs'
+import { RulesTab } from './RulesTab'
 
 const OUTBOX_STATUS: Record<string, { label: string; tone: StatusTone }> = {
   queued: { label: 'Queued', tone: 'neutral' },
@@ -56,7 +57,7 @@ export function SmtpPage() {
     <div className="page page--wide">
       <PageHeader
         title="SMTP & notifications"
-        meta="Outgoing mail settings, message templates and the delivery queue."
+        meta="Outgoing mail settings, alert rules, message templates and the delivery queue."
       />
       <DeliveryAlert />
       <Tabs
@@ -70,6 +71,7 @@ export function SmtpPage() {
         }}
         tabs={[
           { id: 'settings', label: 'Settings', content: <Settings /> },
+          { id: 'rules', label: 'Rules', content: <RulesTab /> },
           { id: 'templates', label: 'Templates', content: <Templates /> },
           { id: 'queue', label: 'Delivery queue', content: <Queue /> },
         ]}

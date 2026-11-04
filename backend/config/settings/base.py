@@ -269,6 +269,10 @@ CELERY_BEAT_SCHEDULE = {
         "task": "notifications.deliver_due",
         "schedule": 60.0,
     },
+    "evaluate-notification-rules": {
+        "task": "notifications.evaluate_rules",
+        "schedule": 3600.0,
+    },
     "purge-mail-bodies": {
         "task": "notifications.purge",
         "schedule": 86400.0,

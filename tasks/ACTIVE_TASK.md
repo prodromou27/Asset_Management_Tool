@@ -1,4 +1,50 @@
-# Current Task: 018a | SMTP config UI, template engine, outbox and test mail
+# Current Task: 018b | Notification rules
+
+Status: **Complete locally; awaiting CI** (2026-11-04, branch DEV). No mail sent outside the
+machine: rules were tested by inspecting the outbox.
+
+**Read:** AGENTS.md, docs/00, 06, 09, 10 (events, dedup key), 14, 17 (ASM-53, ASM-56,
+ASM-57, DEC-14).
+
+**Previous:** 018a SMTP, templates and outbox (CI run 41889402046 green).
+
+## Outcome (ASM-58)
+
+- **Models** (`notifications.0003_notification_rules`): rules (event, thresholds, expired,
+  failure count, recipients, optional sites, `policy_version`) and the alert ledger;
+  `0004` seeds editable templates for the four events.
+- **Evaluation** (`notifications.evaluate_rules`, hourly; skipped while mail is disabled):
+  certificate, domain (evidenced dates only), verified lifecycle (site-scoped per recipient)
+  and integration (failure streaks, stale) findings; only the tier reached is announced; one
+  message per rule/recipient/run, at most 200 items.
+- **Recipients:** ITAM users with an e-mail address and the needed permission; others are
+  skipped and reported.
+- **API/UI:** rules CRUD with If-Match and audit, dry-run preview, recipient list without
+  addresses; "Rules" tab on the SMTP & notifications page.
+
+## Verification (workstation; SQLite test-only fallback)
+
+- Backend **765 passed, 6 skipped** (PostgreSQL/Redis-only). New: 8 rule tests (certificate
+  tiers announced once each incl. expired and HTML escaping, nothing while mail is disabled,
+  Unknown domain expiry never alerted, lifecycle site scope + unverified excluded + preview
+  sends nothing + skipped recipient summary, integration failure streaks and stale,
+  recipient access, rule validation/versions/audit/permissions, alert template preview).
+  A test that created sync runs in the same instant was made deterministic.
+- Migrations applied, reversed (`notifications 0002`) and reapplied; no drift. OpenAPI
+  validates with `--fail-on-warn`; types regenerated. Ruff clean.
+- Frontend: typecheck, oxlint, **180 tests** (3 new) and build pass. Screenshots of the
+  rules list and dialog (mocked API) checked.
+- Not run: Docker stack, delivery through a real relay (DEC-08/DEC-14).
+
+**Open (ASM-58):** digests per site/owner (Task 021), escalation, backup alerts (Task 019),
+recipients from asset owners or groups.
+
+Proposed next task: **019 | Backups, off-host encryption and isolated restore**
+(tasks/BACKLOG.md). Do not start automatically.
+
+---
+
+# Previous record: Task 018a | SMTP config UI, template engine, outbox and test mail
 
 Status: **Complete (CI run 41889402046 green)** (2026-11-04, branch DEV). Owner decisions: split
 Task 018 into 018a (this) and 018b (alert rules, recipients, dedup); SMTP password as a
@@ -49,9 +95,6 @@ generated test CA.
 
 **Open (ASM-57):** alert rules and recipients (018b); OAuth SMTP; production relay and
 sender (DEC-08); recipients and escalation (DEC-14).
-
-Proposed next task: **018b | Notification rules** (tasks/BACKLOG.md). Do not start
-automatically.
 
 ---
 

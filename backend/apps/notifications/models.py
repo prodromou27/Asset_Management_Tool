@@ -129,3 +129,74 @@ class OutboxMessage(models.Model):
 
     def __str__(self):
         return f"{self.template_code} → {self.to_address} ({self.status})"
+
+
+class NotificationRule(models.Model):
+    """Who is told about what (Task 018b, docs/10 "Events and schedules").
+
+    Recipients are ITAM user accounts (never free-typed addresses); each receives only
+    findings they may see (lifecycle findings follow their site scope). ``version`` rises
+    with every change; ``policy_version`` (part of the alert key) only when the alert policy
+    changes, so a changed policy announces current findings again.
+    """
+
+    class Event(models.TextChoices):
+        CERTIFICATE_EXPIRY = "certificate_expiry", "TLS certificate expiry"
+        DOMAIN_EXPIRY = "domain_expiry", "Domain registration expiry"
+        LIFECYCLE_EOL = "lifecycle_eol", "Verified end of life / support"
+        INTEGRATION_FAILURE = "integration_failure", "Integration failures and stale syncs"
+
+    DEFAULT_THRESHOLDS = {
+        Event.CERTIFICATE_EXPIRY: [90, 60, 30, 14, 7],
+        Event.DOMAIN_EXPIRY: [90, 60, 30, 14, 7],
+        Event.LIFECYCLE_EOL: [365, 180, 90, 30, 7],
+        Event.INTEGRATION_FAILURE: [],
+    }
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=120)
+    event = models.CharField(max_length=30, choices=Event.choices)
+    enabled = models.BooleanField(default=True)
+    thresholds = models.JSONField(default=list, blank=True)  # days before the date
+    include_expired = models.BooleanField(default=True)
+    # Integration failures: alert after this many failed runs in a row.
+    failure_count = models.PositiveIntegerField(default=3)
+    recipients = models.ManyToManyField(_USER, related_name="+", blank=True)
+    # Lifecycle: limit to these sites (empty: all sites each recipient may see).
+    sites = models.ManyToManyField("organizations.Site", related_name="+", blank=True)
+    version = models.PositiveIntegerField(default=1)  # edit concurrency (If-Match)
+    # Part of the alert key: rises only when what counts as an alert changes (thresholds,
+    # expired, failure count, sites), so renaming a rule or adding a recipient does not
+    # announce everything again (docs/10 "recipient policy version").
+    policy_version = models.PositiveIntegerField(default=1)
+    last_run_at = models.DateTimeField(null=True, blank=True)
+    last_run_summary = models.CharField(max_length=300, blank=True)
+    created_by = models.ForeignKey(_USER, null=True, on_delete=models.SET_NULL, related_name="+")
+    modified_by = models.ForeignKey(_USER, null=True, on_delete=models.SET_NULL, related_name="+")
+    created_at = models.DateTimeField(auto_now_add=True)
+    modified_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["event", "name"]
+
+    def __str__(self):
+        return self.name
+
+
+class AlertLedger(models.Model):
+    """One finding announced to one recipient. The key is event + target + milestone date +
+    threshold + rule version (docs/10 dedup key); a row means "already told"."""
+
+    id = models.BigAutoField(primary_key=True)
+    rule = models.ForeignKey(NotificationRule, on_delete=models.CASCADE, related_name="ledger")
+    user = models.ForeignKey(_USER, on_delete=models.CASCADE, related_name="+")
+    key = models.CharField(max_length=300)
+    message = models.ForeignKey(
+        OutboxMessage, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["rule", "user", "key"], name="alert_ledger_unique")
+        ]

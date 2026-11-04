@@ -428,6 +428,23 @@ export interface paths {
   "/api/v1/notifications/outbox/stats/": {
     get: operations["notifications_outbox_stats_retrieve"];
   };
+  "/api/v1/notifications/recipients/": {
+    /** @description Active ITAM users who can be chosen as recipients (no addresses are returned). */
+    get: operations["notifications_recipients_list"];
+  };
+  "/api/v1/notifications/rules/": {
+    get: operations["notifications_rules_list"];
+    post: operations["notifications_rules_create"];
+  };
+  "/api/v1/notifications/rules/{id}/": {
+    get: operations["notifications_rules_retrieve"];
+    delete: operations["notifications_rules_destroy"];
+    patch: operations["notifications_rules_partial_update"];
+  };
+  "/api/v1/notifications/rules/{id}/preview/": {
+    /** @description Dry run: what each recipient would be told on the next run (nothing is sent). */
+    post: operations["notifications_rules_preview_create"];
+  };
   "/api/v1/notifications/templates/": {
     get: operations["notifications_templates_list"];
   };
@@ -1390,6 +1407,14 @@ export interface components {
       removed: number;
       members: number;
     };
+    /**
+     * @description * `certificate_expiry` - TLS certificate expiry
+     * * `domain_expiry` - Domain registration expiry
+     * * `lifecycle_eol` - Verified end of life / support
+     * * `integration_failure` - Integration failures and stale syncs
+     * @enum {string}
+     */
+    EventEnum: "certificate_expiry" | "domain_expiry" | "lifecycle_eol" | "integration_failure";
     /**
      * @description * `` - No evidence
      * * `vendor` - Official vendor
@@ -2714,6 +2739,34 @@ export interface components {
      * @enum {string}
      */
     NeighborEvidenceKindEnum: "fdb" | "lldp" | "cdp" | "other";
+    NotificationRule: {
+      /** Format: uuid */
+      id: string;
+      name: string;
+      event: components["schemas"]["EventEnum"];
+      enabled: boolean;
+      thresholds: readonly number[];
+      include_expired: boolean;
+      failure_count: number;
+      recipients: readonly components["schemas"]["Recipient"][];
+      sites: readonly components["schemas"]["RuleSite"][];
+      version: number;
+      /** Format: date-time */
+      last_run_at: string | null;
+      last_run_summary: string;
+      /** Format: date-time */
+      modified_at: string;
+    };
+    NotificationRuleWriteRequest: {
+      name: string;
+      event: components["schemas"]["EventEnum"];
+      enabled?: boolean;
+      thresholds?: number[];
+      include_expired?: boolean;
+      failure_count?: number;
+      recipients?: string[];
+      sites?: string[];
+    };
     NotificationTemplate: {
       id: number;
       code: string;
@@ -3198,6 +3251,16 @@ export interface components {
       kind?: components["schemas"]["LocationKindEnum"];
       is_active?: boolean;
     };
+    PatchedNotificationRuleWriteRequest: {
+      name?: string;
+      event?: components["schemas"]["EventEnum"];
+      enabled?: boolean;
+      thresholds?: number[];
+      include_expired?: boolean;
+      failure_count?: number;
+      recipients?: string[];
+      sites?: string[];
+    };
     PatchedSavedViewWriteRequest: {
       name?: string;
       is_shared?: boolean;
@@ -3309,6 +3372,13 @@ export interface components {
     ReasonRequest: {
       reason: string;
     };
+    Recipient: {
+      /** Format: uuid */
+      id: string;
+      username: string;
+      display_name: string;
+      has_email: boolean;
+    };
     Ref: {
       /** Format: uuid */
       id: string;
@@ -3417,6 +3487,28 @@ export interface components {
      * @enum {string}
      */
     RuleFieldKindEnum: "text" | "enum" | "ref" | "date";
+    RulePreview: {
+      mail_enabled: boolean;
+      recipients: components["schemas"]["RulePreviewRecipient"][];
+    };
+    RulePreviewItem: {
+      title: string;
+      detail: string;
+      date: string;
+      status: string;
+    };
+    RulePreviewRecipient: {
+      user: components["schemas"]["Recipient"];
+      eligible: boolean;
+      reason: string;
+      pending: number;
+      items: components["schemas"]["RulePreviewItem"][];
+    };
+    RuleSite: {
+      /** Format: uuid */
+      id: string;
+      code: string;
+    };
     RuleVersion: {
       number: number;
       rule: unknown;
@@ -6817,6 +6909,107 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["OutboxStats"];
+        };
+      };
+    };
+  };
+  /** @description Active ITAM users who can be chosen as recipients (no addresses are returned). */
+  notifications_recipients_list: {
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["Recipient"][];
+        };
+      };
+    };
+  };
+  notifications_rules_list: {
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["NotificationRule"][];
+        };
+      };
+    };
+  };
+  notifications_rules_create: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["NotificationRuleWriteRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["NotificationRuleWriteRequest"];
+        "multipart/form-data": components["schemas"]["NotificationRuleWriteRequest"];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          "application/json": components["schemas"]["NotificationRule"];
+        };
+      };
+    };
+  };
+  notifications_rules_retrieve: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["NotificationRule"];
+        };
+      };
+    };
+  };
+  notifications_rules_destroy: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      /** @description No response body */
+      204: {
+        content: never;
+      };
+    };
+  };
+  notifications_rules_partial_update: {
+    parameters: {
+      header: {
+        "If-Match": string;
+      };
+      path: {
+        id: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["PatchedNotificationRuleWriteRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["PatchedNotificationRuleWriteRequest"];
+        "multipart/form-data": components["schemas"]["PatchedNotificationRuleWriteRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["NotificationRule"];
+        };
+      };
+    };
+  };
+  /** @description Dry run: what each recipient would be told on the next run (nothing is sent). */
+  notifications_rules_preview_create: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["RulePreview"];
         };
       };
     };
