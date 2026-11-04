@@ -1,6 +1,6 @@
 # Current Task: Staging installation kit (between 013 and 014)
 
-Status: **Complete locally; awaiting CI** (2026-11-04, branch DEV). Requested by the
+Status: **Complete (CI run 41802726383 green)** (2026-11-04, branch DEV). Requested by the
 owner: "prepare the installation; the hostname and certificate are not needed yet".
 
 **Read:** AGENTS.md, docs/00, 12 (sections 0-8), 14, 17 (DEC-01, DEC-04, DEC-11, ASM-03).
@@ -47,6 +47,8 @@ open decisions). Nothing was installed or run on a real host.
 - `make_env.sh` run in a scratch directory: expected keys, secret lengths, valid Fernet
   key, refuses to overwrite. The certificate command checked with OpenSSL 3.5.
 - `bash -n` on all scripts (shellcheck not available here).
+- GitHub CI run 41802726383 on `c94841d`: backend **616 passed, 0 skipped** (PostgreSQL 16 +
+  Redis 7), frontend 122, Compose config and production image builds pass.
 - Not run: the scripts on AlmaLinux, Docker builds or the stack itself. The first run on
   the staging host is the real test; send me any failing step output.
 
