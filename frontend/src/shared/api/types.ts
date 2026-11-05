@@ -123,6 +123,8 @@ export type Paginated<T> = {
 }
 
 export const PERMISSIONS = {
+  reportsView: 'reports.view',
+  reportsSchedule: 'reports.schedule',
   generalView: 'settings.general.view',
   generalManage: 'settings.general.manage',
   healthView: 'health.view',

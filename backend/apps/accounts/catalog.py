@@ -44,6 +44,8 @@ GENERAL_SETTINGS_MANAGE = "settings.general.manage"
 HEALTH_VIEW = "health.view"
 
 PERMISSIONS: dict[str, str] = {
+    "reports.view": "View reports within current site and field permissions",
+    "reports.schedule": "Schedule authenticated report links to your own account",
     GENERAL_SETTINGS_VIEW: "View organization display settings",
     GENERAL_SETTINGS_MANAGE: "Change organization display settings",
     HEALTH_VIEW: "View operational diagnostics and production readiness (no secrets)",

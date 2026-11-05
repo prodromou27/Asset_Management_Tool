@@ -1,49 +1,24 @@
-# Current Task: 020 | Admin settings, integration catalogue and health screens
+﻿# Current Task: 021 | Lifecycle, coverage, asset/group reports and digests
 
-Authorized by owner on 2026-11-05 after Task 019 completion. Work on DEV.
-Task 019 outcome is preserved in TASK019_OUTCOME.md; latest baseline CI 42017098215 green.
+Owner requested continuation on 2026-11-05. DEV baseline ded41a1; Task 020 complete.
+History: TASK020_OUTCOME.md and TASK020_REPORT.md. Do not start Task 022.
+Read: AGENTS.md, docs/00, 07 (tokens), 08 (reports/overview), 10, 11;
+docs/09 (RBAC), 14 (export/mail protection), 15 (A14/A15/A17/A22), 17 (assumptions).
 
-Read: AGENTS.md, docs/00, 07 (tokens), 08 (integrations/administration), 09, 20;
-docs/15 (relevant admin/security gates), docs/17 (existing deployment decisions).
+Deliver four scoped report views: inventory breakdowns, per-dimension lifecycle including
+missing assessments as Unknown, observed Endpoint Central/Defender coverage (no inferred
+agent/compliance claims), and group replacement/ownership summaries. Site/group filters,
+pagination, CSV/XLSX/JSON through existing encrypted export jobs. Protect completed files
+against subsequent scope/permission changes. Add self-owned daily/weekly authenticated-link
+digests through the existing outbox with current-user checks, dedup, audit and scheduling.
+Email contains no inventory rows or attachments. No arbitrary recipients or new SMTP stack.
 
-Objective: fill missing administration workflows using existing modules and navy tokens.
-- General organization/display settings: validated GET/PATCH, If-Match, permissions,
-  before/after audit, clear preview and effective display preferences.
-- Searchable provider catalogue alongside configured instances; accurately distinguish
-  Planned/Beta/Available and configuration, never label unapproved sources healthy.
-- Authenticated operational diagnostics: infrastructure, storage, integrations, SMTP,
-  backups and durable job states, with actionable first-run checklist. Distinguish
-  process readiness from production readiness; unknown/manual gates stay incomplete.
-- Reuse existing users/sites/security/SMTP/backups/lifecycle pages. Present deployment-
-  controlled settings as read-only; no invented controls or unsupported providers.
-
-Acceptance: backend RBAC, validation/version conflicts and audit regression tests;
-read-only diagnostics with no external vendor/SMTP probes or secret/host-path leakage;
-frontend form/error/filter/permission states, schema sync, lint/typecheck/build;
-real browser desktop/mobile checks; PostgreSQL/Redis and image/Compose CI.
-
-Non-goals: live commissioning, production secret/destination changes, SSO/MFA architecture,
-retention deletion, custom queue controls, Task 021. DEC-09 and other operator gates remain.
-
-Status: complete. Implementation `79469ba`; CI run **42058286320** green.
-
-Outcome: General settings API/UI, shared display preferences and organization branding;
-searchable provider catalogue with URL-preserved tab; protected operational services,
-integration/job evidence and actionable first-run checklist. Existing settings screens
-remain in place. No live integration/SMTP/backup probes, secret changes or production
-readiness approval. Added accounts.0014_generalsettings and 0015_admin_permissions.
-
-Verification: full backend 810 passed / 7 environment skips (SQLite fallback), then
-31 focused health/notification tests passed after reusing the SMTP health service;
-full frontend 200 passed, then 22 focused settings/shell tests passed including the new
-unsupported-timezone fallback. Typecheck, lint/build, schema validation and migration
-drift passed. Browser review: 41 synthetic screenshots, no errors/unmapped calls/overflow.
-Details and limitations: TASK020_REPORT.md. Task 019 history: TASK019_OUTCOME.md.
-
-CI: **818 backend tests passed on PostgreSQL/Redis with no skips; 201 frontend tests
-passed**. Migration drift/apply/reversal, OpenAPI/type drift, lint/format/typecheck/build,
-production deploy settings, dev/prod Compose configuration, production and restricted
-backup image builds and the real encrypted SFTP/network-isolated restore all passed.
-
-Next: review Task 021 separately. Production commissioning/IdP/secret recovery and the
-manual readiness gates remain pending operator decisions. Task 021 was not started.
+Acceptance: site/field/RBAC isolation, scoped counts and Unknown behavior, export/download
+revocation, schedule ownership/version/validation, duplicate dispatch/retry/disabled SMTP,
+recipient revocation, frontend filters/forms/errors/permissions and desktop/mobile browser
+checks; schema/type sync, lint/build, PostgreSQL/Redis/migration/Compose/restore CI.
+Non-goals: live SMTP/vendor calls, production commissioning, full BI/report designer,
+new topology/compliance inference, new authentication architecture, Task 022 pilot.
+Status: implemented; local tests and desktop/mobile review passed. Details and rollout
+limits: TASK021_REPORT.md. Next: push DEV, verify all CI gates and record the result.
+No live services or production gates have been enabled.

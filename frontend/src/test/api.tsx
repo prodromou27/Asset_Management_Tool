@@ -80,6 +80,8 @@ export function renderApp(path: string) {
 // --- Fixtures (fictitious) -------------------------------------------------------
 
 const ALL_ADMIN = [
+  'reports.view',
+  'reports.schedule',
   'settings.general.view',
   'settings.general.manage',
   'health.view',

@@ -531,6 +531,17 @@ export interface paths {
     /** @description Hold, reject or assign many candidates. Linking and creating stay one at a time. */
     post: operations["reconciliation_bulk_create"];
   };
+  "/api/v1/reports/{kind}/": {
+    get: operations["reports_retrieve"];
+  };
+  "/api/v1/reports/schedules/": {
+    get: operations["reports_schedules_list"];
+    post: operations["reports_schedules_create"];
+  };
+  "/api/v1/reports/schedules/{id}/": {
+    get: operations["reports_schedules_retrieve"];
+    patch: operations["reports_schedules_partial_update"];
+  };
   "/api/v1/roles/": {
     get: operations["roles_list"];
   };
@@ -1063,6 +1074,12 @@ export interface components {
      * @enum {string}
      */
     BusinessStatusEnum: "ordered" | "in_stock" | "deployed" | "assigned" | "in_repair" | "retired" | "disposed" | "lost";
+    /**
+     * @description * `daily` - Daily
+     * * `weekly` - Weekly
+     * @enum {string}
+     */
+    CadenceEnum: "daily" | "weekly";
     Candidate: {
       /** Format: uuid */
       id: string;
@@ -1576,9 +1593,13 @@ export interface components {
      * @description * `assets` - assets
      * * `groups` - groups
      * * `license_entitlements` - license_entitlements
+     * * `report_inventory` - report_inventory
+     * * `report_lifecycle` - report_lifecycle
+     * * `report_coverage` - report_coverage
+     * * `report_groups` - report_groups
      * @enum {string}
      */
-    ExportCreateFamilyEnum: "assets" | "groups" | "license_entitlements";
+    ExportCreateFamilyEnum: "assets" | "groups" | "license_entitlements" | "report_inventory" | "report_lifecycle" | "report_coverage" | "report_groups";
     ExportCreateRequest: {
       family: components["schemas"]["ExportCreateFamilyEnum"];
       format: components["schemas"]["ExportFormatEnum"];
@@ -3454,6 +3475,16 @@ export interface components {
       columns?: components["schemas"]["ColumnsEnum"][];
       ordering?: components["schemas"]["OrderingEnum"] | components["schemas"]["BlankEnum"];
     };
+    PatchedScheduleRequest: {
+      report?: components["schemas"]["ReportEnum"];
+      filters?: {
+        [key: string]: string;
+      };
+      enabled?: boolean;
+      hour_utc?: number;
+      cadence?: components["schemas"]["CadenceEnum"];
+      weekday?: number;
+    };
     PatchedSecuritySettingsUpdateRequest: {
       session_idle_timeout_minutes?: number;
       session_absolute_timeout_hours?: number;
@@ -3578,6 +3609,32 @@ export interface components {
       refreshed: number;
       resolved: number;
     };
+    Report: {
+      report: string;
+      label: string;
+      note: string;
+      /** Format: date-time */
+      generated_at: string;
+      count: number;
+      columns: components["schemas"]["ReportColumn"][];
+      rows: {
+          [key: string]: unknown;
+        }[];
+      offset: number;
+      limit: number;
+    };
+    ReportColumn: {
+      key: string;
+      label: string;
+    };
+    /**
+     * @description * `inventory` - Inventory
+     * * `lifecycle` - Lifecycle
+     * * `coverage` - Coverage
+     * * `groups` - Groups
+     * @enum {string}
+     */
+    ReportEnum: "inventory" | "lifecycle" | "coverage" | "groups";
     /**
      * @description * `` -
      * * `always` - always
@@ -3769,6 +3826,33 @@ export interface components {
       };
       columns?: components["schemas"]["ColumnsEnum"][];
       ordering?: components["schemas"]["OrderingEnum"] | components["schemas"]["BlankEnum"];
+    };
+    Schedule: {
+      /** Format: uuid */
+      id: string;
+      report: components["schemas"]["ReportEnum"];
+      filters?: {
+        [key: string]: string;
+      };
+      enabled?: boolean;
+      hour_utc: number;
+      cadence?: components["schemas"]["CadenceEnum"];
+      weekday: number;
+      version: number;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      modified_at: string;
+    };
+    ScheduleRequest: {
+      report: components["schemas"]["ReportEnum"];
+      filters?: {
+        [key: string]: string;
+      };
+      enabled?: boolean;
+      hour_utc: number;
+      cadence?: components["schemas"]["CadenceEnum"];
+      weekday: number;
     };
     SecuritySettings: {
       session_idle_timeout_minutes: number;
@@ -7717,6 +7801,121 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["BulkResult"][];
+        };
+      };
+    };
+  };
+  reports_retrieve: {
+    parameters: {
+      query?: {
+        /**
+         * @description * `site` - site
+         * * `category` - category
+         * * `manufacturer` - manufacturer
+         * * `owner` - owner
+         */
+        breakdown?: "site" | "category" | "manufacturer" | "owner";
+        /**
+         * @description * `any_gap` - any_gap
+         * * `endpoint_central_gap` - endpoint_central_gap
+         * * `defender_gap` - defender_gap
+         */
+        coverage?: "any_gap" | "endpoint_central_gap" | "defender_gap";
+        /**
+         * @description * `hardware` - Hardware
+         * * `os` - Operating system / firmware
+         * * `software` - Software
+         */
+        dimension?: "hardware" | "os" | "software";
+        group?: string;
+        limit?: number;
+        offset?: number;
+        q?: string;
+        site?: string;
+        /**
+         * @description * `supported` - Supported
+         * * `eol_announced` - EOL announced
+         * * `expiring` - Approaching end of support
+         * * `security_maintenance_ended` - Security updates ended
+         * * `eos` - End of support
+         * * `not_announced` - Not announced
+         * * `unknown` - Unknown
+         * * `unverified` - Unverified
+         * * `not_applicable` - Not applicable
+         */
+        status?: "supported" | "eol_announced" | "expiring" | "security_maintenance_ended" | "eos" | "not_announced" | "unknown" | "unverified" | "not_applicable";
+      };
+      path: {
+        kind: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["Report"];
+        };
+      };
+    };
+  };
+  reports_schedules_list: {
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["Schedule"][];
+        };
+      };
+    };
+  };
+  reports_schedules_create: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ScheduleRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["ScheduleRequest"];
+        "multipart/form-data": components["schemas"]["ScheduleRequest"];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          "application/json": components["schemas"]["Schedule"];
+        };
+      };
+    };
+  };
+  reports_schedules_retrieve: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["Schedule"];
+        };
+      };
+    };
+  };
+  reports_schedules_partial_update: {
+    parameters: {
+      header: {
+        "If-Match": string;
+      };
+      path: {
+        id: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["PatchedScheduleRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["PatchedScheduleRequest"];
+        "multipart/form-data": components["schemas"]["PatchedScheduleRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["Schedule"];
         };
       };
     };

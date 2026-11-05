@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { isApiError } from '../../shared/api/client'
 import { createExport, exportKeys, fetchExportFamilies } from '../../shared/api/exports'
-import type { ExportJob } from '../../shared/api/types'
+import type { ExportCreate, ExportJob } from '../../shared/api/types'
 import { Dialog } from '../../shared/ui/Dialog'
 import { CheckboxGroup } from '../../shared/ui/Field'
 import { ErrorSummary, LoadingState, QueryErrorState } from '../../shared/ui/States'
@@ -22,7 +22,7 @@ type Format = ExportJob['file_format']
 interface ExportDialogProps {
   open: boolean
   onClose: () => void
-  family: 'assets' | 'groups' | 'license_entitlements'
+  family: ExportCreate['family']
   /** Current list filters; offered as the "Current filters" scope. */
   filters?: Record<string, string>
   /** Specific records (for example one group); offered as the "Selected" scope. */

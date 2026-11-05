@@ -10,6 +10,7 @@ Security (docs/14 data exfiltration):
 """
 
 import hashlib
+import json
 import logging
 from datetime import timedelta
 
@@ -47,7 +48,26 @@ def _denied() -> ApiError:
 
 def can_export(user, family: families.Family) -> bool:
     granted = user.permission_codes()
-    return catalog.EXPORTS_RUN in granted and family.permission in granted
+    allowed = catalog.EXPORTS_RUN in granted and family.permission in granted
+    if family.code.startswith("report_"):
+        from apps.reports.services import can_view
+
+        allowed = allowed and can_view(user, family.code.removeprefix("report_"))
+    return allowed
+
+
+def authorization_fingerprint(user):
+    from apps.accounts.models import User
+    from apps.organizations.scope import accessible_site_ids
+
+    fresh = User.objects.get(pk=user.pk)
+    sites = accessible_site_ids(fresh)
+    policy = [
+        fresh.is_active,
+        sorted(fresh.permission_codes()),
+        "all" if sites is None else sorted(str(pk) for pk in sites),
+    ]
+    return hashlib.sha256(json.dumps(policy).encode()).hexdigest()
 
 
 def describe(family: families.Family, user) -> dict:
@@ -92,6 +112,12 @@ def create_job(request, data: dict) -> ExportJob:
     if refused:
         errors["related"] = [f"Not available to you: {', '.join(refused)}."]
     filters = data.get("filters") or {}
+    if family.code.startswith("report_"):
+        from apps.reports.services import clean_filters
+
+        if data["scope"] == "selected":
+            raise ApiError("VALIDATION_ERROR", "Reports use filtered or all-authorized scope.", 422)
+        filters = clean_filters(user, family.code.removeprefix("report_"), filters)
     bad_filters = [k for k in filters if k not in family.filter_keys]
     if bad_filters:
         errors["filters"] = [f"Unknown filters: {', '.join(bad_filters)}."]
@@ -181,6 +207,7 @@ def run_export(job_id) -> ExportJob:
     if family is None or not can_export(user, family):
         return _fail(job, "Your permission to export this data was removed before it ran.")
     try:
+        fingerprint = authorization_fingerprint(user)
         data = families.build(job, user, settings.ITAM_EXPORT_MAX_ROWS)
         now = timezone.now()
         meta = {
@@ -206,6 +233,7 @@ def run_export(job_id) -> ExportJob:
     job.content_type = content_type
     job.size_bytes = len(body)
     job.checksum = hashlib.sha256(body).hexdigest()
+    job.authorization_fingerprint = fingerprint
     job.file_encrypted = crypto.encrypt(body, crypto.EXPORTS)
     job.status = ExportJob.Status.COMPLETED
     job.completed_at = now
@@ -243,6 +271,15 @@ def download(request, job: ExportJob) -> tuple[bytes, ExportJob]:
         raise ApiError("EXPORT_EXPIRED", "This export has expired. Create a new one.", 410)
     if job.status != ExportJob.Status.COMPLETED or job.file_encrypted is None:
         raise ApiError("EXPORT_NOT_READY", "This export is not ready yet.", 409)
+    if (
+        not job.authorization_fingerprint
+        or job.authorization_fingerprint != authorization_fingerprint(user)
+    ):
+        raise ApiError(
+            "EXPORT_ACCESS_CHANGED",
+            "Export authorization is unavailable or changed. Create a fresh export.",
+            403,
+        )
     body = crypto.decrypt(job.file_encrypted, crypto.EXPORTS)
     if body is None:
         raise ApiError("EXPORT_UNREADABLE", "The stored file cannot be decrypted.", 409)

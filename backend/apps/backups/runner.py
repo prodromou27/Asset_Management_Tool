@@ -184,6 +184,7 @@ def dump_database(directory, job_id):
                         "audit_",
                         "imports_",
                         "exports_",
+                        "reports_",
                     )
                 ):
                     cursor.execute(f"SELECT count(*) FROM {connection.ops.quote_name(table)}")

@@ -1,5 +1,6 @@
 import {
   Activity,
+  ChartNoAxesCombined,
   Settings,
   AppWindow,
   Boxes,
@@ -71,6 +72,7 @@ export const SECTIONS: NavSection[] = [
       { to: '/discovery', label: 'Discovery', icon: Radar, permission: PERMISSIONS.discoveryView },
       { to: '/imports', label: 'Imports', icon: FileUp, permission: PERMISSIONS.importsRun },
       { to: '/exports', label: 'Exports', icon: FileDown, permission: PERMISSIONS.exportsRun },
+      { to: '/reports', label: 'Reports', icon: ChartNoAxesCombined, permission: PERMISSIONS.reportsView },
     ],
   },
   {

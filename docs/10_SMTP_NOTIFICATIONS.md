@@ -54,4 +54,28 @@ Use Mailpit or equivalent capture service only in dev/test, not a public product
 
 ## Production gate
 
+### Task 021 authenticated report digests
+
+`reports.schedule` allows at most 20 private schedules per user. Defaults grant it
+to System Admin and ITAM Manager; `reports.view` follows existing asset-view roles
+and each report also requires its resource permission. Recipients are always the
+owner's administrator-configured account email; arbitrary addresses are rejected.
+Schedule writes are audited and updates require If-Match. The UI creates daily or
+weekly schedules and enables/disables them; API updates also validate saved filters.
+
+Celery evaluates enabled schedules every five minutes. Slots use UTC hours and
+Monday=0 weekdays; new schedules start at the next slot. Only the latest due slot
+is eligible, preventing a historical flood. A unique schedule/slot ledger and
+outbox dedup key prevent duplicate enqueueing; existing outbox retries apply.
+Disabled/unconfigured SMTP queues nothing. Messages contain a generic report label
+and authenticated private schedule link, with no inventory rows or attachments.
+
+Before delivery, current owner activation, password state, email, permissions and
+schedule version are checked. Invalid messages are cancelled. Editing or disabling
+a schedule cancels its prior queued version; that slot is not reissued. The next
+eligible slot uses the new version. A changed email never redirects an existing
+message. Opening a saved link loads its filters before querying report results and
+always re-evaluates current asset scope. Production mail remains disabled until the
+approved relay/sender and delivery tests below are completed.
+
 Admin saves and tests approved SMTP configuration; one test email reaches a nominated recipient; one queued EOL event is delivered once; a simulated outage shows a retry and visible operational alert.

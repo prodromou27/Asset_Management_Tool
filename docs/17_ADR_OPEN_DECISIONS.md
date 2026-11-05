@@ -170,6 +170,27 @@ heartbeats or production approval. Unknown/manual gates remain incomplete. No au
 readiness approval, live access, SSO/MFA implementation, commissioning or Task 021 is
 implied. DEC-09 and the existing identity/deployment decisions remain open.
 
+### ASM-62 — Task 021 scoped reports and private digests (2026-11-05)
+
+Owner authorized continuation after Task 020. Reuse canonical asset/group queries,
+lifecycle assessments, encrypted export jobs and the existing SMTP outbox. Four
+report families cover inventory breakdowns, lifecycle evidence, recorded source
+coverage and group replacement/ownership. Unassessed lifecycle stays Unknown;
+source-link states do not establish agent eligibility or compliance. Group counts
+never include members outside the reader's scope. Personal fields retain existing
+`exports.personal` controls. `reports.view` follows asset-view grants; self-owned
+`reports.schedule` defaults to System Admin/ITAM Manager only.
+
+Use self-addressed authenticated links rather than report attachments or arbitrary
+recipient policy. Daily/weekly UTC slots, unique dispatch records and current
+account/schedule checks reuse the existing queue and retry transport. Reports are
+queried under current access when opened. Export downloads fail closed after a
+permission/site-grant change or for legacy artifacts without a fingerprint; regenerate
+those exports. Schema additions are nullable/additive, with no asset/data contraction.
+The encrypted backup manifest includes the new report tables and CI restores a
+synthetic saved schedule. No live SMTP/vendor calls or Task 022 commissioning is
+implied; DEC-09 and other operator decisions remain open.
+
 ## GLPI licensing note
 
 GLPI repository is GPLv3. Use product concepts and independently written code. Forking or copying GLPI source is a **separate** licensing/product strategy requiring owner approval. Do not casually mix GPL files into a differently licensed custom codebase.

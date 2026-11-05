@@ -31,6 +31,7 @@ from apps.reconciliation.urls import (
 from apps.software.urls import asset_urlpatterns as software_asset_urlpatterns
 
 urlpatterns = [
+    path("api/v1/reports/", include("apps.reports.urls")),
     path("api/v1/settings/general/", GeneralSettingsView.as_view(), name="settings-general"),
     path("api/v1/backups/", include("apps.backups.urls")),
     path("api/v1/health/", include("apps.health.urls")),

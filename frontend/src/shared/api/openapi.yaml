@@ -5537,6 +5537,219 @@ paths:
                 items:
                   $ref: '#/components/schemas/BulkResult'
           description: ''
+  /api/v1/reports/{kind}/:
+    get:
+      operationId: reports_retrieve
+      parameters:
+      - in: query
+        name: breakdown
+        schema:
+          enum:
+          - site
+          - category
+          - manufacturer
+          - owner
+          type: string
+          minLength: 1
+        description: |-
+          * `site` - site
+          * `category` - category
+          * `manufacturer` - manufacturer
+          * `owner` - owner
+      - in: query
+        name: coverage
+        schema:
+          enum:
+          - any_gap
+          - endpoint_central_gap
+          - defender_gap
+          type: string
+          minLength: 1
+        description: |-
+          * `any_gap` - any_gap
+          * `endpoint_central_gap` - endpoint_central_gap
+          * `defender_gap` - defender_gap
+      - in: query
+        name: dimension
+        schema:
+          enum:
+          - hardware
+          - os
+          - software
+          type: string
+          minLength: 1
+        description: |-
+          * `hardware` - Hardware
+          * `os` - Operating system / firmware
+          * `software` - Software
+      - in: query
+        name: group
+        schema:
+          type: string
+          format: uuid
+      - in: path
+        name: kind
+        schema:
+          type: string
+        required: true
+      - in: query
+        name: limit
+        schema:
+          type: integer
+          maximum: 100
+          minimum: 1
+          default: 50
+      - in: query
+        name: offset
+        schema:
+          type: integer
+          maximum: 100000
+          minimum: 0
+          default: 0
+      - in: query
+        name: q
+        schema:
+          type: string
+          maxLength: 200
+      - in: query
+        name: site
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: status
+        schema:
+          enum:
+          - supported
+          - eol_announced
+          - expiring
+          - security_maintenance_ended
+          - eos
+          - not_announced
+          - unknown
+          - unverified
+          - not_applicable
+          type: string
+          minLength: 1
+        description: |-
+          * `supported` - Supported
+          * `eol_announced` - EOL announced
+          * `expiring` - Approaching end of support
+          * `security_maintenance_ended` - Security updates ended
+          * `eos` - End of support
+          * `not_announced` - Not announced
+          * `unknown` - Unknown
+          * `unverified` - Unverified
+          * `not_applicable` - Not applicable
+      tags:
+      - reports
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Report'
+          description: ''
+  /api/v1/reports/schedules/:
+    get:
+      operationId: reports_schedules_list
+      tags:
+      - reports
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Schedule'
+          description: ''
+    post:
+      operationId: reports_schedules_create
+      tags:
+      - reports
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScheduleRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ScheduleRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ScheduleRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Schedule'
+          description: ''
+  /api/v1/reports/schedules/{id}/:
+    get:
+      operationId: reports_schedules_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - reports
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Schedule'
+          description: ''
+    patch:
+      operationId: reports_schedules_partial_update
+      parameters:
+      - in: header
+        name: If-Match
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - reports
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedScheduleRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedScheduleRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedScheduleRequest'
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Schedule'
+          description: ''
   /api/v1/roles/:
     get:
       operationId: roles_list
@@ -7828,6 +8041,14 @@ components:
         * `retired` - Retired
         * `disposed` - Disposed
         * `lost` - Lost
+    CadenceEnum:
+      enum:
+      - daily
+      - weekly
+      type: string
+      description: |-
+        * `daily` - Daily
+        * `weekly` - Weekly
     Candidate:
       type: object
       properties:
@@ -9231,11 +9452,19 @@ components:
       - assets
       - groups
       - license_entitlements
+      - report_inventory
+      - report_lifecycle
+      - report_coverage
+      - report_groups
       type: string
       description: |-
         * `assets` - assets
         * `groups` - groups
         * `license_entitlements` - license_entitlements
+        * `report_inventory` - report_inventory
+        * `report_lifecycle` - report_lifecycle
+        * `report_coverage` - report_coverage
+        * `report_groups` - report_groups
     ExportCreateRequest:
       type: object
       properties:
@@ -14545,6 +14774,28 @@ components:
           oneOf:
           - $ref: '#/components/schemas/OrderingEnum'
           - $ref: '#/components/schemas/BlankEnum'
+    PatchedScheduleRequest:
+      type: object
+      properties:
+        report:
+          $ref: '#/components/schemas/ReportEnum'
+        filters:
+          type: object
+          additionalProperties:
+            type: string
+            minLength: 1
+        enabled:
+          type: boolean
+        hour_utc:
+          type: integer
+          maximum: 23
+          minimum: 0
+        cadence:
+          $ref: '#/components/schemas/CadenceEnum'
+        weekday:
+          type: integer
+          maximum: 6
+          minimum: 0
     PatchedSecuritySettingsUpdateRequest:
       type: object
       properties:
@@ -14859,6 +15110,65 @@ components:
       - opened
       - refreshed
       - resolved
+    Report:
+      type: object
+      properties:
+        report:
+          type: string
+        label:
+          type: string
+        note:
+          type: string
+        generated_at:
+          type: string
+          format: date-time
+        count:
+          type: integer
+        columns:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReportColumn'
+        rows:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+        offset:
+          type: integer
+        limit:
+          type: integer
+      required:
+      - columns
+      - count
+      - generated_at
+      - label
+      - limit
+      - note
+      - offset
+      - report
+      - rows
+    ReportColumn:
+      type: object
+      properties:
+        key:
+          type: string
+        label:
+          type: string
+      required:
+      - key
+      - label
+    ReportEnum:
+      enum:
+      - inventory
+      - lifecycle
+      - coverage
+      - groups
+      type: string
+      description: |-
+        * `inventory` - Inventory
+        * `lifecycle` - Lifecycle
+        * `coverage` - Coverage
+        * `groups` - Groups
     RequiredEnum:
       enum:
       - always
@@ -15341,6 +15651,76 @@ components:
           - $ref: '#/components/schemas/BlankEnum'
       required:
       - name
+    Schedule:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        report:
+          $ref: '#/components/schemas/ReportEnum'
+        filters:
+          type: object
+          additionalProperties:
+            type: string
+        enabled:
+          type: boolean
+        hour_utc:
+          type: integer
+          maximum: 23
+          minimum: 0
+        cadence:
+          $ref: '#/components/schemas/CadenceEnum'
+        weekday:
+          type: integer
+          maximum: 6
+          minimum: 0
+        version:
+          type: integer
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        modified_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - hour_utc
+      - id
+      - modified_at
+      - report
+      - version
+      - weekday
+    ScheduleRequest:
+      type: object
+      properties:
+        report:
+          $ref: '#/components/schemas/ReportEnum'
+        filters:
+          type: object
+          additionalProperties:
+            type: string
+            minLength: 1
+        enabled:
+          type: boolean
+        hour_utc:
+          type: integer
+          maximum: 23
+          minimum: 0
+        cadence:
+          $ref: '#/components/schemas/CadenceEnum'
+        weekday:
+          type: integer
+          maximum: 6
+          minimum: 0
+      required:
+      - hour_utc
+      - report
+      - weekday
     SecuritySettings:
       type: object
       properties:

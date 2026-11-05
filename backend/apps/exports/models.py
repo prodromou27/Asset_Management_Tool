@@ -48,6 +48,7 @@ class ExportJob(models.Model):
     content_type = models.CharField(max_length=100, blank=True)
     size_bytes = models.PositiveIntegerField(default=0)
     checksum = models.CharField(max_length=64, blank=True)
+    authorization_fingerprint = models.CharField(max_length=64, blank=True, null=True, default="")
     file_encrypted = models.BinaryField(null=True, blank=True, editable=False)
     error_message = models.CharField(max_length=500, blank=True)
     created_by = models.ForeignKey(_USER, on_delete=models.PROTECT, related_name="+")

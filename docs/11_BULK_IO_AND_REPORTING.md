@@ -52,4 +52,32 @@ Nested group references must reject cycles; group membership cannot confer acces
 
 ## Performance
 
+### Task 021 implemented reporting boundary
+
+`/reports` and `/api/v1/reports/{inventory,lifecycle,coverage,groups}/` share the
+same authorized queries as the four `report_*` encrypted export families. Preview
+pages contain 50 rows (API maximum 100); export row limits and CSV/XLSX/JSON writers
+remain those of Task 014. Site/group/search filters never grant additional access.
+Owner breakdown and group-owner fields require `exports.personal`. Lifecycle shows
+one hardware/OS/firmware dimension, including unassessed assets as Unknown; exports
+retain assessment/product IDs and lossless milestone IDs as a JSON-array cell.
+
+Coverage describes stored active, stale/disabled and absent source links, not agent
+installation, device eligibility or compliance. Group counts include visible live
+members only; verified EOS counts require effective EOS plus recorded evidence.
+Group name search does not search or discard its members.
+
+Completed exports now bind to the creator's active status, permissions and effective
+site grants. Changed or missing authorization fingerprints require a fresh export,
+including artifacts made before this upgrade. This does not revoke copies already
+downloaded. The additive nullable column permits older workers to finish during
+rollout; their artifacts fail closed on download. Drain old workers before enabling
+new report families. Apply migrations before new processes; rollback report code
+before removing its additive schema. Existing assets and artifacts are retained.
+
+Self-owned digest schedules save validated filters, not results. Links re-evaluate
+current scope when opened. Daily/weekly UTC scheduling and cancellation semantics
+are documented in docs/10. This is not a general BI designer: custom columns/sorts,
+arbitrary recipients, attachments and new report families remain separate work.
+
 Target at least 10k devices, 20k other records and 1m software installations; paginate tables, server-side filter/search, background large exports, index group criteria. Tune concurrency based on tests, not a fictional throughput guarantee.

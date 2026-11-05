@@ -2,6 +2,7 @@ import { QueryClientProvider, type QueryClient } from '@tanstack/react-query'
 import { useState, type ReactNode } from 'react'
 import { BackupsPage } from '../features/backups/BackupsPage'
 import { GeneralSettingsPage } from '../features/admin-general/GeneralSettingsPage'
+import { ReportsPage } from '../features/reports/ReportsPage'
 import { BrowserRouter, Navigate, Route, Routes, useParams } from 'react-router-dom'
 import { AuditLogPage } from '../features/admin-audit/AuditLogPage'
 import { CategoriesPage } from '../features/admin-categories/CategoriesPage'
@@ -68,6 +69,7 @@ function Protected({
 export function AppRoutes() {
   return (
     <Routes>
+      <Route path="/reports" element={<Protected permission={PERMISSIONS.reportsView} what="reports"><ReportsPage /></Protected>} />
       <Route path="/admin/general" element={<Protected permission={PERMISSIONS.generalView} what="general settings"><GeneralSettingsPage /></Protected>} />
       <Route path="/admin/backups" element={<Protected permission={PERMISSIONS.backupsView} what="backups and recovery"><BackupsPage /></Protected>} />
       <Route path="/login" element={<LoginPage />} />

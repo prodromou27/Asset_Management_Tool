@@ -76,6 +76,7 @@ INSTALLED_APPS = [
     "apps.groups",
     "apps.imports",
     "apps.exports",
+    "apps.reports",
     "apps.lifecycle",
     "apps.software",
     "apps.domains",
@@ -240,6 +241,7 @@ CELERY_RESULT_BACKEND = env("REDIS_URL")
 CELERY_TASK_ALWAYS_EAGER = False
 CELERY_TIMEZONE = "UTC"
 CELERY_BEAT_SCHEDULE = {
+    "dispatch-report-digests": {"task": "reports.dispatch_digests", "schedule": 300.0},
     "dispatch-backups": {"task": "backups.dispatch", "schedule": 300.0},
     "refresh-source-freshness": {
         "task": "reconciliation.refresh_source_freshness",

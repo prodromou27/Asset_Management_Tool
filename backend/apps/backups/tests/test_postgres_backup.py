@@ -31,6 +31,7 @@ def _roundtrip(tmp_path):
     from apps.lifecycle.models import LifecycleMilestone, LifecycleProduct, LifecycleSource
     from apps.notifications.models import OutboxMessage, SmtpProfile
     from apps.organizations.models import Site
+    from apps.reports.models import DigestSchedule
     from apps.software.models import SoftwareInstallation, SoftwareProduct, SoftwareVersion
 
     os.environ["ITAM_APP_REVISION"] = "1" * 40
@@ -43,6 +44,7 @@ def _roundtrip(tmp_path):
     category = AssetCategory.objects.create(code="restore-fixture", name="Restore fixture")
     asset = Asset.objects.create(name="Restore fixture", site=site, category=category)
     group = AssetGroup.objects.create(name="Restore fixture", kind="static")
+    DigestSchedule.objects.create(owner=admin_user, report="inventory", enabled=False)
     membership = AssetGroupMembership.objects.create(
         group=group,
         asset=asset,

@@ -402,6 +402,10 @@ class Family:
     related: tuple[Related, ...]
 
     def columns(self) -> list[Column]:
+        if self.code.startswith("report_"):
+            from apps.reports.services import columns_for
+
+            return columns_for(self.code.removeprefix("report_"))
         if self.code == "assets":
             return [*ASSET_COLUMNS, *_custom_columns()]
         if self.code == "license_entitlements":
@@ -443,9 +447,29 @@ def allowed_related(family: Family, permissions: set[str]) -> list[Related]:
     return [r for r in family.related if not r.permission or r.permission in permissions]
 
 
+for _kind, _label, _permission in (
+    ("inventory", "Inventory report", "assets.view"),
+    ("lifecycle", "Lifecycle report", "lifecycle.view"),
+    ("coverage", "Source coverage report", "discovery.view"),
+    ("groups", "Group report", "groups.view"),
+):
+    FAMILIES[f"report_{_kind}"] = Family(
+        f"report_{_kind}",
+        _label,
+        _permission,
+        "Current scoped report; no email attachment.",
+        ("site", "group", "q", "breakdown", "dimension", "status", "coverage"),
+        (),
+    )
+
+
 def build(job, user, max_rows: int) -> ExportData:
     """Rows for ``job`` as ``user`` sees the data right now."""
     family = FAMILIES[job.family]
+    if family.code.startswith("report_"):
+        from apps.reports.services import export_data
+
+        return export_data(job, user, max_rows)
     permissions = user.permission_codes()
     personal = catalog.EXPORTS_PERSONAL in permissions
     available = family.columns()

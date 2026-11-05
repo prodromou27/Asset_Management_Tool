@@ -344,7 +344,7 @@ def deliver_due(now=None) -> dict:
                     continue
                 message = OutboxMessage.objects.get(pk=pk)
                 result = _send_one(client, profile, message, now)
-                counts[result] += 1
+                counts[result] = counts.get(result, 0) + 1
     except mailer.ConfigError as exc:
         # Fix the settings first: messages wait without using up their attempts.
         OutboxMessage.objects.filter(
@@ -368,6 +368,17 @@ def deliver_due(now=None) -> dict:
 
 
 def _send_one(client, profile, message: OutboxMessage, now) -> str:
+    if message.event_type == "report_digest":
+        from apps.reports.digests import can_deliver
+
+        if not can_deliver(message):
+            _finish(
+                message,
+                status=Status.CANCELLED,
+                finished_at=now,
+                last_error="Report recipient or access changed; digest cancelled.",
+            )
+            return "cancelled"
     built = mailer.build(
         profile, message.to_address, message.subject, message.body_text, message.body_html
     )
