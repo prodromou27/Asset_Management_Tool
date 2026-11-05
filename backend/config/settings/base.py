@@ -40,6 +40,8 @@ env = environ.Env(
     SMTP_SECURITY=(str, "starttls"),
     SMTP_FROM=(str, ""),
     ITAM_NOTIFICATION_BODY_RETENTION_DAYS=(int, 14),
+    ITAM_BACKUP_ALLOW_RUN=(bool, False),
+    ITAM_BACKUP_TARGET_LABEL=(str, "Not configured"),
 )
 
 env_file = BASE_DIR / ".env"
@@ -78,6 +80,7 @@ INSTALLED_APPS = [
     "apps.software",
     "apps.domains",
     "apps.notifications",
+    "apps.backups",
 ]
 
 AUTH_USER_MODEL = "accounts.User"
@@ -237,6 +240,7 @@ CELERY_RESULT_BACKEND = env("REDIS_URL")
 CELERY_TASK_ALWAYS_EAGER = False
 CELERY_TIMEZONE = "UTC"
 CELERY_BEAT_SCHEDULE = {
+    "dispatch-backups": {"task": "backups.dispatch", "schedule": 300.0},
     "refresh-source-freshness": {
         "task": "reconciliation.refresh_source_freshness",
         "schedule": 3600.0,
@@ -332,3 +336,6 @@ ITAM_SMTP_DEFAULTS = {
 # Deployment-level kill switch: no connector contacts a live source unless true,
 # in addition to the per-instance approval recorded by an administrator.
 ITAM_ALLOW_LIVE_INTEGRATIONS = env("ITAM_ALLOW_LIVE_INTEGRATIONS")
+ITAM_BACKUP_ALLOW_RUN = env("ITAM_BACKUP_ALLOW_RUN")
+ITAM_BACKUP_TARGET_LABEL = env("ITAM_BACKUP_TARGET_LABEL")
+CELERY_TASK_ROUTES = {"backups.execute": {"queue": "backups"}}

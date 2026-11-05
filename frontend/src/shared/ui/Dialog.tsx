@@ -40,7 +40,7 @@ export function Dialog({
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault()
-    onConfirm()
+    if (!busy) onConfirm()
   }
 
   return (

@@ -1168,6 +1168,190 @@ paths:
                 items:
                   $ref: '#/components/schemas/AuthProvider'
           description: ''
+  /api/v1/backups/drills/:
+    get:
+      operationId: backups_drills_list
+      tags:
+      - backups
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RestoreDrill'
+          description: ''
+    post:
+      operationId: backups_drills_create
+      tags:
+      - backups
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RestoreDrillRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RestoreDrillRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RestoreDrillRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RestoreDrill'
+          description: ''
+  /api/v1/backups/jobs/:
+    get:
+      operationId: backups_jobs_list
+      tags:
+      - backups
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BackupJob'
+          description: ''
+    post:
+      operationId: backups_jobs_create
+      tags:
+      - backups
+      security:
+      - sessionAuth: []
+      responses:
+        '202':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BackupJob'
+          description: ''
+  /api/v1/backups/jobs/{id}/:
+    get:
+      operationId: backups_jobs_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - backups
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BackupJob'
+          description: ''
+  /api/v1/backups/jobs/{id}/verify/:
+    post:
+      operationId: backups_jobs_verify_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - backups
+      security:
+      - sessionAuth: []
+      responses:
+        '202':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BackupJob'
+          description: ''
+  /api/v1/backups/policy/:
+    get:
+      operationId: backups_policy_retrieve
+      tags:
+      - backups
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BackupPolicy'
+          description: ''
+    patch:
+      operationId: backups_policy_partial_update
+      parameters:
+      - in: header
+        name: If-Match
+        schema:
+          type: string
+        required: true
+      tags:
+      - backups
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedBackupPolicyRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedBackupPolicyRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedBackupPolicyRequest'
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BackupPolicy'
+          description: ''
+  /api/v1/backups/report/:
+    get:
+      operationId: backups_report_retrieve
+      tags:
+      - backups
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BackupSummary'
+          description: ''
+  /api/v1/backups/summary/:
+    get:
+      operationId: backups_summary_retrieve
+      tags:
+      - backups
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BackupSummary'
+          description: ''
   /api/v1/certificates/:
     get:
       operationId: certificates_list
@@ -7275,6 +7459,181 @@ components:
         * `planned` - Planned
         * `beta` - Beta (fixture-tested)
         * `available` - Available
+    BackupJob:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/BackupJobKindEnum'
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/BackupJobStatusEnum'
+          readOnly: true
+        target_label:
+          type: string
+          readOnly: true
+        snapshot_id:
+          type: string
+          readOnly: true
+        source:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        created_by:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        started_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        finished_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        recovery_point:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        size_bytes:
+          type: integer
+          readOnly: true
+        manifest:
+          readOnly: true
+        error_message:
+          type: string
+          readOnly: true
+        warning:
+          type: string
+          readOnly: true
+      required:
+      - created_at
+      - created_by
+      - error_message
+      - finished_at
+      - id
+      - kind
+      - manifest
+      - recovery_point
+      - size_bytes
+      - snapshot_id
+      - source
+      - started_at
+      - status
+      - target_label
+      - warning
+    BackupJobKindEnum:
+      enum:
+      - backup
+      - verify
+      type: string
+      description: |-
+        * `backup` - Backup
+        * `verify` - Verification
+    BackupJobStatusEnum:
+      enum:
+      - queued
+      - running
+      - succeeded
+      - failed
+      type: string
+      description: |-
+        * `queued` - Queued
+        * `running` - Running
+        * `succeeded` - Verified
+        * `failed` - Failed
+    BackupPolicy:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        hour_utc:
+          type: integer
+          maximum: 23
+          minimum: 0
+        rpo_hours:
+          type: integer
+          maximum: 168
+          minimum: 1
+        rto_hours:
+          type: integer
+          maximum: 168
+          minimum: 1
+        keep_daily:
+          type: integer
+          maximum: 365
+          minimum: 1
+        keep_weekly:
+          type: integer
+          maximum: 104
+          minimum: 1
+        keep_monthly:
+          type: integer
+          maximum: 120
+          minimum: 1
+        retention_enabled:
+          type: boolean
+        version:
+          type: integer
+          readOnly: true
+        modified_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - hour_utc
+      - keep_daily
+      - keep_monthly
+      - keep_weekly
+      - modified_at
+      - rpo_hours
+      - rto_hours
+      - version
+    BackupSummary:
+      type: object
+      properties:
+        execution_allowed:
+          type: boolean
+        target_label:
+          type: string
+        encryption:
+          type: string
+        off_host:
+          type: string
+        last_backup:
+          allOf:
+          - $ref: '#/components/schemas/BackupJob'
+          nullable: true
+        last_drill:
+          allOf:
+          - $ref: '#/components/schemas/RestoreDrill'
+          nullable: true
+        problems:
+          type: array
+          items:
+            type: string
+      required:
+      - encryption
+      - execution_allowed
+      - last_backup
+      - last_drill
+      - off_host
+      - problems
+      - target_label
     BlankEnum:
       enum:
       - ''
@@ -13428,6 +13787,37 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/IPAddressInputRequest'
+    PatchedBackupPolicyRequest:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        hour_utc:
+          type: integer
+          maximum: 23
+          minimum: 0
+        rpo_hours:
+          type: integer
+          maximum: 168
+          minimum: 1
+        rto_hours:
+          type: integer
+          maximum: 168
+          minimum: 1
+        keep_daily:
+          type: integer
+          maximum: 365
+          minimum: 1
+        keep_weekly:
+          type: integer
+          maximum: 104
+          minimum: 1
+        keep_monthly:
+          type: integer
+          maximum: 120
+          minimum: 1
+        retention_enabled:
+          type: boolean
     PatchedCustomFieldUpdateRequest:
       type: object
       description: Key and type are immutable so stored values stay valid.
@@ -14190,6 +14580,85 @@ components:
       - assets
       type: string
       description: '* `assets` - Assets'
+    RestoreDrill:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        backup:
+          type: string
+          format: uuid
+        target_label:
+          type: string
+          maxLength: 120
+        started_at:
+          type: string
+          format: date-time
+        finished_at:
+          type: string
+          format: date-time
+        passed:
+          type: boolean
+        notes:
+          type: string
+          maxLength: 2000
+        recorded_by:
+          type: string
+          format: uuid
+          readOnly: true
+        recorded_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - backup
+      - finished_at
+      - id
+      - notes
+      - passed
+      - recorded_at
+      - recorded_by
+      - started_at
+      - target_label
+    RestoreDrillRequest:
+      type: object
+      properties:
+        backup:
+          type: string
+          format: uuid
+        target_label:
+          type: string
+          minLength: 1
+          maxLength: 120
+        started_at:
+          type: string
+          format: date-time
+        finished_at:
+          type: string
+          format: date-time
+        passed:
+          type: boolean
+        notes:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        isolated:
+          type: boolean
+          writeOnly: true
+        outbound_disabled:
+          type: boolean
+          writeOnly: true
+      required:
+      - backup
+      - finished_at
+      - isolated
+      - notes
+      - outbound_disabled
+      - passed
+      - started_at
+      - target_label
     ResultEnum:
       enum:
       - applied

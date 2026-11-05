@@ -19,6 +19,7 @@
 | ADR-013 | A matching serial (or hardware UUID) alone never merges assets: automatic linking also requires the same known manufacturer, the same known asset class and no conflicting identifier; any clash becomes a reconciliation candidate (see ASM-32) | Accepted (operator direction, 2026-11-03) |
 | ADR-014 | Microsoft Entra device ID is a strong cross-source key only between integrations of the **same tenant** and only when it points at one asset. Because Defender reports no manufacturer or chassis, it may auto-link without the ADR-013 manufacturer + class pair, but only when nothing contradicts it (no known manufacturer/class disagreement, no conflicting identifier, no other asset sharing several identifiers) **and** a hostname, MAC or serial corroborates it (see ASM-38) | Accepted (Task 009 direction: "strong cross-source correlation when present, verified and unambiguous") |
 | ADR-015 | Sources never change an asset's category. A source type that maps to a different category opens a category review; a person reclassifies the asset (the audited reclassification service with template impact preview, same asset ID, history and links) or keeps the current category (see ASM-44) | Accepted (Task 011) |
+| ADR-016 | Dedicated PostgreSQL/restic backup worker, remote read-back verification and network-isolated restore drills (ASM-59) | Implemented; live commissioning requires DEC-09 approval |
 
 ## Operator decisions needed before staging/production
 
@@ -111,6 +112,34 @@
 | ASM-58 (Task 018b) | Notification rules (`NotificationRule`, `AlertLedger` in `apps.notifications`). **Events:** TLS certificate expiry (certificates presented by enabled, non-retired endpoints, or uploaded), domain registration expiry (only evidenced dates; Unknown never alerted), verified lifecycle milestones (assessment `effective_status` eol_announced/expiring/security_maintenance_ended/eos with evidence and a milestone date; unverified/unknown never claim end of support; exceptions respected through the effective status), integration problems (N failed runs in a row, default 3, and data older than the integration's stale limit). **Thresholds:** defaults 90/60/30/14/7 (certificates, domains) and 365/180/90/30/7 (lifecycle), plus optional 'expired'; only the tier currently reached is announced (enabling a rule does not send every earlier tier). UTC calendar days. **Recipients:** ITAM user accounts only (never typed addresses); a recipient needs an e-mail address and the permission to see the findings (certificates.view; assets.view + lifecycle.view; integrations.manage), otherwise skipped and counted in the run summary; lifecycle findings follow each recipient's site scope and the rule's optional site list. **Dedup:** ledger key = event + target + milestone date (or failure-streak start / last success) + threshold + `policy_version`, per rule and recipient; `policy_version` rises only when thresholds, expired, failure count or sites change (renaming or adding recipients does not re-announce; a new recipient receives current items). **Delivery:** hourly evaluation (Celery beat), skipped entirely while mail is disabled (no ledger rows, nothing lost); one message per rule, recipient and run listing at most 200 new items (rest next run), queued through the 018a outbox with a digest dedup key. Seeded editable templates per event. **Access/API:** `notifications.manage` creates, edits (If-Match), deletes (audited) and previews rules (dry run per recipient, nothing sent); `notifications.view` lists rules; `/notifications/recipients/` lists active users with a has-e-mail flag (no addresses). | Daily digest per site/owner and data-quality summaries (Task 021); escalation recipients; alerts for backups (Task 019); recipients from asset owners or groups. |
 
 ## Change-control rule for agents
+
+### ADR-016 / ASM-59 — Task 019 backup implementation (2026-11-05)
+
+Context: docs/13 requires consistent PostgreSQL dumps, encrypted off-host copies,
+verification and isolated restore; no destination/key/retention/RPO/RTO is approved yet
+(DEC-09). Implementing custom cryptography/transport would add avoidable recovery risk.
+
+Decision: use PostgreSQL 16 pg_dump exported snapshots and restic via fixed argument
+lists on a dedicated opt-in worker/queue. SFTP repositories and password-file custody are
+deployment-provisioned, never accepted from HTTP. Normal API/worker containers receive no
+backup key or repository endpoint. Execution and scheduling start disabled; policy uses
+If-Match; job creation has a DB-enforced singleton active slot. Verify the entire remote
+repository and restore/read back the immutable snapshot before success. Retention is
+opt-in, scoped by ITAM tag/host and only follows verification. All current blobs are DB
+binary fields. Deployment secrets/configuration and PostgreSQL roles use the separately
+approved recovery mechanism. Use a network-disabled new ephemeral PostgreSQL container
+for operator restore drills; do not add production restore API access.
+
+Consequences: restic and PostgreSQL client binaries are confined to the backup image;
+full checks/read-back and tmpfs require capacity/timing measurements. CI uses a disposable
+local encrypted repository and a separate database for round-trip proof, not evidence of
+off-host physical separation. SFTP host-key pinning, destination access, secret recovery,
+image digests, SMTP delivery and host restore drills remain commissioning gates. DEC-09
+stays open. See ops/backup/README.md and ops/restore/README.md.
+
+Owner also requested whole-UI/functionality refinement. Preserve docs/07 navy tokens;
+review existing workflow tests and shared components, fix demonstrated defects, and expose
+selected-asset exports through the existing Task 014 backend without changing permissions.
 
 If a decision would change data identity, security, deployment, scope or business semantics, propose a short ADR with context, options, decision and consequences. Do not silently choose a dangerous default. For cosmetic/local code choices within approved architecture, decide and proceed.
 

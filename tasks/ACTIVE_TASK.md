@@ -1,4 +1,70 @@
-# Current Task: 018b | Notification rules
+# Current Task: 019 | Backups, off-host encryption and isolated restore
+
+Status: Implemented, local checks passed; awaiting PostgreSQL/Docker CI (2026-11-05, DEV).
+Owner also requested a whole-UI/functionality
+review and refinement. Preserve the navy console design and completed workflows.
+
+**Read:** AGENTS.md, docs/00, 07, 08 (administration), 09 (backup permissions),
+10 (backup alerts), 12, 13, 14, 15 (A19/A20), 17 (DEC-09).
+
+Acceptance: restricted, disabled-by-default encrypted off-host backup runner; consistent
+PostgreSQL dump and manifest; success only after remote read-back/integrity verification;
+audited job/verification history, schedule and stale/failure alerts; permission-protected
+Backups & Recovery UI and summary; isolated restore with outbound actions disabled and
+representative data checks. Test failed transfers, wrong keys, permissions and concurrency.
+Review shared UI and existing workflow coverage; fix demonstrated usability defects.
+No production destination, secrets, live relay, deployment or production restore.
+
+## Outcome (ASM-59 / ADR-016)
+
+- `apps.backups`: policy, singleton active jobs, restore-drill reports; migrations
+  `backups.0001_initial`, `0002_backup_alert_template`, `accounts.0013_backup_permissions`.
+- Dedicated optional backup worker/queue: PostgreSQL 16 repeatable-read exported snapshot,
+  manifest with migration history/counts/checksum/revision/image digest, encrypted SFTP
+  restic snapshot, full repository check and restore/read-back before success. Disabled
+  until deployment approval. Retention is opt-in and only runs after verification.
+- Audited permissions/If-Match, queued-job redispatch, RPO/stuck/failure/drill alerts via
+  the existing SMTP outbox. No backup file download or production restore endpoint.
+- `/api/v1/backups/`: `policy/` GET/PATCH, `summary/` and `report/` GET, `jobs/` GET/POST,
+  `jobs/{id}/` GET, `jobs/{id}/verify/` POST, `drills/` GET/POST.
+- Backups & Recovery administration page; policy, job history/verification, readiness,
+  recovery summary and explicitly operator-recorded drill results. Operator runbooks in
+  `ops/backup/README.md`, `ops/restore/README.md`; isolated Docker drill script.
+- UI/functionality review: selected-asset exports through the existing export service;
+  selection is limited to loaded/visible assets and current filters; search draft follows
+  top-bar URL changes; certificate sidebar selection and aria-current; mobile headers
+  wrap; navigation focus confinement/return and background scroll lock; empty tabs and
+  busy-dialog double-submit guards; horizontally scrolling tabs.
+
+## Local verification
+
+- Full backend: **783 passed, 7 skipped** (SQLite fallback; PostgreSQL/Redis-only checks).
+  Subsequent focused backup/restore checks: **20 passed, 1 skipped**, including isolated
+  container invariants and failed-restore cleanup. Real PostgreSQL/restic round-trip and
+  network-disabled Docker restore are wired into CI with entirely synthetic fixtures.
+- Full frontend: **189 passed**, including a same-page global-search regression.
+  Typecheck, oxlint and production build pass after the visual refresh.
+  Existing >500 kB bundle warning remains. OpenAPI validates and types regenerated.
+- Ruff clean; no migration drift; fresh SQLite apply/reverse/reapply succeeded. YAML source
+  parsing passed; real Compose/image checks require CI (Docker unavailable locally).
+- Thirteen Playwright/Edge screenshots at 1440x900 and 390x844 (mock API; 28 asset rows),
+  policy dialog, selection, software, domains, sites and categories; no browser exceptions
+  or page overflow. Corrected mobile headers, clipped table actions and absolutely
+  positioned screen-reader labels escaping their scroll container. Refreshed primary,
+  secondary, navigation, warning and active-tab text all exceed AA contrast (lowest 5.02:1).
+
+Owner chose **broader visual styling refresh** while preserving the navy sidebar. Shared
+tokens, headers, toolbar/filter surfaces, table boundaries/selection, segmented tabs,
+empty/error/warning states and sidebar brand hierarchy refreshed across existing screens;
+docs/07 updated. Final frontend and screenshot checks passed after this visual pass.
+
+Next action: monitor CI and record its result. DEC-09 (real target, key recovery, approved
+policy/objectives, host sizing and timed staging rehearsal), DEC-08/14 live alert delivery
+and future external media remain operational gates. Do not start Task 020 automatically.
+
+---
+
+# Previous record: Task 018b | Notification rules
 
 Status: **Complete (CI run 41912261776 green)** (2026-11-04, branch DEV). No mail sent outside the
 machine: rules were tested by inspecting the outbox.

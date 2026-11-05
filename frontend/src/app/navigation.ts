@@ -3,6 +3,7 @@ import {
   AppWindow,
   Boxes,
   Building2,
+  DatabaseBackup,
   FileDown,
   FileUp,
   Globe,
@@ -88,6 +89,7 @@ export const SECTIONS: NavSection[] = [
       { to: '/admin/audit', label: 'Audit log', icon: ScrollText, permission: PERMISSIONS.auditView },
       { to: '/admin/security', label: 'Security policy', icon: ShieldCheck, permission: PERMISSIONS.securityView },
       { to: '/admin/smtp', label: 'SMTP & notifications', icon: Mail, permission: PERMISSIONS.notificationsView },
+      { to: '/admin/backups', label: 'Backups & Recovery', icon: DatabaseBackup, permission: PERMISSIONS.backupsView },
     ],
   },
   {

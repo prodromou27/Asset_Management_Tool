@@ -1,7 +1,7 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { ExportFamily, ExportJob } from '../../shared/api/types'
-import { CATEGORIES, SITE_HQ, makeMe, mockApi, page, readerMe, renderApp } from '../../test/api'
+import { CATEGORIES, SITE_HQ, makeAsset, makeMe, mockApi, page, readerMe, renderApp } from '../../test/api'
 
 afterEach(() => vi.unstubAllGlobals())
 
@@ -67,6 +67,34 @@ const exporter = () =>
   makeMe({ ...readerMe(), permissions: ['assets.view', 'exports.run'] })
 
 describe('Export dialog on the assets list', () => {
+  it('exports selected loaded assets and clears selection when filters change', async () => {
+    const asset = makeAsset()
+    const { calls } = mockApi({
+      'GET /auth/me/': { body: exporter() },
+      ...assetsPage,
+      'GET /assets/': { body: page([asset]) },
+      'GET /exports/families/': { body: [family()] },
+      'POST /exports/': { status: 202, body: job({ status: 'queued', downloadable: false }) },
+      'GET /exports/': { body: page([]) },
+    })
+    renderApp('/assets')
+    fireEvent.click(await screen.findByLabelText(`Select ${asset.name}`))
+    expect(screen.getByText('1 selected')).toBeInTheDocument()
+    expect(screen.getByLabelText('Select all loaded assets')).toBeChecked()
+    fireEvent.click(screen.getByRole('button', { name: 'Export selected' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Export assets' })
+    expect(await within(dialog).findByLabelText('1 selected assets')).toBeChecked()
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }))
+    fireEvent.change(screen.getByLabelText('Site'), { target: { value: SITE_HQ.id } })
+    expect(screen.queryByText('1 selected')).not.toBeInTheDocument()
+    fireEvent.click(await screen.findByLabelText('Select all loaded assets'))
+    fireEvent.click(screen.getByRole('button', { name: 'Export selected' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Start export' }))
+    await waitFor(() => {
+      const request = calls.find((c) => c.method === 'POST' && c.path === '/exports/')
+      expect(request?.body).toMatchObject({ scope: 'selected', ids: [asset.id], filters: {} })
+    })
+  })
   it('exports the current filters with the chosen format and related data', async () => {
     const { calls } = mockApi({
       'GET /auth/me/': { body: makeMe() },

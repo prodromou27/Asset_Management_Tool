@@ -19,6 +19,7 @@ export function Tabs({ label, tabs, selected, onSelect }: TabsProps) {
   const baseId = useId()
   const refs = useRef<Record<string, HTMLButtonElement | null>>({})
   const current = tabs.find((tab) => tab.id === selected) ?? tabs[0]
+  if (!current) return null
 
   function move(event: KeyboardEvent, index: number) {
     const last = tabs.length - 1

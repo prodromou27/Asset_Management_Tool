@@ -25,6 +25,16 @@ describe('locate', () => {
 })
 
 describe('application shell', () => {
+  it('keeps the sidebar selected on certificate detail routes', async () => {
+    mockApi({
+      'GET /auth/me/': { body: makeMe() },
+      'GET /certificates/fixture/': { status: 404, body: { error: { message: 'Not found' } } },
+    })
+    renderApp('/certificates/fixture')
+    const nav = await screen.findByRole('navigation', { name: 'Primary' })
+    expect(within(nav).getByRole('link', { name: 'Domains & Certificates' })).toHaveClass('nav-link--active')
+    expect(within(nav).getByRole('link', { name: 'Domains & Certificates' })).toHaveAttribute('aria-current', 'page')
+  })
   it('groups navigation into labelled sections and shows where the user is', async () => {
     mockApi({ 'GET /auth/me/': { body: makeMe() }, 'GET /health/ready/': readyOk })
 
@@ -91,10 +101,19 @@ describe('application shell', () => {
 
     const toggle = await screen.findByRole('button', { name: 'Open navigation' })
     expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    toggle.focus()
     fireEvent.click(toggle)
+    expect(screen.getByRole('button', { name: 'Close navigation' })).toHaveFocus()
+    expect(document.querySelector<HTMLElement>('.app-shell__body')?.inert).toBe(true)
+    fireEvent.keyDown(document, { key: 'Tab', shiftKey: true })
+    expect(screen.getByRole('link', { name: 'System health' })).toHaveFocus()
+    fireEvent.keyDown(document, { key: 'Tab' })
+    expect(screen.getByRole('button', { name: 'Close navigation' })).toHaveFocus()
     expect(toggle).toHaveAttribute('aria-expanded', 'true')
     fireEvent.keyDown(document, { key: 'Escape' })
     expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    expect(document.querySelector<HTMLElement>('.app-shell__body')?.inert).toBe(false)
+    expect(toggle).toHaveFocus()
     fireEvent.click(toggle)
     fireEvent.click(screen.getByRole('button', { name: 'Close navigation' }))
     expect(toggle).toHaveAttribute('aria-expanded', 'false')

@@ -30,6 +30,7 @@ from apps.reconciliation.urls import (
 from apps.software.urls import asset_urlpatterns as software_asset_urlpatterns
 
 urlpatterns = [
+    path("api/v1/backups/", include("apps.backups.urls")),
     path("api/v1/health/", include("apps.health.urls")),
     path("api/v1/auth/", include(auth_urlpatterns)),
     path("api/v1/users/", include(user_urlpatterns)),

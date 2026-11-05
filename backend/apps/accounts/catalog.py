@@ -37,8 +37,14 @@ CERTIFICATES_VIEW = "certificates.view"
 CERTIFICATES_MANAGE = "certificates.manage"
 NOTIFICATIONS_VIEW = "notifications.view"
 NOTIFICATIONS_MANAGE = "notifications.manage"
+BACKUPS_VIEW = "backups.view"
+BACKUPS_MANAGE = "backups.manage"
 
 PERMISSIONS: dict[str, str] = {
+    BACKUPS_VIEW: "View backup operations and recovery reports (never backup files or secrets)",
+    BACKUPS_MANAGE: (
+        "Configure backup policy, request backups and verification, record restore drills"
+    ),
     USERS_VIEW: "View user accounts, role assignments and access review data",
     USERS_MANAGE: "Create, edit, disable and enable user accounts and their roles",
     ROLES_VIEW: "View roles and the permissions each role grants",
@@ -183,6 +189,7 @@ ROLES: list[tuple[str, str, str, list[str]]] = [
             LIFECYCLE_VIEW,
             CERTIFICATES_VIEW,
             NOTIFICATIONS_VIEW,
+            BACKUPS_VIEW,
         ],
     ),
     (

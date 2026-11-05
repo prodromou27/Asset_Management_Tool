@@ -1,4 +1,5 @@
 import { useEffect, useRef, type ReactNode } from 'react'
+import { Inbox } from 'lucide-react'
 import { isApiError } from '../api/client'
 
 export function LoadingState({ label }: { label: string }) {
@@ -12,8 +13,11 @@ export function LoadingState({ label }: { label: string }) {
 export function EmptyState({ title, children }: { title: string; children?: ReactNode }) {
   return (
     <div className="state state--empty">
-      <p className="state__title">{title}</p>
-      {children && <p className="state__body">{children}</p>}
+      <span className="state__icon" aria-hidden="true"><Inbox size={18} strokeWidth={1.75} /></span>
+      <div>
+        <p className="state__title">{title}</p>
+        {children && <p className="state__body">{children}</p>}
+      </div>
     </div>
   )
 }

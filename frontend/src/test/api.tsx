@@ -104,6 +104,8 @@ const ALL_ADMIN = [
   'certificates.manage',
   'notifications.view',
   'notifications.manage',
+  'backups.view',
+  'backups.manage',
   'reconciliation.decide',
   'audit.view',
   'categories.manage',

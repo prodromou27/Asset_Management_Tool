@@ -156,4 +156,6 @@ export const PERMISSIONS = {
   certificatesManage: 'certificates.manage',
   notificationsView: 'notifications.view',
   notificationsManage: 'notifications.manage',
+  backupsView: 'backups.view',
+  backupsManage: 'backups.manage',
 } as const

@@ -94,7 +94,7 @@ describe('Asset list columns and saved views', () => {
       expect(last.search.get('observation_status')).toBe('stale')
       expect(last.search.get('ordering')).toBe('name')
     })
-    await waitFor(() => expect(headers()).toEqual(['Name / hostname', 'Site / location', 'Last seen']))
+    await waitFor(() => expect(headers()).toEqual(['', 'Name / hostname', 'Site / location', 'Last seen']))
     expect(screen.getByText(/view “Stale switches”/)).toBeInTheDocument()
   })
 

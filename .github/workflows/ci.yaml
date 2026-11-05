@@ -43,6 +43,7 @@ jobs:
       POSTGRES_HOST: localhost
       POSTGRES_PORT: "5432"
       REDIS_URL: redis://localhost:6379/0
+      ITAM_BACKUP_DRILL_ARTIFACT_DIR: /tmp/itam-drill-fixture
     defaults:
       run:
         shell: bash
@@ -55,6 +56,8 @@ jobs:
       - name: Refuse SQLite fallback in CI
         run: test -z "${ITAM_TEST_DB_SQLITE:-}"
       - run: uv sync --frozen --group dev
+      - name: PostgreSQL backup and encrypted repository tools
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client-16 restic
       - run: uv run ruff check .
       - run: uv run ruff format --check .
       - name: Migration drift check
@@ -65,6 +68,7 @@ jobs:
           uv run python manage.py migrate --check
       - name: Migrations reverse cleanly
         run: |
+          uv run python manage.py migrate backups zero --no-input
           uv run python manage.py migrate software zero --no-input
           uv run python manage.py migrate lifecycle zero --no-input
           uv run python manage.py migrate exports zero --no-input
@@ -97,6 +101,13 @@ jobs:
         run: |
           export DJANGO_SECRET_KEY="$(python3 -c 'import secrets;print(secrets.token_urlsafe(64))')"
           uv run python manage.py check --deploy --fail-level WARNING
+      - name: Preserve synthetic restore fixture for the isolated Docker drill
+        uses: actions/upload-artifact@v4
+        with:
+          name: backup-drill-fixture
+          path: /tmp/itam-drill-fixture
+          retention-days: 1
+          if-no-files-found: error
 
   frontend:
     runs-on: ubuntu-latest
@@ -125,6 +136,7 @@ jobs:
 
   compose:
     name: Compose config + image build
+    needs: backend
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -158,3 +170,12 @@ jobs:
           jq -e '.services.api.environment.ITAM_PUBLIC_SCHEME == "http"' /tmp/http.json
       - name: Build production images
         run: bash scripts/compose.sh prod build api frontend
+      - name: Build restricted backup worker
+        run: docker compose -f infra/compose.yaml -f infra/compose.prod.yaml --profile backups build backup-worker
+      - name: Download synthetic restore fixture
+        uses: actions/download-artifact@v4
+        with:
+          name: backup-drill-fixture
+          path: /tmp/itam-drill-fixture
+      - name: Restore into new network-disabled PostgreSQL and verify recovery
+        run: python3 ops/restore/drill.py /tmp/itam-drill-fixture --report /tmp/itam-drill-report.json

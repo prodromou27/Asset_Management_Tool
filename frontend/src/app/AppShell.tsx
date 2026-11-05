@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Boxes, ChevronDown, Menu, Search, X } from 'lucide-react'
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
-import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { logout, queryKeys } from '../shared/api/accounts'
 import { PERMISSIONS } from '../shared/api/types'
 import { locate, SECTIONS, type NavItem } from './navigation'
@@ -14,21 +14,26 @@ function initials(name: string): string {
 }
 
 function NavList({ items, onNavigate }: { items: NavItem[]; onNavigate: () => void }) {
+  const { pathname } = useLocation()
   return (
     <ul className="nav-list">
-      {items.map(({ to, label, icon: Icon, end }) => (
+      {items.map(({ to, label, icon: Icon, end, also }) => {
+        const under = (root: string) => pathname === root || pathname.startsWith(`${root}/`)
+        const active = pathname === to || (!end && to !== '/' && under(to)) || (also ?? []).some(under)
+        return (
         <li key={to}>
-          <NavLink
+          <Link
             to={to}
-            end={end || to === '/'}
+            aria-current={active ? 'page' : undefined}
             onClick={onNavigate}
-            className={({ isActive }) => `nav-link${isActive ? ' nav-link--active' : ''}`}
+            className={`nav-link${active ? ' nav-link--active' : ''}`}
           >
             <Icon className="nav-link__icon" size={18} strokeWidth={1.75} aria-hidden="true" />
             <span>{label}</span>
-          </NavLink>
+          </Link>
         </li>
-      ))}
+        )
+      })}
     </ul>
   )
 }
@@ -147,9 +152,39 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!navOpen) return
-    const onKey = (event: KeyboardEvent) => event.key === 'Escape' && setNavOpen(false)
+    const nav = document.getElementById('app-nav')
+    const body = document.querySelector<HTMLElement>('.app-shell__body')
+    const opener = document.activeElement
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    if (body) body.inert = true
+    const controls = () => [...(nav?.querySelectorAll<HTMLElement>('a[href], button:not([disabled])') ?? [])]
+    controls()[0]?.focus()
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setNavOpen(false)
+      if (event.key !== 'Tab') return
+      const items = controls()
+      const first = items[0]
+      const last = items.at(-1)
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last?.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first?.focus()
+      }
+    }
+    const media = window.matchMedia?.('(max-width: 767px)')
+    const onResize = () => { if (!media?.matches) setNavOpen(false) }
+    media?.addEventListener('change', onResize)
     document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      media?.removeEventListener('change', onResize)
+      document.body.style.overflow = previousOverflow
+      if (body) body.inert = false
+      if (opener instanceof HTMLElement) opener.focus()
+    }
   }, [navOpen])
 
   return (
@@ -162,7 +197,10 @@ export function AppShell({ children }: { children: ReactNode }) {
           <span className="brand-mark" aria-hidden="true">
             <Boxes size={18} strokeWidth={2} />
           </span>
-          <span className="brand-name">ITAM</span>
+          <span className="brand-copy">
+            <span className="brand-name">ITAM</span>
+            <span className="brand-caption">Asset management</span>
+          </span>
           <button
             type="button"
             className="nav-close"

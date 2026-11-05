@@ -113,6 +113,30 @@ export interface paths {
   "/api/v1/auth/providers/": {
     get: operations["auth_providers_list"];
   };
+  "/api/v1/backups/drills/": {
+    get: operations["backups_drills_list"];
+    post: operations["backups_drills_create"];
+  };
+  "/api/v1/backups/jobs/": {
+    get: operations["backups_jobs_list"];
+    post: operations["backups_jobs_create"];
+  };
+  "/api/v1/backups/jobs/{id}/": {
+    get: operations["backups_jobs_retrieve"];
+  };
+  "/api/v1/backups/jobs/{id}/verify/": {
+    post: operations["backups_jobs_verify_create"];
+  };
+  "/api/v1/backups/policy/": {
+    get: operations["backups_policy_retrieve"];
+    patch: operations["backups_policy_partial_update"];
+  };
+  "/api/v1/backups/report/": {
+    get: operations["backups_report_retrieve"];
+  };
+  "/api/v1/backups/summary/": {
+    get: operations["backups_summary_retrieve"];
+  };
   "/api/v1/certificates/": {
     get: operations["certificates_list"];
     post: operations["certificates_create"];
@@ -923,6 +947,66 @@ export interface components {
      * @enum {string}
      */
     AvailabilityEnum: "planned" | "beta" | "available";
+    BackupJob: {
+      /** Format: uuid */
+      id: string;
+      kind: components["schemas"]["BackupJobKindEnum"];
+      status: components["schemas"]["BackupJobStatusEnum"];
+      target_label: string;
+      snapshot_id: string;
+      /** Format: uuid */
+      source: string | null;
+      /** Format: uuid */
+      created_by: string | null;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      started_at: string | null;
+      /** Format: date-time */
+      finished_at: string | null;
+      /** Format: date-time */
+      recovery_point: string | null;
+      size_bytes: number;
+      manifest: unknown;
+      error_message: string;
+      warning: string;
+    };
+    /**
+     * @description * `backup` - Backup
+     * * `verify` - Verification
+     * @enum {string}
+     */
+    BackupJobKindEnum: "backup" | "verify";
+    /**
+     * @description * `queued` - Queued
+     * * `running` - Running
+     * * `succeeded` - Verified
+     * * `failed` - Failed
+     * @enum {string}
+     */
+    BackupJobStatusEnum: "queued" | "running" | "succeeded" | "failed";
+    BackupPolicy: {
+      enabled?: boolean;
+      hour_utc: number;
+      rpo_hours: number;
+      rto_hours: number;
+      keep_daily: number;
+      keep_weekly: number;
+      keep_monthly: number;
+      retention_enabled?: boolean;
+      version: number;
+      /** Format: date-time */
+      modified_at: string;
+    };
+    BackupSummary: {
+      execution_allowed: boolean;
+      target_label: string;
+      encryption: string;
+      off_host: string;
+      last_backup: components["schemas"]["BackupJob"] | null;
+      last_drill: components["schemas"]["RestoreDrill"] | null;
+      problems: string[];
+    };
     /** @enum {unknown} */
     BlankEnum: "";
     /**
@@ -3111,6 +3195,16 @@ export interface components {
       interfaces?: components["schemas"]["InterfaceInputRequest"][];
       ip_addresses?: components["schemas"]["IPAddressInputRequest"][];
     };
+    PatchedBackupPolicyRequest: {
+      enabled?: boolean;
+      hour_utc?: number;
+      rpo_hours?: number;
+      rto_hours?: number;
+      keep_daily?: number;
+      keep_weekly?: number;
+      keep_monthly?: number;
+      retention_enabled?: boolean;
+    };
     /** @description Key and type are immutable so stored values stay valid. */
     PatchedCustomFieldUpdateRequest: {
       label?: string;
@@ -3415,6 +3509,36 @@ export interface components {
      * @enum {string}
      */
     ResourceEnum: "assets";
+    RestoreDrill: {
+      /** Format: uuid */
+      id: string;
+      /** Format: uuid */
+      backup: string;
+      target_label: string;
+      /** Format: date-time */
+      started_at: string;
+      /** Format: date-time */
+      finished_at: string;
+      passed: boolean;
+      notes: string;
+      /** Format: uuid */
+      recorded_by: string;
+      /** Format: date-time */
+      recorded_at: string;
+    };
+    RestoreDrillRequest: {
+      /** Format: uuid */
+      backup: string;
+      target_label: string;
+      /** Format: date-time */
+      started_at: string;
+      /** Format: date-time */
+      finished_at: string;
+      passed: boolean;
+      notes: string;
+      isolated: boolean;
+      outbound_disabled: boolean;
+    };
     /**
      * @description * `` - Not applied
      * * `applied` - Applied
@@ -4809,6 +4933,125 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["AuthProvider"][];
+        };
+      };
+    };
+  };
+  backups_drills_list: {
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["RestoreDrill"][];
+        };
+      };
+    };
+  };
+  backups_drills_create: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RestoreDrillRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["RestoreDrillRequest"];
+        "multipart/form-data": components["schemas"]["RestoreDrillRequest"];
+      };
+    };
+    responses: {
+      201: {
+        content: {
+          "application/json": components["schemas"]["RestoreDrill"];
+        };
+      };
+    };
+  };
+  backups_jobs_list: {
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["BackupJob"][];
+        };
+      };
+    };
+  };
+  backups_jobs_create: {
+    responses: {
+      202: {
+        content: {
+          "application/json": components["schemas"]["BackupJob"];
+        };
+      };
+    };
+  };
+  backups_jobs_retrieve: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["BackupJob"];
+        };
+      };
+    };
+  };
+  backups_jobs_verify_create: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      202: {
+        content: {
+          "application/json": components["schemas"]["BackupJob"];
+        };
+      };
+    };
+  };
+  backups_policy_retrieve: {
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["BackupPolicy"];
+        };
+      };
+    };
+  };
+  backups_policy_partial_update: {
+    parameters: {
+      header: {
+        "If-Match": string;
+      };
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["PatchedBackupPolicyRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["PatchedBackupPolicyRequest"];
+        "multipart/form-data": components["schemas"]["PatchedBackupPolicyRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["BackupPolicy"];
+        };
+      };
+    };
+  };
+  backups_report_retrieve: {
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["BackupSummary"];
+        };
+      };
+    };
+  };
+  backups_summary_retrieve: {
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["BackupSummary"];
         };
       };
     };

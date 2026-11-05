@@ -240,6 +240,15 @@ pnpm run test
 pnpm run build
 ```
 
+## Backups and recovery
+
+Task 019 adds Administration → Backups & Recovery: disabled-by-default nightly policy,
+audited encrypted backup/verification jobs, recovery summary and operator-recorded restore
+drills. The optional `backups` Compose profile runs a separate restricted worker with
+PostgreSQL 16/restic tools. Read [backup commissioning](ops/backup/README.md) and
+[isolated restore](ops/restore/README.md); DEC-09 approval and a tested separate key recovery
+mechanism are required before live operation. There is no production restore button.
+
 ## Key prohibitions
 
 - No additional endpoint agent or native SNMP scanner in V1. LibreNMS already performs network discovery.

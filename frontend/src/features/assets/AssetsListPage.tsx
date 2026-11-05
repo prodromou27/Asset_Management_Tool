@@ -69,12 +69,17 @@ export function AssetsListPage() {
     [...FILTER_KEYS, 'ordering'].map((key) => [key, params.get(key) ?? undefined]),
   )
   const viewId = params.get('view')
-  const [search, setSearch] = useState(filters.q ?? '')
+  const querySearch = filters.q ?? ''
+  const [searchDraft, setSearchDraft] = useState({ query: querySearch, value: querySearch })
+  const search = searchDraft.query === querySearch ? searchDraft.value : querySearch
+  const setSearch = (value: string) => setSearchDraft({ query: querySearch, value })
   const [personalColumns, setPersonalColumns] = useState<AssetColumn[]>(() => loadColumns(me?.id))
   // Unsaved column edits while a saved view is applied (kept per view id).
   const [viewDraft, setViewDraft] = useState<{ id: string; columns: AssetColumn[] } | null>(null)
   const [dialog, setDialog] = useState<'save' | 'delete' | 'columns' | null>(null)
   const [exporting, setExporting] = useState(false)
+  const [selection, setSelection] = useState<{ key: string; ids: Set<string> }>({ key: '', ids: new Set() })
+  const selectionKey = JSON.stringify(filters)
 
   const categories = useQuery({ queryKey: assetKeys.categories, queryFn: fetchCategories })
   const sites = useQuery({ queryKey: assetKeys.sites, queryFn: fetchSites })
@@ -151,6 +156,15 @@ export function AssetsListPage() {
   })
 
   const items = assets.data?.pages.flatMap((page) => page.items) ?? []
+  const selectedIds = can(PERMISSIONS.exportsRun) && selection.key === selectionKey
+    ? items.filter((asset) => selection.ids.has(asset.id)).map((asset) => asset.id)
+    : []
+  function selectAsset(id: string, checked: boolean) {
+    const ids = new Set(selectedIds)
+    if (checked) ids.add(id)
+    else ids.delete(id)
+    setSelection({ key: selectionKey, ids })
+  }
   const total = assets.data?.pages[0]?.count
   const filtered = FILTER_KEYS.some((key) => filters[key])
   const shown = COLUMNS.filter((c) => columns.includes(c.id)).sort(
@@ -187,9 +201,11 @@ export function AssetsListPage() {
         }
       />
       <ExportDialog
+        key={selectedIds.join(',')}
         open={exporting}
         onClose={() => setExporting(false)}
         family="assets"
+        selected={selectedIds.length ? { ids: selectedIds, label: `${selectedIds.length} selected assets` } : undefined}
         filters={Object.fromEntries(
           FILTER_KEYS.flatMap((key) => (filters[key] ? [[key, filters[key] as string]] : [])),
         )}
@@ -330,6 +346,13 @@ export function AssetsListPage() {
       </form>
 
       <section className="panel panel--flush" aria-live="polite">
+        {selectedIds.length > 0 && (
+          <div className="selection-toolbar">
+            <span>{selectedIds.length} selected</span>
+            <Button variant="quiet" onClick={() => setSelection({ key: selectionKey, ids: new Set() })}>Clear selection</Button>
+            <Button onClick={() => setExporting(true)}>Export selected</Button>
+          </div>
+        )}
         {assets.isPending && <LoadingState label="Loading assets…" />}
         {assets.isError && <QueryErrorState error={assets.error} what="assets" />}
         {assets.isSuccess && items.length === 0 && (
@@ -347,6 +370,12 @@ export function AssetsListPage() {
               <caption className="visually-hidden">Assets</caption>
               <thead>
                 <tr>
+                  {can(PERMISSIONS.exportsRun) && <th scope="col" className="selection-cell">
+                    <input type="checkbox" aria-label="Select all loaded assets"
+                      checked={items.length > 0 && selectedIds.length === items.length}
+                      ref={(node) => { if (node) node.indeterminate = selectedIds.length > 0 && selectedIds.length < items.length }}
+                      onChange={(event) => setSelection({ key: selectionKey, ids: new Set(event.target.checked ? items.map((asset) => asset.id) : []) })} />
+                  </th>}
                   {shown.map((column) => (
                     <th key={column.id} scope="col">
                       {column.header}
@@ -356,7 +385,13 @@ export function AssetsListPage() {
               </thead>
               <tbody>
                 {items.map((asset) => (
-                  <tr key={asset.id} className={asset.is_archived ? 'row--archived' : undefined}>
+                  <tr key={asset.id} aria-selected={selectedIds.includes(asset.id)}
+                    className={asset.is_archived ? 'row--archived' : undefined}>
+                    {can(PERMISSIONS.exportsRun) && <td className="selection-cell">
+                      <input type="checkbox" aria-label={`Select ${asset.name}`}
+                        checked={selectedIds.includes(asset.id)}
+                        onChange={(event) => selectAsset(asset.id, event.target.checked)} />
+                    </td>}
                     {shown.map((column) => (
                       <td key={column.id} className={column.className}>
                         {column.render(asset)}

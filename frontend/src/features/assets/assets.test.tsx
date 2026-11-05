@@ -29,6 +29,22 @@ const reference = {
 }
 
 describe('Assets list', () => {
+  it('updates the search field when top-bar search changes the URL on the same page', async () => {
+    const { calls } = mockApi({
+      'GET /auth/me/': { body: readerMe() },
+      ...reference,
+      'GET /assets/': { body: page([]) },
+    })
+    renderApp('/assets?q=first')
+    expect(await screen.findByRole('searchbox', { name: 'Search' })).toHaveValue('first')
+    const globalSearch = screen.getByRole('searchbox', { name: 'Search assets' })
+    fireEvent.change(globalSearch, { target: { value: 'second' } })
+    fireEvent.submit(globalSearch.closest('form')!)
+    await waitFor(() => {
+      expect(screen.getByRole('searchbox', { name: 'Search' })).toHaveValue('second')
+      expect(calls.filter((call) => call.path === '/assets/').at(-1)?.search.get('q')).toBe('second')
+    })
+  })
   it('shows assets with text statuses and honest empty values', async () => {
     mockApi({
       'GET /auth/me/': { body: assetOperatorMe() },

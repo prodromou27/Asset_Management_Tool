@@ -12,18 +12,18 @@
 6. No emoji icons in navigation or dashboard. No giant welcoming hero/banner.
 7. Make dangerous actions visually quieter until intentionally selected, then explicit confirmation.
 
-## Design tokens (owner design review 2026-11-04: "navy console" direction)
+## Design tokens (navy console; broader visual refinement requested 2026-11-05)
 
 The owner rejected the first implementation as plain and dated (style, colours, navigation) and chose a dark navy sidebar with a blue accent. Values live in `frontend/src/styles/tokens.css`; change them only through design review. Dark mode is deferred (the tokens are structured for it).
 
 | Token | Light | Use |
 |---|---|---|
-| Page background | #F4F6F9 | Canvas |
+| Page background | #F6F8FB | Canvas |
 | Main surface | #FFFFFF | Panels, tables, top bar |
 | Muted surface | #F8FAFC | Table header band, search field |
 | Primary text | #152033 | Body |
-| Secondary text | #5B6576 | Metadata, labels (5.9:1 on white) |
-| Hairline / strong border | #E3E7ED / #C9D1DC | Dividers / control outlines |
+| Secondary text | #536276 | Metadata, labels (AA contrast on white) |
+| Hairline / strong border | #DCE3ED / #BCC8D8 | Dividers / control outlines |
 | Brand/action | #2563EB (hover #1D4ED8) | Primary buttons, brand mark (white text 5.2:1) |
 | Link | #1D4ED8 | Links |
 | Success | #15803D | Supported, healthy |
@@ -44,6 +44,14 @@ Desktop >=1280px: persistent dark navy left navigation grouped into Inventory, S
 At 768–1279px collapse optional panels; at <=767px use overlay nav and responsive stacked detail sections. Read-only inventory table may horizontally scroll on small screens with first column pinned. No essential content hidden behind hover alone.
 
 ## Components
+
+Owner requested a broader visual refresh on 2026-11-05 while preserving the navy sidebar.
+Shared headers use a fine divider and wrap actions responsively; filters/saved views sit
+in compact white bordered toolbars; tables have consistent surface boundaries, restrained
+header bands and a pale-blue selected row. Tabs use compact segmented surfaces with a
+blue-tinted active state. Feedback has a clear bordered surface, small monochrome icon for
+empty states, and a left status rule for errors/warnings. No new font/icon dependency,
+gradients, oversized cards or decorative data. Existing 36px controls/40px rows remain.
 
 - AssetTable: sticky header, column chooser, inline status chips, last-seen tooltip, keyboard focus, row selection, bulk toolbar, column widths remembered, saved views.
 - AssetIdentityHeader: hostname + asset ID + category + 3 status dimensions, source freshness and verified/manual badges; not a banner.

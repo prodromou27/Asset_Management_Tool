@@ -1,4 +1,6 @@
-FROM python:3.12-slim AS base
+FROM postgres:16-bookworm AS pgtools
+
+FROM python:3.12-slim-bookworm AS base
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -27,3 +29,15 @@ USER itam
 EXPOSE 8000
 
 CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3"]
+
+# Only the opt-in backup worker receives database tools and repository credentials.
+FROM base AS backup-runner
+USER root
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    restic openssh-client libpq5 liblz4-1 libzstd1 \
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=pgtools /usr/lib/postgresql/16/bin/pg_dump /usr/local/bin/pg_dump
+COPY --from=pgtools /usr/lib/postgresql/16/bin/pg_restore /usr/local/bin/pg_restore
+USER itam
+
+FROM base AS production

@@ -54,6 +54,8 @@ x-backend-env: &backend-env
   ITAM_TLS_CHECK_TIMEOUT_SECONDS: ${ITAM_TLS_CHECK_TIMEOUT_SECONDS:-5}
   ITAM_NOTIFICATION_EXPIRY_HOURS: ${ITAM_NOTIFICATION_EXPIRY_HOURS:-72}
   ITAM_NOTIFICATION_BODY_RETENTION_DAYS: ${ITAM_NOTIFICATION_BODY_RETENTION_DAYS:-14}
+  ITAM_BACKUP_ALLOW_RUN: ${ITAM_BACKUP_ALLOW_RUN:-false}
+  ITAM_BACKUP_TARGET_LABEL: ${ITAM_BACKUP_TARGET_LABEL:-Not configured}
 
 x-backend-depends: &backend-depends
   postgres:
@@ -126,6 +128,33 @@ services:
     depends_on: *backend-depends
     networks:
       - backend
+
+  backup-worker:
+    profiles: ["backups"]
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+      target: backup-runner
+    command: ["celery", "-A", "config", "worker", "--loglevel=INFO", "--queues=backups", "--concurrency=1", "--hostname=backup@%h"]
+    environment:
+      <<: *backend-env
+      DJANGO_SETTINGS_MODULE: config.settings.production
+      RESTIC_REPOSITORY: ${RESTIC_REPOSITORY:-}
+      RESTIC_PASSWORD_FILE: /run/secrets/restic_password
+      ITAM_APP_REVISION: ${ITAM_APP_REVISION:-unrecorded}
+      ITAM_BACKUP_IMAGE_REFERENCE: ${ITAM_BACKUP_IMAGE_REFERENCE:-unrecorded}
+    volumes:
+      - ${ITAM_BACKUP_SECRETS_DIR:-./backup-no-secrets}:/run/secrets:ro
+      - ${ITAM_BACKUP_SSH_DIR:-./backup-no-secrets}:/home/itam/.ssh:ro
+    depends_on: *backend-depends
+    read_only: true
+    tmpfs:
+      - /tmp:mode=1777
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    restart: unless-stopped
+    networks: [backend]
 
   frontend:
     networks:
