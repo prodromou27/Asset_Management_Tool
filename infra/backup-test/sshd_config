@@ -1,7 +1,7 @@
 Port 22
 PidFile /run/sshd/sshd.pid
-HostKey /run/fixture-keys/host_key
-AuthorizedKeysFile /run/fixture-keys/authorized_keys
+HostKey /etc/ssh/fixture_host_key
+AuthorizedKeysFile /home/backup/.ssh/authorized_keys
 PermitRootLogin no
 PasswordAuthentication no
 KbdInteractiveAuthentication no

@@ -2,6 +2,7 @@
 
 import json
 import os
+import secrets
 import subprocess
 import sys
 import uuid
@@ -79,7 +80,7 @@ def _roundtrip(tmp_path):
     )
     audit.record(action="backups.drill_fixture", object_type="asset", object_id=asset.pk)
     password = tmp_path / "password"
-    password.write_text("disposable-ci-repository-password")
+    password.write_text(secrets.token_urlsafe(48))
     env = dict(
         os.environ,
         RESTIC_REPOSITORY=str(tmp_path / "repository"),

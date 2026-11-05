@@ -6,4 +6,5 @@ RUN apt-get update && apt-get install -y --no-install-recommends openssh-server 
     && passwd -d backup && mkdir -p /run/sshd /repository \
     && chown backup:backup /repository
 COPY sshd_config /etc/ssh/sshd_config
-CMD ["/usr/sbin/sshd", "-D", "-e"]
+COPY start.sh /usr/local/bin/start-fixture
+CMD ["sh", "/usr/local/bin/start-fixture"]
