@@ -13,6 +13,8 @@ Acceptance: frontend workflow tests, lint/typecheck/build, representative deskto
 and mobile visual inspection; browser script checks exceptions, unmapped fixtures,
 page overflow and focus behavior. Document final visual direction and real results.
 
-Status: implemented and locally verified. 207 frontend tests, lint/typecheck/build
-and 57 browser captures passed. Details: UI_REDESIGN_REPORT.md.
-Next: push DEV and confirm CI. Production gates remain disabled.
+Status: COMPLETE for the requested UI implementation and local acceptance.
+Implementation 61a2bec is pushed to DEV. 207 frontend tests, lint/typecheck/build
+and 57 browser captures passed. Details and CI evidence link: UI_REDESIGN_REPORT.md.
+Next: verify DEV CI and hand off the design for owner review; no new epic is started.
+Production gates remain disabled.
