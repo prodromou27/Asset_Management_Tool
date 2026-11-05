@@ -131,7 +131,7 @@ function Queue() {
           label="Status"
           name="status"
           options={[
-            { value: '', label: 'Needs decision (open and on hold)' },
+            { value: '', label: 'Needs decision' },
             ...Object.entries(CANDIDATE_STATUS).map(([value, label]) => ({ value, label })),
             { value: 'all', label: 'All' },
           ]}

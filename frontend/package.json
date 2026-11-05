@@ -12,6 +12,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "e2e": "playwright test",
+    "review:ui": "node scripts/ui-review.mjs",
     "preview": "vite preview",
     "gen:api": "openapi-typescript src/shared/api/openapi.yaml -o src/shared/api/schema.d.ts && oxlint src/shared/api"
   },

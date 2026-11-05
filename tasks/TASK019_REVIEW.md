@@ -23,10 +23,24 @@ No TODO/FIXME/HACK markers were found in the reviewed application/ops/infra sour
 Documented operator decisions remain open, especially DEC-09 and DEC-08/14; unresolved
 decisions are not reported as implemented production controls.
 
-## Remaining phases
+## Phase 2 UI evidence
 
-Phase 2: extend real-browser screenshots/keyboard/layout checks to all requested areas;
-record reusable UI refinements in a separate commit.
+Shared dialog titles/actions remain visible while the body scrolls; settings action rows
+and section headers wrap; account-panel focus/Escape behavior and breadcrumb semantics
+are consistent. Mobile linked-record name columns have a readable minimum width, and the
+Discovery default filter has a concise label. The SMTP action-row overflow and cramped
+integration name were found by actual browser inspection and corrected.
+
+`pnpm review:ui` uses only loopback Vite and synthetic API fixtures. **29 screenshots** at
+1440×900/390×844 cover Assets (28 rows and detail), Discovery, Lifecycle, Integrations
+(including a long name), Software & Licenses, domains, administration and security/SMTP/
+backup settings, plus loading/error/denied states and a mobile dialog. It asserts no
+browser exceptions, unmapped fixture requests or document overflow, visible dialog actions,
+and navigation focus return. Artifacts: `frontend/test-results/task019-review/` (ignored).
+Forty focused UI tests, typecheck, oxlint and production build passed. The existing
+large-bundle warning remains; no performance claim is made from screenshots.
+
+## Remaining phase
 
 Phase 3: close backup manifest/reporting and isolated-storage/restore evidence gaps against
 the new request, preserving the current architecture and migration history.

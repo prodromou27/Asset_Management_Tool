@@ -85,7 +85,12 @@ function UserMenu() {
 
   useEffect(() => {
     if (!open) return
-    const onKey = (event: KeyboardEvent) => event.key === 'Escape' && setOpen(false)
+    ref.current?.querySelector<HTMLElement>('.user-menu__item')?.focus()
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      setOpen(false)
+      ref.current?.querySelector<HTMLElement>('.user-menu__trigger')?.focus()
+    }
     const onClick = (event: MouseEvent) =>
       ref.current && !ref.current.contains(event.target as Node) && setOpen(false)
     document.addEventListener('keydown', onKey)
@@ -241,13 +246,13 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Menu size={20} aria-hidden="true" />
           </button>
           {where.page && (
-            <p className="top-bar__context">
+            <nav className="top-bar__context" aria-label="Breadcrumb">
               <span className="top-bar__section">{where.section}</span>
               <span className="top-bar__sep" aria-hidden="true">
                 /
               </span>
-              <span className="top-bar__page">{where.page}</span>
-            </p>
+              <span className="top-bar__page" aria-current="page">{where.page}</span>
+            </nav>
           )}
           <div className="top-bar__end">
             {!restricted && <GlobalSearch />}

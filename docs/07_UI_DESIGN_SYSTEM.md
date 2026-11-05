@@ -53,6 +53,13 @@ blue-tinted active state. Feedback has a clear bordered surface, small monochrom
 empty states, and a left status rule for errors/warnings. No new font/icon dependency,
 gradients, oversized cards or decorative data. Existing 36px controls/40px rows remain.
 
+Supplemental review: long modal bodies scroll independently while title/actions remain
+within the viewport; settings actions and section headers wrap on mobile. The account
+panel moves focus to its first action and Escape returns focus to its opener. The top-bar
+context is a labelled breadcrumb navigation. `pnpm review:ui` exercises synthetic local
+fixtures at 1440×900 and 390×844, records screenshots under `test-results/task019-review`,
+and fails on browser exceptions, unmapped API fixtures, page overflow or lost drawer focus.
+
 - AssetTable: sticky header, column chooser, inline status chips, last-seen tooltip, keyboard focus, row selection, bulk toolbar, column widths remembered, saved views.
 - AssetIdentityHeader: hostname + asset ID + category + 3 status dimensions, source freshness and verified/manual badges; not a banner.
 - SourceEvidenceDrawer: observed value, normalized value, integration name, timestamp, confidence, conflict, override action.

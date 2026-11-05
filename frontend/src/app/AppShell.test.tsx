@@ -25,6 +25,17 @@ describe('locate', () => {
 })
 
 describe('application shell', () => {
+  it('moves focus into the account panel and restores it on Escape', async () => {
+    mockApi({ 'GET /auth/me/': { body: makeMe() }, 'GET /health/ready/': readyOk })
+    renderApp('/')
+    const trigger = await screen.findByRole('button', { expanded: false, name: /admin/i })
+    fireEvent.click(trigger)
+    expect(screen.getByRole('link', { name: 'Change password' })).toHaveFocus()
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(trigger).toHaveFocus()
+    expect(trigger).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toHaveTextContent('System health')
+  })
   it('keeps the session visible when sign out fails and allows a retry', async () => {
     let attempts = 0
     mockApi({

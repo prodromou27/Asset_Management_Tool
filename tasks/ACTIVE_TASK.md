@@ -17,6 +17,11 @@ Phase 1 verification: 45 focused backend tests passed (SQLite fallback), includi
 reproduced cross-site case; 15 shell tests, frontend typecheck/oxlint and targeted Ruff
 checks passed. Findings and coverage are recorded in `tasks/TASK019_REVIEW.md`.
 
+Phase 2: shared modal/footer layout, account focus/breadcrumbs, wrapping settings actions,
+readable mobile record names and concise Discovery filter labels. Browser review:
+29 screenshots covering all requested areas/states, no exceptions/unmapped fixtures/page
+overflow, and keyboard checks passed. Forty focused UI tests, typecheck, lint/build passed.
+
 Status: **Complete (CI run 42006140665 green)** (2026-11-05, DEV; implementation `8b7fd97`).
 Owner also requested a whole-UI/functionality
 review and refinement. Preserve the navy console design and completed workflows.
