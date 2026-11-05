@@ -11,7 +11,8 @@ permissions:
 jobs:
   backend:
     name: Backend (PostgreSQL + Redis)
-    runs-on: ubuntu-latest
+    # Match the PostgreSQL 16 client package to the database/restore image.
+    runs-on: ubuntu-24.04
     services:
       postgres:
         image: postgres:16-alpine

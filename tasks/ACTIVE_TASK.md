@@ -62,6 +62,11 @@ Next action: monitor CI and record its result. DEC-09 (real target, key recovery
 policy/objectives, host sizing and timed staging rehearsal), DEC-08/14 live alert delivery
 and future external media remain operational gates. Do not start Task 020 automatically.
 
+First CI run 42002909168: frontend passed; backend stopped before tests because
+`ubuntu-latest` is now Ubuntu 26.04 and does not provide `postgresql-client-16` in its
+default package sources. Pin the backend runner to Ubuntu 24.04 to keep the client and
+server/restore image on PostgreSQL 16. No application test failure in this run.
+
 ---
 
 # Previous record: Task 018b | Notification rules
