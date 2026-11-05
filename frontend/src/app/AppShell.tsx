@@ -8,6 +8,7 @@ import { getDisplayTimezoneWarning } from '../shared/format'
 import { locate, SECTIONS, type NavItem } from './navigation'
 import { useSession } from './useSession'
 import { ThemeToggle } from './theme'
+import { AssetTypeNav } from './AssetTypeNav'
 
 function initials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean)
@@ -15,13 +16,14 @@ function initials(name: string): string {
   return letters.toUpperCase()
 }
 
-function NavList({ items, onNavigate }: { items: NavItem[]; onNavigate: () => void }) {
-  const { pathname } = useLocation()
+function NavList({ items, onNavigate, visible }: { items: NavItem[]; onNavigate: () => void; visible: boolean }) {
+  const { pathname, search } = useLocation()
   return (
     <ul className="nav-list">
       {items.map(({ to, label, icon: Icon, end, also }) => {
         const under = (root: string) => pathname === root || pathname.startsWith(`${root}/`)
-        const active = pathname === to || (!end && to !== '/' && under(to)) || (also ?? []).some(under)
+        const active = (pathname === to || (!end && to !== '/' && under(to)) || (also ?? []).some(under))
+          && !(to === '/assets' && pathname === '/assets' && new URLSearchParams(search).has('category'))
         return (
         <li key={to}>
           <Link
@@ -34,6 +36,7 @@ function NavList({ items, onNavigate }: { items: NavItem[]; onNavigate: () => vo
             <span className="nav-link__label">{label}</span>
             {active && <ChevronRight className="nav-link__current" size={14} aria-hidden="true" />}
           </Link>
+          {to === '/assets' && visible && <AssetTypeNav onNavigate={onNavigate} />}
         </li>
         )
       })}
@@ -260,7 +263,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               <p className="nav-section" id={`nav-${section.id}`}>
                 {section.label}
               </p>
-              <div className="nav-items" id={`nav-items-${section.id}`}><NavList items={section.items} onNavigate={() => setNavOpen(false)} /></div>
+              <div className="nav-items" id={`nav-items-${section.id}`}><NavList items={section.items} visible={currentSection === section.label || navOpen} onNavigate={() => setNavOpen(false)} /></div>
             </div>
           ))}
         </div>

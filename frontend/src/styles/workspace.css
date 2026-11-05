@@ -47,6 +47,12 @@
 .nav-link--active { background: var(--color-nav-active); border-left-color: var(--color-nav-accent); font-weight: 600; }
 .nav-link__current { display: none; }
 .nav-link__icon { flex-shrink: 0; width: 16px; height: 16px; color: var(--color-text-secondary); }
+.asset-types { margin: 4px 0 12px; }
+.asset-types__heading { margin: 10px 16px 4px 38px; color: var(--color-text-secondary); font-size: 10px; text-transform: uppercase; letter-spacing: .05em; }
+.asset-types__note { margin: 8px 16px 8px 38px; font-size: 11px; color: var(--color-text-secondary); }
+.asset-types__note button { border: 0; padding: 0; background: none; color: var(--color-link); font: inherit; text-decoration: underline; cursor: pointer; }
+.asset-type-link { padding-left: 30px; min-height: 32px; font-size: 12px; }
+.asset-type-link span { overflow-wrap: anywhere; min-width: 0; }
 .nav-backdrop { display: none; }
 .app-shell__body { margin-left: var(--shell-sidebar-size); min-width: 0; }
 .app-shell__main { padding: 0 24px 32px; }

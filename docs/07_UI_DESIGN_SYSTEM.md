@@ -57,6 +57,15 @@ controls sit above a wide search/filter bar and table. Filters/sorting expand on
 desktop and mobile, expose their active count and preserve URL state when collapsed.
 Do not reintroduce the separate filter rail or top-only module navigation.
 
+The Inventory sidebar includes an Asset types section beneath Assets. Links use
+active root categories from the existing category API, including Workstations,
+Servers, Printers and administrator-defined types. They open a fresh category-filtered
+asset list; backend category filters include descendants and retain current site/RBAC
+scope. The selected category names the page; child filters highlight their root type.
+Assets returns to the unfiltered authorized list. Inactive roots are hidden. No counts
+or fallback categories are fabricated. Metadata errors offer Retry. Existing manual/
+dynamic Groups remain separate and do not grant access. No new category data is seeded.
+
 Detail pages use compact baseline tabs, restrained status chips, a main evidence/form
 column and a muted right-side ownership/record panel. Stack at narrow widths. Forms
 use labelled white controls with clear borders; dialogs have simple divided action

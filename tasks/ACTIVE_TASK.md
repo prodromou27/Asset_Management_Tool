@@ -1,19 +1,17 @@
-# Current task: IT Glue-inspired UI (2026-11-05)
+# Current task: Asset type navigation (2026-11-05)
 
-Owner rejected prior designs and named IT Glue as the visual reference. Baseline
-3624584. This supersedes the forest theme and top-only navigation direction.
+Owner approved the IT Glue-inspired UI and requested missing asset group/type links:
+Workstations, Servers, Printers and other existing categories. Baseline e1d84d0.
 Read: AGENTS.md, docs/00_MASTER_DECISIONS.md, docs/07_UI_DESIGN_SYSTEM.md.
-History: FULL_UI_REDESIGN_REPORT.md and FULL_UI_REDESIGN_OUTCOME.md.
 
-Implement independently written UI using the reference's purple global navigation,
-light contextual sidebar, flat white content, teal secondary actions/links, green
-create actions, compact inventory lists and right-side detail panels. Adapt to this
-single-organization ITAM app; preserve workflows/RBAC/API and usable dark mode.
-No IT Glue source/assets/branding are shipped. No new packages or production access.
+Expose active root asset categories in the Inventory sidebar using existing metadata,
+category-filtered asset queries and site/RBAC rules. Root filters include descendants.
+Keep static/dynamic Groups separate. No hardcoded category data, new schema or API.
+Category pages use the selected type name; allow return to all assets. Preserve UI.
 
-Acceptance: frontend workflow tests, lint/types/build; desktop/mobile screenshots
-and browser checks in both themes; navigation, filtering, persistence, focus and
-error states. Status: COMPLETE for implementation and local acceptance: 210 tests,
-lint/types/build and 103 browser captures passed. See ITGLUE_UI_REPORT.md.
-Next: push DEV, verify CI and hand off the reference-led design for owner review.
-Do not start Task 022. Production gates remain disabled.
+Acceptance: root/child selection, inactive/custom categories, permissions, metadata
+errors/retry, page titles and URL filtering; existing workflow tests, lint/types/build,
+desktop/mobile browser review in both themes. Status: COMPLETE for local acceptance:
+214 frontend tests, 26 backend scope/category tests, lint/types/build and 112 browser
+captures passed. Details: ASSET_TYPES_REPORT.md. Next: push DEV, verify CI and hand
+off category navigation. Do not start Task 022 or enable live services.

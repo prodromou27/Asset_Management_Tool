@@ -3,7 +3,7 @@ import { chromium } from '@playwright/test'
 import fs from 'node:fs/promises'
 
 // Synthetic API responses only. No backend, vendor connector or SMTP service is contacted.
-const output = 'test-results/itglue-inspired-review'
+const output = 'test-results/asset-types-review'
 await fs.mkdir(output, { recursive: true })
 let screenshots = 0
 const capture = async (page, name, fullPage = true) => {
@@ -18,7 +18,10 @@ const policy = { enabled: false, hour_utc: 2, rpo_hours: 24, rto_hours: 4, keep_
 const general = { organization_name: 'ITAM', timezone: 'Asia/Nicosia', date_format: 'day_month_year', language: 'en', support_contact: '', version: 1, modified_at: '2026-11-05T00:00:00Z', modified_by: null }
 me.display_preferences = { ...general }
 const site = { id: 'site', code: 'HQ', name: 'Headquarters', is_active: true, parent: null }
-const category = { id: 'switch', code: 'switch', name: 'Switch', path: 'Networking / Switch', parent: null, depth: 0, is_active: true }
+const rootCategory = (id, name) => ({ id, code: id, name, path: name, parent: null, depth: 0, is_active: true })
+const typeCategories = [rootCategory('workstations', 'Workstations'), rootCategory('servers', 'Servers'), rootCategory('networking', 'Networking'), rootCategory('printers', 'Printers')]
+const category = { id: 'switch', code: 'switch', name: 'Switch', path: 'Networking / Switch', parent: 'networking', depth: 1, is_active: true }
+const laptopCategory = { ...rootCategory('laptop', 'Laptop'), path: 'Workstations / Laptop', parent: 'workstations', depth: 1 }
 const assets = Array.from({ length: 28 }, (_, i) => ({
   id: `asset-${i}`, name: `sw-floor-${String(i + 1).padStart(2, '0')}`, asset_tag: `IT-${1000 + i}`,
   category, manufacturer: 'Fixture Networks', model: 'Fixture 48', serial_number: `TEST-SERIAL-${i}`,
@@ -27,6 +30,11 @@ const assets = Array.from({ length: 28 }, (_, i) => ({
   support_status: 'unknown', is_archived: false, last_seen_at: null, source_count: 0,
   modified_at: '2026-11-05T00:00:00Z', version: 1,
 }))
+assets.push(...[
+  ['workstation', 'ws-user-01', laptopCategory],
+  ['server', 'srv-core-01', typeCategories[1]],
+  ['printer', 'prn-office-01', typeCategories[3]],
+].map(([id, name, assetCategory]) => ({ ...assets[0], id, name, category: assetCategory, model: 'Synthetic type fixture', asset_tag: `FIXTURE-${id}`, serial_number: `TEST-${id}` })))
 const pageData = (items) => ({ items, next_cursor: null, previous_cursor: null, count: items.length })
 const fixtureSource = { code: 'fixture', name: 'Sanitized fixture import', kind: 'import', availability: 'available', description: 'Synthetic review source', instance_count: 1, has_adapter: false, required_permissions: [] }
 const fixtureIntegration = {
@@ -52,7 +60,7 @@ const routes = {
   ] },
   '/auth/me/': me, '/backups/policy/': policy, '/backups/jobs/': [], '/backups/drills/': [],
   '/backups/summary/': { execution_allowed: false, target_label: 'Not configured', encryption: 'Restic authenticated encryption; key custody approval required', off_host: 'SFTP repository required; validate physical separation at commissioning', last_backup: null, last_drill: null, problems: ['Setup incomplete: deployment approval and repository/key provisioning needed (DEC-09).', 'Nightly backups are disabled.', 'No verified backup recorded.', 'No isolated restore drill recorded.'] },
-  '/assets/': pageData(assets), '/asset-categories/': [category], '/sites/': [site], '/saved-views/': [],
+  '/assets/': pageData(assets), '/asset-categories/': [...typeCategories, laptopCategory, category], '/sites/': [site], '/saved-views/': [],
   '/integrations/': [fixtureIntegration], '/health/ready/': { status: 'ok', dependencies: { database: { status: 'up', detail: '' }, redis: { status: 'up', detail: '' } } },
   '/locations/': [], '/departments/': [], '/domains/': pageData([]),
   '/certificates/': pageData([]), '/tls-endpoints/': pageData([]),
@@ -90,6 +98,12 @@ try {
   page.on('pageerror', (error) => errors.push(error.message))
   await page.route('**/api/v1/**', async (route) => {
     const key = new URL(route.request().url()).pathname.replace('/api/v1', '')
+    const selectedCategory = new URL(route.request().url()).searchParams.get('category')
+    if (key === '/assets/' && selectedCategory && !responses.has(key)) {
+      const filtered = assets.filter((asset) => asset.category.id === selectedCategory || asset.category.parent === selectedCategory)
+      await route.fulfill({ contentType: 'application/json', body: JSON.stringify(pageData(filtered)) })
+      return
+    }
     if (key === '/reports/schedules/' && route.request().method() === 'POST') {
       const schedule = { ...route.request().postDataJSON(), id: 'fixture-schedule', version: 1, created_at: '2026-11-05T00:00:00Z', modified_at: '2026-11-05T00:00:00Z' }
       routes['/reports/schedules/'] = [schedule]
@@ -169,6 +183,34 @@ try {
   await capture(page, 'backups-mobile')
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)
   if (overflow) throw new Error('Mobile page overflows viewport')
+  await page.setViewportSize({ width: 1440, height: 900 })
+  for (const [id, name, expected] of [['workstations', 'Workstations', 'ws-user-01'], ['servers', 'Servers', 'srv-core-01'], ['printers', 'Printers', 'prn-office-01']]) {
+    await page.goto('http://127.0.0.1:5197/assets')
+    await page.getByRole('link', { name, exact: true }).click()
+    await page.waitForURL(`**/assets?category=${id}`)
+    await page.getByRole('heading', { name, exact: true }).waitFor()
+    const results = page.getByRole('table', { name: 'Assets', exact: true })
+    await results.getByRole('link', { name: expected, exact: true }).waitFor()
+    if (await results.locator('tbody tr').count() !== 1) throw new Error(`Incorrect type fixture rows for ${name}`)
+    if (await page.getByRole('link', { name, exact: true }).getAttribute('aria-current') !== 'page') throw new Error('Asset type is not highlighted')
+    await capture(page, `asset-type-${id}-desktop`)
+    await page.getByRole('button', { name: 'Switch to dark theme' }).click()
+    await capture(page, `asset-type-${id}-desktop-dark`)
+    await page.getByRole('button', { name: 'Switch to light theme' }).click()
+  }
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('http://127.0.0.1:5197/assets?category=laptop')
+  await page.getByRole('heading', { name: 'Laptop', exact: true }).waitFor()
+  await page.getByRole('button', { name: 'Open navigation' }).click()
+  if (await page.getByRole('link', { name: 'Workstations', exact: true }).getAttribute('aria-current') !== 'page') throw new Error('Child category does not highlight its parent')
+  await capture(page, 'asset-types-navigation-mobile', false)
+  await page.getByRole('link', { name: 'Servers', exact: true }).click()
+  await page.getByRole('heading', { name: 'Servers', exact: true }).waitFor()
+  if (await page.getByRole('button', { name: 'Open navigation' }).getAttribute('aria-expanded') !== 'false') throw new Error('Type selection did not close mobile navigation')
+  await capture(page, 'asset-type-servers-mobile')
+  await page.getByRole('button', { name: 'Switch to dark theme' }).click()
+  await capture(page, 'asset-type-servers-mobile-dark')
+  await page.getByRole('button', { name: 'Switch to light theme' }).click()
   for (const [url, label] of [
     ['/assets/asset-0', 'asset-detail'], ['/discovery', 'discovery'],
     ['/lifecycle', 'lifecycle'], ['/admin/integrations', 'integrations'],

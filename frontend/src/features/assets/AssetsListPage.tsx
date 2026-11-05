@@ -99,6 +99,7 @@ export function AssetsListPage() {
   })
 
   const activeView = views.data?.find((v) => v.id === viewId) ?? null
+  const activeCategory = categories.data?.find((category) => category.id === filters.category)
   const viewFilters = activeView ? { ...activeView.filters, ...(activeView.ordering ? { ordering: activeView.ordering } : {}) } : null
   const currentFilters = Object.fromEntries(
     Object.entries(filters).filter(([, v]) => v !== undefined && v !== ''),
@@ -176,7 +177,7 @@ export function AssetsListPage() {
   return (
     <div className="page page--wide">
       <PageHeader
-        title="Assets"
+        title={activeCategory?.name ?? 'Assets'}
         meta={
           total === undefined
             ? 'Assets in the sites you can access'
