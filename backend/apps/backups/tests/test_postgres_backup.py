@@ -3,6 +3,8 @@
 import json
 import os
 import shutil
+import subprocess
+import sys
 import uuid
 from pathlib import Path
 
@@ -10,29 +12,29 @@ import pytest
 from django.db import connection
 from django.utils import timezone
 
-from apps.audit import services as audit
-from apps.backups import runner
-from apps.domains.models import Certificate, DomainRegistration
-from apps.groups.models import AssetGroup
-from apps.imports.crypto import decrypt, encrypt
-from apps.imports.models import ImportJob
-from apps.licensing.models import LicenseEntitlement, LicenseProduct
-from apps.lifecycle.models import LifecycleProduct
 
-
-@pytest.mark.integration
-@pytest.mark.django_db(transaction=True)
-def test_real_dump_encrypted_repository_and_isolated_restore(
-    tmp_path, monkeypatch, make_asset, hq, switch, admin_user
-):
-    if connection.vendor != "postgresql":
-        pytest.skip("Real backup/restore requires PostgreSQL and restic (CI).")
+def _roundtrip(tmp_path):
     import psycopg
     from psycopg import sql
 
-    monkeypatch.setenv("ITAM_APP_REVISION", "1" * 40)
-    monkeypatch.setenv("ITAM_BACKUP_IMAGE_REFERENCE", "fixture/backup@sha256:" + "2" * 64)
-    asset = make_asset(site=hq, category=switch)
+    from apps.accounts.models import User
+    from apps.assets.models import Asset, AssetCategory
+    from apps.audit import services as audit
+    from apps.backups import runner
+    from apps.domains.models import Certificate, DomainRegistration
+    from apps.groups.models import AssetGroup
+    from apps.imports.crypto import decrypt, encrypt
+    from apps.imports.models import ImportJob
+    from apps.licensing.models import LicenseEntitlement, LicenseProduct
+    from apps.lifecycle.models import LifecycleProduct
+    from apps.organizations.models import Site
+
+    os.environ["ITAM_APP_REVISION"] = "1" * 40
+    os.environ["ITAM_BACKUP_IMAGE_REFERENCE"] = "fixture/backup@sha256:" + "2" * 64
+    admin_user = User.objects.create_user("restore.fixture", "disposable-test-password")
+    site = Site.objects.create(code="RESTORE", name="Restore fixture")
+    category = AssetCategory.objects.create(code="restore-fixture", name="Restore fixture")
+    asset = Asset.objects.create(name="Restore fixture", site=site, category=category)
     group = AssetGroup.objects.create(name="Restore fixture", kind="static")
     domain = DomainRegistration.objects.create(fqdn="restore.example.invalid")
     certificate = Certificate.objects.create(
@@ -83,7 +85,7 @@ def test_real_dump_encrypted_repository_and_isolated_restore(
         RESTIC_CACHE_DIR=str(tmp_path / "cache"),
     )
     runner.run(["restic", "init"], env=env)
-    monkeypatch.setattr(runner, "repository_env", lambda: env)
+    runner.repository_env = lambda: env  # Only this disposable child process uses a local repo.
     snapshot, manifest = runner.backup(uuid.uuid4())
     assert len(snapshot) == 64
     assert manifest["counts"]["assets_asset"] >= 1
@@ -150,3 +152,50 @@ def test_real_dump_encrypted_repository_and_isolated_restore(
                 recovered.execute("UPDATE notifications_smtpprofile SET enabled=false")
         finally:
             control.execute(sql.SQL("DROP DATABASE {}").format(sql.Identifier(target)))
+
+
+@pytest.mark.integration
+@pytest.mark.django_db
+def test_real_dump_encrypted_repository_and_isolated_restore(tmp_path):
+    if connection.vendor != "postgresql":
+        pytest.skip("Real backup/restore requires PostgreSQL and restic (CI).")
+    import psycopg
+    from psycopg import sql
+
+    db = connection.settings_dict
+    source = "itam_backup_source_" + uuid.uuid4().hex
+    params = dict(host=db["HOST"], port=db["PORT"], user=db["USER"], password=db["PASSWORD"])
+    # Normal pytest transaction rollback remains intact. The actual source DB has its own
+    # committed fixtures and production audit triggers; cleanup drops only this new DB.
+    with psycopg.connect(dbname="postgres", autocommit=True, **params) as control:
+        control.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(source)))
+        try:
+            env = dict(
+                os.environ,
+                POSTGRES_DB=source,
+                POSTGRES_HOST=str(db["HOST"]),
+                POSTGRES_PORT=str(db["PORT"]),
+                POSTGRES_USER=db["USER"],
+                POSTGRES_PASSWORD=db["PASSWORD"],
+                DJANGO_SETTINGS_MODULE="config.settings.test",
+            )
+            env.pop("ITAM_TEST_DB_SQLITE", None)
+            result = subprocess.run(
+                [sys.executable, str(Path(__file__).resolve()), str(tmp_path)],
+                env=env,
+                capture_output=True,
+                timeout=300,
+            )
+            assert result.returncode == 0, result.stderr.decode()
+        finally:
+            control.execute(sql.SQL("DROP DATABASE {}").format(sql.Identifier(source)))
+
+
+if __name__ == "__main__":
+    sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+    import django
+    from django.core.management import call_command
+
+    django.setup()
+    call_command("migrate", verbosity=0, interactive=False)
+    _roundtrip(Path(sys.argv[1]))

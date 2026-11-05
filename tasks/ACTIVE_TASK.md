@@ -67,6 +67,12 @@ First CI run 42002909168: frontend passed; backend stopped before tests because
 default package sources. Pin the backend runner to Ubuntu 24.04 to keep the client and
 server/restore image on PostgreSQL 16. No application test failure in this run.
 
+Second CI run 42003267036: all **792 backend tests passed**, but pytest's transaction-test
+teardown attempted to TRUNCATE the immutable audit table and was correctly refused.
+Move the real backup round-trip scenario into a fresh source database in a child process;
+drop only that disposable source DB afterward. Keep the normal pytest rollback and all
+production audit triggers enabled. Frontend **189 passed**; Docker job waits for backend.
+
 ---
 
 # Previous record: Task 018b | Notification rules
