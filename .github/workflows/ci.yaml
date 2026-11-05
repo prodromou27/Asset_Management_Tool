@@ -172,7 +172,7 @@ jobs:
       - name: Build production images
         run: bash scripts/compose.sh prod build api frontend
       - name: Build restricted backup worker
-        run: docker compose -f infra/compose.yaml -f infra/compose.prod.yaml --profile backups build backup-worker
+        run: docker compose --env-file .env -f infra/compose.yaml -f infra/compose.prod.yaml --profile backups build backup-worker
       - name: Download synthetic restore fixture
         uses: actions/download-artifact@v4
         with:

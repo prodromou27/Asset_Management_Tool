@@ -77,6 +77,12 @@ Third CI run 42004466042: **791 passed, 1 failed**; the new child-process fixtur
 the required user display name. Add it and exercise the fixture setup locally before
 external tools so this validation is covered by the SQLite fallback too.
 
+Fourth CI run 42005237560: backend **793 passed, 0 skipped**, frontend **189 passed**,
+migration reversal/schema synchronization and API/frontend production images passed.
+The optional backup-worker build command omitted `--env-file .env` and could not read
+the throwaway CI environment. Supply the explicit env file (as in the operator runbook)
+and assert PostgreSQL/restic binaries load during backup-image build.
+
 ---
 
 # Previous record: Task 018b | Notification rules

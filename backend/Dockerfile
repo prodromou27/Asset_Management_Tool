@@ -39,5 +39,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY --from=pgtools /usr/lib/postgresql/16/bin/pg_dump /usr/local/bin/pg_dump
 COPY --from=pgtools /usr/lib/postgresql/16/bin/pg_restore /usr/local/bin/pg_restore
 USER itam
+RUN pg_dump --version && pg_restore --version && restic version
 
 FROM base AS production
