@@ -1,17 +1,21 @@
-# Current task: Asset type navigation (2026-11-05)
+# Current task: 022a | Local pilot preparation and real API/browser rehearsal
 
-Owner approved the IT Glue-inspired UI and requested missing asset group/type links:
-Workstations, Servers, Printers and other existing categories. Baseline e1d84d0.
-Read: AGENTS.md, docs/00_MASTER_DECISIONS.md, docs/07_UI_DESIGN_SYSTEM.md.
+Owner requested continuation and chose local preparation first (2026-11-05).
+Baseline 4a6e64d. Task 021 and the approved UI/category navigation are complete.
+Read: AGENTS.md, docs/00, docs/12-17 and docs/20. Do not deploy to a host.
 
-Expose active root asset categories in the Inventory sidebar using existing metadata,
-category-filtered asset queries and site/RBAC rules. Root filters include descendants.
-Keep static/dynamic Groups separate. No hardcoded category data, new schema or API.
-Category pages use the selected type name; allow return to all assets. Preserve UI.
+Bounded slice: replace the unauthenticated E2E placeholder with an isolated, real
+Django test-database + React/Playwright loopback rehearsal; synthetic accounts/data,
+real login/CSRF, category filtering, asset registration, scoped group/report/export,
+cross-site read/write refusal and disabled-session revocation. Reuse current services.
+Add reproducible local/CI execution, an evidence matrix and staging handoff checklist.
+No new dependencies, public listeners, vendor/SMTP calls or production migrations.
 
-Acceptance: root/child selection, inactive/custom categories, permissions, metadata
-errors/retry, page titles and URL filtering; existing workflow tests, lint/types/build,
-desktop/mobile browser review in both themes. Status: COMPLETE for local acceptance:
-214 frontend tests, 26 backend scope/category tests, lint/types/build and 112 browser
-captures passed. Details: ASSET_TYPES_REPORT.md. Next: push DEV, verify CI and hand
-off category navigation. Do not start Task 022 or enable live services.
+Acceptance: real backend/browser roundtrip and DB audit assertions, secret-free
+summary, loopback network guard, test-only DB guard, lint/types/build and PostgreSQL
+CI. SQLite can support local functional proof but cannot prove PostgreSQL scale.
+Status: implemented and locally verified. Four pytest checks passed, including the
+14-scenario real browser/API rehearsal; lint/types/build passed. TASK022A_REPORT.md
+records proof and limits. Next: push DEV and verify PostgreSQL/Chromium CI, then
+Task 022b reference-load measurements. Task 022 overall remains open for load/security/
+UAT/recovery and AlmaLinux host gates; operator decisions remain required.

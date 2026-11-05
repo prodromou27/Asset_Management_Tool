@@ -4,6 +4,10 @@ Target: **single AlmaLinux OS 10.2 VM/server** (latest stable verified on 2 Nove
 
 ## 0. Preflight (operator must fill)
 
+Before an approved host is available, use `ops/pilot/README.md` for the isolated local
+API/browser rehearsal. It creates only a pytest test database and loopback listeners;
+passing it does not prove AlmaLinux/Docker compatibility or approve the host checks below.
+
 | Item | Required check |
 |---|---|
 | OS | Install/record AlmaLinux OS 10.2 GA, architecture (prefer x86_64 if infrastructure supports it), kernel, repos and fully patched state; recheck latest stable GA at deployment |

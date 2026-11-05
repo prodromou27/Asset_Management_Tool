@@ -191,6 +191,19 @@ The encrypted backup manifest includes the new report tables and CI restores a
 synthetic saved schedule. No live SMTP/vendor calls or Task 022 commissioning is
 implied; DEC-09 and other operator decisions remain open.
 
+### ASM-63 — Task 022 local preparation phase (2026-11-05)
+
+Owner requested task continuation and explicitly selected local pilot preparation.
+Task 022 is split into bounded rehearsals: 022a exercises existing UI/API/auth/export
+services against a disposable pytest database, then 022b measures reference load.
+Reuse the existing test settings, pytest, Playwright and Vite; no new production
+configuration or dependencies. Bind only to loopback, reject remote DB/API targets,
+generate synthetic account credentials per run and keep them out of arguments/logs.
+CI runs the same rehearsal against PostgreSQL; local SQLite is functional proof only.
+Eager tasks do not establish worker/broker/scheduler behavior. G6, AlmaLinux host,
+live-source, SMTP, load, supply-chain and recovery commissioning remain open. Existing
+operator decisions and approvals in this document are not superseded.
+
 ## GLPI licensing note
 
 GLPI repository is GPLv3. Use product concepts and independently written code. Forking or copying GLPI source is a **separate** licensing/product strategy requiring owner approval. Do not casually mix GPL files into a differently licensed custom codebase.

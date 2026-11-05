@@ -240,6 +240,13 @@ pnpm run test
 pnpm run build
 ```
 
+## Local pilot rehearsal
+
+For the isolated real-API browser rehearsal, see [local pilot preparation](ops/pilot/README.md).
+`pnpm e2e` in `frontend` uses a disposable Django test database and loopback UI/API,
+with synthetic credentials/data. It complements mocked UI review and does not approve
+production deployment or substitute for the AlmaLinux staging pilot.
+
 ## Backups and recovery
 
 Task 019 adds Administration → Backups & Recovery: disabled-by-default nightly policy,

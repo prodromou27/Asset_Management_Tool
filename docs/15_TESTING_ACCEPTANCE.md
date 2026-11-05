@@ -58,6 +58,12 @@ G6 Production pilot: security/load/UAT/recovery and documented sign-off.
 
 ## Agent definition of done
 
+Task 022a adds `pnpm e2e`: a real React/Playwright to Django test-database rehearsal,
+distinct from the mocked `pnpm review:ui` visual fixtures. Run instructions, evidence
+scope and the remaining Task 022 load/host/security/recovery gates are in
+`ops/pilot/README.md`. SQLite can prove local functional paths only; CI uses PostgreSQL.
+This does not satisfy G6 production pilot sign-off by itself.
+
 - Requirement/AC ID cited in commit/task report.
 - DB migration, typed API, backend authorization and audit present if relevant.
 - Unit/contract/E2E tests added at proportional level.

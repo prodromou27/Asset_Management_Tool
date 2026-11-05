@@ -144,6 +144,69 @@ jobs:
       - run: pnpm run test
       - run: pnpm run build
 
+  pilot:
+    name: Real API + browser pilot (synthetic)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: itam_pilot
+          POSTGRES_USER: itam
+          POSTGRES_PASSWORD: ci-only-pilot-ephemeral
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U itam -d itam_pilot"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      POSTGRES_DB: itam_pilot
+      POSTGRES_USER: itam
+      POSTGRES_PASSWORD: ci-only-pilot-ephemeral
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: "5432"
+      ITAM_UI_BROWSER_CHANNEL: chromium
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.13.6"
+      - name: Sync backend test dependencies
+        working-directory: backend
+        run: uv sync --frozen --group dev
+      - uses: pnpm/action-setup@v4
+        with:
+          version: "10"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - name: Sync frontend and browser
+        working-directory: frontend
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm exec playwright install --with-deps chromium
+      - name: Pilot lint and format
+        run: |
+          backend/.venv/bin/ruff check --config backend/pyproject.toml ops/pilot
+          backend/.venv/bin/ruff format --check --config backend/pyproject.toml ops/pilot
+      - name: Real loopback browser and database rehearsal
+        working-directory: frontend
+        run: |
+          test -z "${ITAM_TEST_DB_SQLITE:-}"
+          pnpm e2e
+      - name: Preserve synthetic pilot evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: synthetic-browser-pilot
+          path: frontend/test-results/pilot/
+          retention-days: 7
+          if-no-files-found: warn
+
   compose:
     name: Compose config + image build
     needs: backend
