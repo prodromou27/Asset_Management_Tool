@@ -31,7 +31,9 @@ def _roundtrip(tmp_path):
 
     os.environ["ITAM_APP_REVISION"] = "1" * 40
     os.environ["ITAM_BACKUP_IMAGE_REFERENCE"] = "fixture/backup@sha256:" + "2" * 64
-    admin_user = User.objects.create_user("restore.fixture", "disposable-test-password")
+    admin_user = User.objects.create_user(
+        "restore.fixture", "disposable-test-password", display_name="Restore Fixture"
+    )
     site = Site.objects.create(code="RESTORE", name="Restore fixture")
     category = AssetCategory.objects.create(code="restore-fixture", name="Restore fixture")
     asset = Asset.objects.create(name="Restore fixture", site=site, category=category)
@@ -189,6 +191,21 @@ def test_real_dump_encrypted_repository_and_isolated_restore(tmp_path):
             assert result.returncode == 0, result.stderr.decode()
         finally:
             control.execute(sql.SQL("DROP DATABASE {}").format(sql.Identifier(source)))
+
+
+@pytest.mark.django_db
+def test_disposable_roundtrip_fixtures_are_valid_before_external_tools(tmp_path, monkeypatch):
+    from apps.backups import runner
+
+    monkeypatch.setenv("ITAM_APP_REVISION", "1" * 40)
+    monkeypatch.setenv("ITAM_BACKUP_IMAGE_REFERENCE", "fixture/backup@sha256:" + "2" * 64)
+
+    def stop_before_repository(*args, **kwargs):
+        raise runner.RunnerError("fixture setup completed")
+
+    monkeypatch.setattr(runner, "run", stop_before_repository)
+    with pytest.raises(runner.RunnerError, match="fixture setup completed"):
+        _roundtrip(tmp_path)
 
 
 if __name__ == "__main__":

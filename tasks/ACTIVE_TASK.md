@@ -73,6 +73,10 @@ Move the real backup round-trip scenario into a fresh source database in a child
 drop only that disposable source DB afterward. Keep the normal pytest rollback and all
 production audit triggers enabled. Frontend **189 passed**; Docker job waits for backend.
 
+Third CI run 42004466042: **791 passed, 1 failed**; the new child-process fixture omitted
+the required user display name. Add it and exercise the fixture setup locally before
+external tools so this validation is covered by the SQLite fallback too.
+
 ---
 
 # Previous record: Task 018b | Notification rules
