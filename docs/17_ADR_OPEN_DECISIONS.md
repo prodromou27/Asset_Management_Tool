@@ -143,8 +143,6 @@ selected-asset exports through the existing Task 014 backend without changing pe
 
 If a decision would change data identity, security, deployment, scope or business semantics, propose a short ADR with context, options, decision and consequences. Do not silently choose a dangerous default. For cosmetic/local code choices within approved architecture, decide and proceed.
 
-## GLPI licensing note
-
 ### ASM-60 — Task 019 review and recovery evidence refinement (2026-11-05)
 
 Within ADR-016, consolidate the backup password, SSH identity and approved host pin in
@@ -156,5 +154,7 @@ CI now uses a disposable real SFTP service and recovers an encrypted repository 
 separate job after deleting the source DB and storage container/volume. This proves
 synthetic transport/recovery behavior; physical off-host separation, production secrets,
 retention, capacity, SMTP delivery and RPO/RTO approval remain DEC-09 commissioning gates.
+
+## GLPI licensing note
 
 GLPI repository is GPLv3. Use product concepts and independently written code. Forking or copying GLPI source is a **separate** licensing/product strategy requiring owner approval. Do not casually mix GPL files into a differently licensed custom codebase.

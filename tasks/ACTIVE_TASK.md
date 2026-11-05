@@ -2,7 +2,7 @@
 
 ## Supplemental owner request (2026-11-05): focused review → UI → Task 019 gaps
 
-In progress on DEV. Existing implementation is preserved; do not start Task 020.
+Supplemental work complete on DEV. Existing implementation is preserved; do not start Task 020.
 Additional read list: docs/08 (asset/discovery/lifecycle/admin), docs/20 (backup settings).
 Phase 1 fixes confirmed failed-sign-out state, backup notification/finalization coupling,
 unrelated credentials inherited by the backup worker, and a reproduced cross-site raw
@@ -22,13 +22,24 @@ readable mobile record names and concise Discovery filter labels. Browser review
 29 screenshots covering all requested areas/states, no exceptions/unmapped fixtures/page
 overflow, and keyboard checks passed. Forty focused UI tests, typecheck, lint/build passed.
 
-Phase 3 local implementation complete; CI proof pending. Strict SFTP key/host pinning,
+Phase 3 complete; CI run **42016059523** green on implementation `7223d65`.
+Strict SFTP key/host pinning,
 expanded additive manifests, audited downloadable reports and UI job details/durations;
 synthetic SFTP destination and encrypted-repository recovery after source deletion wired
 into CI. Local full backend 795 passed/7 environment skips; frontend 192 passed;
 lint/typecheck/build/OpenAPI and migration drift passed. No new schema migrations.
-Next action: verify PostgreSQL/SFTP and network-isolated Docker restore in CI, record
-measured fixture recovery time, then commission only after DEC-09 approval.
+CI: **802 backend passed, no skips; 192 frontend passed**; migration apply/reversal,
+schema/type drift, deploy settings, Compose validation and production/backup image builds
+passed. Real encrypted SFTP backup and wrong-password/host-pin checks passed. Recovery
+after deleting the source DB/storage container/volume passed in a fresh `--network none`
+PostgreSQL: seven nonempty relationship checks, table counts, migrations, extensions and
+checksum verified; target removed. Database restore **9.95s**, retrieval plus restore
+**11.37s**, fixture recovery-point age **173.27s**. These are synthetic measurements,
+not production SLA approval. Evidence: `TASK019_RESTORE_REPORT.json` / `TASK019_REVIEW.md`.
+Browser review now includes **31 screenshots**, including bounded desktop/mobile drawers.
+Next action: owner resolves DEC-09, then an explicitly approved target-host commissioning
+and secret-recovery/application-readiness drill. Production remains disabled; Task 020
+was not started.
 
 Status: **Complete (CI run 42006140665 green)** (2026-11-05, DEV; implementation `8b7fd97`).
 Owner also requested a whole-UI/functionality
