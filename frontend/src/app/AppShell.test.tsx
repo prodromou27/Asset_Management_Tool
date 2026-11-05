@@ -25,6 +25,26 @@ describe('locate', () => {
 })
 
 describe('application shell', () => {
+  it('keeps the session visible when sign out fails and allows a retry', async () => {
+    let attempts = 0
+    mockApi({
+      'GET /auth/me/': { body: makeMe() },
+      'GET /health/ready/': readyOk,
+      'POST /auth/logout/': () => ++attempts === 1
+        ? { status: 503, body: { error: { message: 'Fixture network failure' } } }
+        : { status: 204 },
+      'GET /auth/providers/': { body: [] },
+      'GET /auth/csrf/': { body: {} },
+    })
+    renderApp('/')
+    fireEvent.click(await screen.findByRole('button', { name: /admin/i, expanded: false }))
+    fireEvent.click(screen.getByRole('button', { name: 'Sign out' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Your session may still be active')
+    expect(screen.getByRole('heading', { level: 1, name: 'System health' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Sign out' }))
+    await waitFor(() => expect(screen.queryByRole('heading', { name: 'System health' })).not.toBeInTheDocument())
+    expect(attempts).toBe(2)
+  })
   it('keeps the sidebar selected on certificate detail routes', async () => {
     mockApi({
       'GET /auth/me/': { body: makeMe() },

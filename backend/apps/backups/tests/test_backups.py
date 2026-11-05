@@ -129,6 +129,31 @@ def test_success_verification_replay_and_retention_warning(allowed, monkeypatch)
     assert services.summary()["last_backup"].pk == job.pk
 
 
+def test_notification_failure_cannot_strand_verified_job(allowed, monkeypatch, caplog):
+    job = services.request_job()
+    monkeypatch.setattr(
+        runner,
+        "backup",
+        Mock(
+            return_value=(
+                SNAPSHOT,
+                {
+                    "size_bytes": 123,
+                    "recovery_point": timezone.now().isoformat(),
+                },
+            )
+        ),
+    )
+    runner.retention.side_effect = runner.RunnerError("Fixture retention failure")
+    monkeypatch.setattr(services, "alert", Mock(side_effect=RuntimeError("fixture-secret")))
+    services.execute(job.pk)
+    job.refresh_from_db()
+    assert job.status == "succeeded" and job.active_slot is None and job.finished_at
+    assert job.warning and AuditEvent.objects.filter(action="backups.backup_succeeded").exists()
+    assert "fixture-secret" not in caplog.text
+    assert services.request_job().status == "queued"
+
+
 def test_verify_existing_snapshot_failure_preserves_previous_good(
     allowed, monkeypatch, client_for, admin_user
 ):

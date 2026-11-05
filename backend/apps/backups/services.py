@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timedelta
 
 from django.conf import settings
@@ -11,6 +12,8 @@ from config.api import ApiError
 
 from . import runner
 from .models import BackupJob, BackupPolicy, RestoreDrill
+
+logger = logging.getLogger(__name__)
 
 
 def policy():
@@ -37,6 +40,15 @@ def alert(message, dedup):
                 event_type="backup_alert",
                 dedup_key=f"backup:{dedup}:{user.pk}",
             )
+
+
+def operational_alert(message, dedup):
+    try:
+        alert(message, dedup)
+    except Exception:
+        # Notification failures must not strand the durable job or active repository lock.
+        # Do not log exception text: a mail/config error can contain sensitive values.
+        logger.warning("Backup notification could not be queued; review the notification service.")
 
 
 def kick(job):
@@ -126,7 +138,6 @@ def execute(job_id):
                 object_id=job.pk,
                 detail=job.warning,
             )
-            alert(job.warning, f"retention:{job.pk}")
     job.finished_at = timezone.now()
     job.active_slot = None
     job.save()
@@ -141,7 +152,9 @@ def execute(job_id):
         detail=job.error_message,
     )
     if job.status == "failed":
-        alert(job.error_message, str(job.pk))
+        operational_alert(job.error_message, str(job.pk))
+    elif job.warning:
+        operational_alert(job.warning, f"retention:{job.pk}")
 
 
 def dispatch():
@@ -152,7 +165,7 @@ def dispatch():
     # operator must establish the worker is stopped before clearing a stranded job.
     for job in BackupJob.objects.filter(status__in=["queued", "running"]):
         if job.created_at < now - timedelta(hours=6):
-            alert(
+            operational_alert(
                 "A backup job has been active for over six hours. Check the backup worker.",
                 f"stuck:{job.pk}:{now.date()}",
             )
@@ -163,7 +176,7 @@ def dispatch():
         return
     latest = BackupJob.objects.filter(kind="backup", status="succeeded").first()
     if not latest or latest.recovery_point < now - timedelta(hours=p.rpo_hours):
-        alert(
+        operational_alert(
             "The recovery point exceeds the configured RPO, or no verified backup exists.",
             f"stale:{now.date()}",
         )

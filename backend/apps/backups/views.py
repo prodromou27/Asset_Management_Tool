@@ -234,7 +234,7 @@ class DrillListView(APIView):
                 },
             )
         if not obj.passed:
-            services.alert(
+            services.operational_alert(
                 "An isolated restore drill failed. Review Backups & Recovery.", str(obj.pk)
             )
         return Response(data.data, status=201)

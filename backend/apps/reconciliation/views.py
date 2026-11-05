@@ -87,18 +87,22 @@ def visible_candidates(user):
 
 
 def visible_observations(user):
-    """An observation is visible if its instance's default site is in scope, or the
-    device it describes is linked to an asset the user can see."""
+    """Current canonical asset scope takes precedence over a connector's default site.
+
+    The default site only scopes observations that have no current asset link.
+    Otherwise a multi-site connector or a moved asset would disclose raw payloads.
+    """
     site_ids = scope.accessible_site_ids(user)
     if site_ids is scope.ALL:
         return Observation.objects.select_related("instance")
     linked = SourceLink.objects.filter(
         instance_id=OuterRef("instance_id"),
         external_id=OuterRef("external_id"),
-        asset__site__in=site_ids,
-    )
+        asset__isnull=False,
+    ).exclude(status=SourceLink.Status.UNLINKED)
     return Observation.objects.select_related("instance").filter(
-        Q(instance__default_site__in=site_ids) | Q(Exists(linked))
+        (Q(instance__default_site__in=site_ids) & ~Q(Exists(linked)))
+        | Q(Exists(linked.filter(asset__site__in=site_ids)))
     )
 
 

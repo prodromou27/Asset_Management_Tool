@@ -428,6 +428,12 @@ code,
   background: var(--color-page-bg);
 }
 
+.user-menu__error {
+  margin: var(--space-2);
+  color: var(--color-danger);
+  font-size: 12px;
+}
+
 @media (width < 1024px) {
   .app-shell__main,
   .top-bar {

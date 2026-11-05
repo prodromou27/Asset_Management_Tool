@@ -137,7 +137,22 @@ services:
       target: backup-runner
     command: ["celery", "-A", "config", "worker", "--loglevel=INFO", "--queues=backups", "--concurrency=1", "--hostname=backup@%h"]
     environment:
-      <<: *backend-env
+      # Explicit allowlist: the backup worker does not need live connector, SMTP or
+      # import-decryption credentials. Mail delivery runs on the ordinary worker.
+      ITAM_ENV: ${ITAM_ENV:?ITAM_ENV is required}
+      ITAM_ALLOWED_HOSTS: ${ITAM_ALLOWED_HOSTS:?ITAM_ALLOWED_HOSTS is required}
+      ITAM_PUBLIC_SCHEME: ${ITAM_PUBLIC_SCHEME:-https}
+      ITAM_LOG_LEVEL: ${ITAM_LOG_LEVEL:-INFO}
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?DJANGO_SECRET_KEY is required}
+      POSTGRES_DB: ${POSTGRES_DB:-itam}
+      POSTGRES_USER: ${POSTGRES_USER:-itam}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      REDIS_URL: redis://redis:6379/0
+      ITAM_ALLOW_LIVE_INTEGRATIONS: "false"
+      ITAM_BACKUP_ALLOW_RUN: ${ITAM_BACKUP_ALLOW_RUN:-false}
+      ITAM_BACKUP_TARGET_LABEL: ${ITAM_BACKUP_TARGET_LABEL:-Not configured}
       DJANGO_SETTINGS_MODULE: config.settings.production
       RESTIC_REPOSITORY: ${RESTIC_REPOSITORY:-}
       RESTIC_PASSWORD_FILE: /run/secrets/restic_password

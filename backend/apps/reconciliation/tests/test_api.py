@@ -37,6 +37,42 @@ def branch_candidate(nms_branch):
 # --- Visibility -------------------------------------------------------------------------
 
 
+def test_linked_observation_uses_asset_site_not_connector_default(
+    client_for, hq_manager, make_user, nms, branch, switch, make_asset
+):
+    from django.utils import timezone
+
+    from apps.assets.tests.fixtures import grant
+    from apps.observations.models import Observation
+
+    asset = make_asset(site=branch, category=switch)
+    observation = Observation.objects.create(
+        instance=nms,
+        external_id="moved-device",
+        observed_at=timezone.now(),
+        checksum="fixture",
+        payload={"serial": "branch-private-fixture"},
+        normalized={},
+        normalizer_version=1,
+    )
+    SourceLink.objects.create(
+        instance=nms,
+        external_id=observation.external_id,
+        asset=asset,
+        method="auto_strong_match",
+        first_seen_at=timezone.now(),
+        last_seen_at=timezone.now(),
+        last_observation=observation,
+    )
+    hq_client = client_for(hq_manager)
+    detail = f"/api/v1/discovery/observations/{observation.pk}/"
+    listing = "/api/v1/discovery/observations/"
+    assert hq_client.get(detail).status_code == 404
+    assert hq_client.get(listing, {"instance": str(nms.pk)}).json()["count"] == 0
+    branch_user = grant(make_user("branch.reviewer", roles=["itam_manager"]), branch)
+    assert client_for(branch_user).get(detail).status_code == 200
+
+
 def test_unauthenticated_and_unprivileged_are_denied(
     api_client, client_for, hq_operator, hq_candidate
 ):

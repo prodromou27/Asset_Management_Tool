@@ -76,7 +76,7 @@ function UserMenu() {
   const navigate = useNavigate()
   const signOut = useMutation({
     mutationFn: logout,
-    onSettled: () => {
+    onSuccess: () => {
       queryClient.clear()
       queryClient.setQueryData(queryKeys.me, null)
       navigate('/login', { replace: true })
@@ -130,6 +130,11 @@ function UserMenu() {
           >
             Sign out
           </button>
+          {signOut.isError && (
+            <p className="user-menu__error" role="alert">
+              Sign out failed. Your session may still be active. Try again.
+            </p>
+          )}
         </div>
       )}
     </div>

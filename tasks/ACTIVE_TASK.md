@@ -1,5 +1,22 @@
 # Current Task: 019 | Backups, off-host encryption and isolated restore
 
+## Supplemental owner request (2026-11-05): focused review → UI → Task 019 gaps
+
+In progress on DEV. Existing implementation is preserved; do not start Task 020.
+Additional read list: docs/08 (asset/discovery/lifecycle/admin), docs/20 (backup settings).
+Phase 1 fixes confirmed failed-sign-out state, backup notification/finalization coupling,
+unrelated credentials inherited by the backup worker, and a reproduced cross-site raw
+observation leak: an HQ-default connector exposed an observation linked to a Branch-only
+asset to an HQ-scoped reviewer (200 before the fix; expected 404). Current canonical asset
+scope now takes precedence over connector defaults. Phase 2 extends real-browser
+coverage to Discovery, Lifecycle, Integrations and Settings and commits UI work separately.
+Phase 3 completes manifest/report/restore evidence and isolated test storage against the
+new request. DEC-09 remains unresolved; production backups and restores stay disabled.
+
+Phase 1 verification: 45 focused backend tests passed (SQLite fallback), including the
+reproduced cross-site case; 15 shell tests, frontend typecheck/oxlint and targeted Ruff
+checks passed. Findings and coverage are recorded in `tasks/TASK019_REVIEW.md`.
+
 Status: **Complete (CI run 42006140665 green)** (2026-11-05, DEV; implementation `8b7fd97`).
 Owner also requested a whole-UI/functionality
 review and refinement. Preserve the navy console design and completed workflows.
