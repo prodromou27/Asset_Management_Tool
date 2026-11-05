@@ -1,14 +1,14 @@
 Port 22
 PidFile /run/sshd/sshd.pid
 HostKey /etc/ssh/fixture_host_key
-AuthorizedKeysFile /home/backup/.ssh/authorized_keys
+AuthorizedKeysFile /home/itamfixture/.ssh/authorized_keys
 PermitRootLogin no
 PasswordAuthentication no
 KbdInteractiveAuthentication no
 PermitEmptyPasswords no
 PubkeyAuthentication yes
 StrictModes yes
-AllowUsers backup
+AllowUsers itamfixture
 AllowTcpForwarding no
 X11Forwarding no
 Subsystem sftp internal-sftp

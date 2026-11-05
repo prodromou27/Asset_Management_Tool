@@ -68,7 +68,7 @@ def destination(directory):
         else:
             raise RuntimeError("Synthetic SFTP fixture did not become ready.")
         yield {
-            "ITAM_TEST_SFTP_REPOSITORY": f"sftp://backup@127.0.0.1:{port}//repository",
+            "ITAM_TEST_SFTP_REPOSITORY": f"sftp://itamfixture@127.0.0.1:{port}//repository",
             "ITAM_TEST_SFTP_SECRETS": str(client),
         }
         if output := os.environ.get("ITAM_BACKUP_DRILL_ARTIFACT_DIR"):
