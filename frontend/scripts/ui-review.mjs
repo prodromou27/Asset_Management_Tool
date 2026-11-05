@@ -6,8 +6,8 @@ import fs from 'node:fs/promises'
 const output = 'test-results/task019-review'
 await fs.mkdir(output, { recursive: true })
 let screenshots = 0
-const capture = async (page, name) => {
-  await page.screenshot({ path: `${output}/${name}.png`, fullPage: true })
+const capture = async (page, name, fullPage = true) => {
+  await page.screenshot({ path: `${output}/${name}.png`, fullPage })
   screenshots++
 }
 
@@ -123,7 +123,9 @@ try {
     await page.goto('http://127.0.0.1:5197/admin/backups')
     await page.getByRole('button', { name: 'View details' }).click()
     await page.getByRole('dialog', { name: 'Backup job details' }).waitFor()
-    await capture(page, `backup-job-details-${width}`)
+    const drawerBounds = await page.getByRole('dialog', { name: 'Backup job details' }).boundingBox()
+    if (!drawerBounds || drawerBounds.y < 0 || drawerBounds.y + drawerBounds.height > (width === 390 ? 844 : 900) + 1) throw new Error('Backup drawer clipped vertically')
+    await capture(page, `backup-job-details-${width}`, false)
     if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)) throw new Error('Backup details overflow')
     await page.keyboard.press('Escape')
   }
