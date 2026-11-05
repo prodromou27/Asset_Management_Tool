@@ -3,7 +3,7 @@ import { chromium } from '@playwright/test'
 import fs from 'node:fs/promises'
 
 // Synthetic API responses only. No backend, vendor connector or SMTP service is contacted.
-const output = 'test-results/forest-workspace-review'
+const output = 'test-results/itglue-inspired-review'
 await fs.mkdir(output, { recursive: true })
 let screenshots = 0
 const capture = async (page, name, fullPage = true) => {
@@ -119,7 +119,7 @@ try {
     return active && active.left >= 0 && active.right <= innerWidth
   })
   const currentModule = await page.locator('.nav-link[aria-current="page"]').boundingBox()
-  if (!currentModule || currentModule.x < 0 || currentModule.x + currentModule.width > 1440) throw new Error('Current module is clipped in top navigation')
+  if (!currentModule || currentModule.x < 0 || currentModule.x + currentModule.width > 240) throw new Error('Current module is clipped in contextual sidebar')
   await capture(page, 'backups-desktop')
   await page.getByRole('button', { name: 'Inventory', exact: true }).click()
   await page.getByRole('link', { name: 'Assets', exact: true }).waitFor({ state: 'visible' })
@@ -132,6 +132,17 @@ try {
   await page.getByRole('table', { name: 'Assets', exact: true }).waitFor()
   await page.getByLabel('Select sw-floor-01', { exact: true }).check()
   await capture(page, 'assets-selection-desktop')
+  await page.getByRole('button', { name: 'Filters & sort', exact: true }).click()
+  await page.getByLabel('Category', { exact: true }).waitFor({ state: 'visible' })
+  await capture(page, 'assets-filters-desktop')
+  await page.getByRole('button', { name: 'Filters & sort', exact: true }).click()
+  await page.getByLabel('Category', { exact: true }).waitFor({ state: 'hidden' })
+  for (const width of [1024, 768]) {
+    await page.setViewportSize({ width, height: 900 })
+    if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)) throw new Error(`Tablet layout overflows at ${width}`)
+    await capture(page, `assets-${width}`)
+  }
+  await page.setViewportSize({ width: 1440, height: 900 })
   await page.getByRole('button', { name: 'Switch to dark theme' }).click()
   await capture(page, 'assets-selection-desktop-dark')
   await page.reload()

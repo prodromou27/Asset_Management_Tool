@@ -1,87 +1,82 @@
-# 07 | Forest workspace design system
+# 07 | IT Glue-inspired interface
 
-Owner direction: 5 November 2026. The owner rejected the navy refresh and explicitly
-requested a full new design with different colours, themes, layouts and CSS. This
-replaces all previous navy-sidebar requirements. Keep a professional, useful ITAM
-interface with real data, readable density and traceable evidence.
+Owner direction: 5 November 2026. The owner rejected prior navy/forest designs and
+named IT Glue as the visual reference. This replaces previous visual requirements.
+Keep original ITAM code, branding, data semantics, workflows and permission checks.
 
-## Visual direction
+## Reference and adaptation
 
-Warm stone canvas, white paper-like surfaces and forest-green actions in light mode;
-charcoal canvas, layered dark surfaces and mint accents in dark mode. No neon,
-decorative charts, invented metrics or external fonts/images. Reuse bundled Inter,
-IBM Plex Mono and Lucide. Main headings are 32px (28px mobile), section headings 15px,
-body 14px, table text 13px. Control heights 38px, default rows 46px, corners 8-12px,
-dialog corners 16px. Use subtle shadows for overlays; keep content surfaces quiet.
+Official reference pages inspected, including their configuration/admin screenshots:
+- https://help.itglue.kaseya.com/help/Content/2-using/get-to-know-it-glue/structure-and-navigation.html
+- https://help.itglue.kaseya.com/help/Content/2-using/organizations/organizations-sidebar.html
+- https://help.itglue.kaseya.com/help/Content/2-using/documentation-guide/configurations.html
 
-## Themes and tokens
+Adopt the purple global bar, light-grey contextual left sidebar, organization context,
+white workspace, teal links/secondary actions, green create actions, compact lists,
+lightweight page titles and right-side record panels. Implement independently;
+reference screenshots remain ignored review artifacts, never application assets.
+Do not add IT Glue logos, copied code, passwords/vault features, multiple organizations,
+invented metrics or nonfunctional navigation. This app remains single-organization.
 
-Source: frontend/src/styles/tokens.css. Shared components use semantic variables.
+## Tokens and typography
 
-| Token | Forest light | Charcoal dark |
+Semantic variables live in frontend/src/styles/tokens.css. Both light and dark mode
+are supported through the existing browser-local theme control and itam.appearance.
+Storage failure leaves theme switching usable. Sign-in shares the same themes.
+
+| Token | Light | Dark |
 |---|---|---|
-| Canvas | #F4F2ED | #181C1A |
-| Surface | #FFFFFF | #222825 |
-| Muted surface | #F7F6F2 | #2A322E |
-| Primary text | #292E28 | #EDF2EC |
-| Secondary text | #60695E | #B0BEB4 |
-| Border | #E0E3DA | #3B4740 |
-| Strong border | #84917B | #7E9286 |
-| Primary action | #256347 | #A0D8AD |
-| Action label | #FFFFFF | #173321 |
-| Link | #215A3E | #A9DFB4 |
-| Masthead | #183F32 | #122C23 |
+| Masthead | #7B2D70 | #64255C |
+| Sidebar | #F3F3F3 | #222229 |
+| Surface | #FFFFFF | #25252C |
+| Muted surface | #F7F7F7 | #2E2E36 |
+| Text | #333333 | #EEEEEF |
+| Secondary text | #666666 | #BABAC1 |
+| Links | #416E78 | #9ECDD5 |
+| Secondary action | #497780 | #3B6973 |
+| Primary action | #287D4B | #92D3A9 |
+| Navigation accent | #7B2D70 | #DBA9D2 |
 
-The sun/moon control changes theme immediately; `itam.appearance` stores only the
-local browser preference. Storage failure leaves the control usable. The ThemeProvider
-wraps authenticated and sign-in routes, so the preference survives navigation/reload.
-No account, organization, API or authorization setting is changed. Native form controls
-follow color-scheme. Email HTML previews intentionally retain their own white document.
+Use bundled Inter and IBM Plex Mono with Lucide icons. Titles 32px/weight 350
+(28px mobile), body 14px, table text 13px, labels 12px. Standard control 34px,
+row minimum 38px, corners 2-3px, no decorative shadows or large rounded cards.
+Action colours are darker than reference screenshots for legible white labels.
 
-## Navigation and workspace
+## Layout and navigation
 
-Remove the persistent sidebar. A full-width forest masthead contains organization,
-asset search, theme and account actions. Below it are section buttons (Inventory,
-Sources, Administration, System) and a horizontally scrolling module navigation row.
-Selecting a section reveals its modules without changing the current record; following
-a module updates the URL and restores the appropriate section. Permissions determine
-both sections and modules. Active links retain aria-current and explicit text/icons.
+56px purple masthead: ITAM identity, authorized area buttons, asset search, theme
+and account actions. Area selection changes sidebar contents without navigating away;
+opening a module restores its appropriate area. Preserve permission filtering and
+aria-current. At narrower desktop widths global areas scroll horizontally within the
+header. A 220px light contextual sidebar contains organization identity, area heading
+and module links, with a purple active marker. Sidebar scrolls independently.
 
-At <=767px, the masthead remains compact; navigation becomes a right-hand drawer with
-all authorized sections. Opening it makes page/masthead inert, traps focus, locks body
-scroll and focuses Close. Escape/link/close returns focus; resizing to desktop closes
-it. The account menu has an explicit accessible name even when its visual text is hidden.
+Main content has a muted breadcrumb strip, organization context on inventory/source
+pages, a light title/action row and flat white data surface. Inventory saved-view
+controls sit above a wide search/filter bar and table. Filters/sorting expand on both
+desktop and mobile, expose their active count and preserve URL state when collapsed.
+Do not reintroduce the separate filter rail or top-only module navigation.
 
-Content fills the workspace, capped at 1920px, with 4vw margins on desktop and 16px on
-mobile. Breadcrumbs sit above page titles; a ruled title/action row anchors each page.
-Inventory uses a 240px filter/saved-view rail beside the table (210px on small desktop).
-On mobile the rail stacks above the table and secondary filters use a disclosure with
-an active-filter count. Closing filters never clears them or changes URL semantics.
+Detail pages use compact baseline tabs, restrained status chips, a main evidence/form
+column and a muted right-side ownership/record panel. Stack at narrow widths. Forms
+use labelled white controls with clear borders; dialogs have simple divided action
+footers and bounded scrolling. Retain all existing editing/export/evidence actions.
 
-## Components
+Below 768px the sidebar becomes a left drawer showing all authorized areas. Opening
+it makes masthead/content inert, traps keyboard focus and locks body scroll. Escape,
+close and navigation restore focus. Theme, account and asset search remain available
+in the compact masthead. Tables scroll internally; do not overflow the page.
 
-- Tables: sentence-case headers, tabular numbers, gentle alternating rows, forest/mint
-  selection, internal horizontal scrolling and text-based statuses. Preserve column
-  selection, saved views, bulk actions and evidence links.
-- Detail: segmented tabs, bordered status summary, wider main evidence panel and
-  separate ownership/record panels. Stack on narrower screens.
-- Forms: muted filled controls with a lower border; visible labels/help, explicit
-  validation and clear focus. No placeholder-only labels. Preserve fields and actions.
-- Dialogs: larger title, rounded surface, separated muted action footer, independently
-  scrolling body and persistent actions within viewport. Retain focus/escape behavior.
-- Sign-in: centred paper surface on the theme canvas, large heading, full-width action
-  and its own theme control. No changes to authentication or password behavior.
-- Status: supported green, near EOS amber, EOS red, Unknown/stale neutral. Adjust each
-  theme's semantic colours for legibility. Text carries meaning alongside colour.
+## Accessibility and acceptance
 
-## Accessibility and verification
+Keep text statuses alongside colour, explicit account/field names, focus rings and
+reduced-motion behavior. Status colours retain supported/expiring/EOS/Unknown meanings.
+No unsupported sidebar counts or fictitious client data. Email HTML preview keeps its
+own white document. Existing organization/site/field/RBAC scope remains authoritative.
 
-Aim for WCAG AA contrast, visible keyboard focus and no colour-only status. Preserve
-existing reduced-motion handling, labelled fields, async/error messages, tables and
-keyboard tabs. Functional regression tests cover workflow permissions, theme persistence,
-blocked storage and section selection. Browser fixtures exercise both themes at
-1440x900 and 390x844, plus dialogs, error/denied/loading states and sign-in validation.
-Check theme persistence on reload, page overflow, mobile filter state and drawer focus.
-Synthetic evidence: frontend/test-results/forest-workspace-review/. No live API/SMTP
-calls are part of UI verification. These checks do not constitute a full accessibility
-or production commissioning audit.
+Run frontend workflow tests, lint/types/build, synthetic browser checks at 1440x900
+and 390x844 in both themes, and 1024/768 inventory checks. Verify desktop/mobile
+filter disclosure, section switching, saved filters, theme reload, account/dialog/drawer
+focus, overflow and loading/error/denied states. Evidence is written under
+frontend/test-results/itglue-inspired-review/. No live connector or SMTP call is used.
+Functional and contrast spot checks are not a full accessibility/commissioning audit.

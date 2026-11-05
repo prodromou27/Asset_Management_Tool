@@ -1,5 +1,6 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
+import { FileDown, FileUp, Plus } from 'lucide-react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useSession } from '../../app/useSession'
 import {
@@ -187,14 +188,16 @@ export function AssetsListPage() {
           <>
             {can(PERMISSIONS.importsRun) && (
               <Link className="button button--secondary" to="/imports/new?family=asset">
+                <FileUp size={14} aria-hidden="true" />
                 Import
               </Link>
             )}
             {can(PERMISSIONS.exportsRun) && (
-              <Button onClick={() => setExporting(true)}>Export</Button>
+              <Button onClick={() => setExporting(true)}><FileDown size={14} aria-hidden="true" />Export</Button>
             )}
             {can(PERMISSIONS.assetsCreate) && (
               <Link className="button button--primary" to="/assets/new">
+                <Plus size={14} aria-hidden="true" />
                 Add asset
               </Link>
             )}
@@ -214,7 +217,7 @@ export function AssetsListPage() {
 
       <div className="inventory-workspace">
       <aside className="inventory-filters" aria-label="Inventory filters and views">
-      <h2 className="inventory-filters__title">Refine inventory</h2>
+      <h2 className="visually-hidden">Views and filters</h2>
       <div className="view-bar">
         <SelectField
           label="Saved view"

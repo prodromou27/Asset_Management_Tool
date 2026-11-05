@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Boxes, ChevronDown, ChevronRight, Menu, Search, X } from 'lucide-react'
+import { Boxes, Building2, ChevronDown, ChevronRight, Menu, Search, X } from 'lucide-react'
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { logout, queryKeys } from '../shared/api/accounts'
@@ -17,28 +17,8 @@ function initials(name: string): string {
 
 function NavList({ items, onNavigate }: { items: NavItem[]; onNavigate: () => void }) {
   const { pathname } = useLocation()
-  const list = useRef<HTMLUListElement>(null)
-  useEffect(() => {
-    const container = list.current
-    const active = container?.querySelector<HTMLElement>('[aria-current="page"]')
-    if (!active || !container) return
-    const reveal = () => {
-      const bounds = container.getBoundingClientRect()
-      const link = active.getBoundingClientRect()
-      if (!bounds.width) return
-      if (link.right > bounds.right) container.scrollLeft += link.right - bounds.right + 12
-      if (link.left < bounds.left) container.scrollLeft -= bounds.left - link.left + 12
-    }
-    reveal()
-    // Font loading and responsive layout can change module widths after the first paint.
-    if (typeof ResizeObserver === 'undefined') return
-    const observer = new ResizeObserver(reveal)
-    observer.observe(container)
-    observer.observe(active)
-    return () => observer.disconnect()
-  }, [pathname])
   return (
-    <ul className="nav-list" ref={list}>
+    <ul className="nav-list">
       {items.map(({ to, label, icon: Icon, end, also }) => {
         const under = (root: string) => pathname === root || pathname.startsWith(`${root}/`)
         const active = pathname === to || (!end && to !== '/' && under(to)) || (also ?? []).some(under)
@@ -238,9 +218,16 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Boxes size={18} strokeWidth={2} />
           </span>
           <span className="brand-copy">
-            <span className="brand-name" title={me?.display_preferences?.organization_name}>{me?.display_preferences?.organization_name ?? 'ITAM'}</span>
-            <span className="brand-caption">Inventory & operations</span>
+            <span className="brand-name">ITAM</span>
           </span>
+        </div>
+        <div className="workspace-global-nav" aria-label="Workspace areas">
+          {!restricted && sections.map((section) => <button type="button" key={section.id}
+            className={`workspace-area${currentSection === section.label ? ' workspace-area--current' : ''}`}
+            aria-expanded={currentSection === section.label} aria-controls={`nav-items-${section.id}`}
+            onClick={() => setSectionChoice({ pathname, section: section.label })}>
+            {section.label}
+          </button>)}
         </div>
         <div className="masthead-tools">
           {!restricted && <GlobalSearch />}
@@ -260,13 +247,19 @@ export function AppShell({ children }: { children: ReactNode }) {
           >
             <X size={18} aria-hidden="true" />
           </button>
+        <div className="workspace-organization">
+          <Building2 size={20} aria-hidden="true" />
+          <div><span className="workspace-organization__label">Organization</span>
+            <strong title={me?.display_preferences?.organization_name}>{me?.display_preferences?.organization_name ?? 'ITAM'}</strong>
+          </div>
+        </div>
         <div className="workspace-navigation">
         {!restricted &&
           sections.map((section) => (
             <div className={`nav-group${currentSection === section.label ? ' nav-group--current' : ''}`} key={section.id}>
-              <button type="button" className="nav-section" id={`nav-${section.id}`} aria-expanded={navOpen || currentSection === section.label} aria-controls={`nav-items-${section.id}`} onClick={() => setSectionChoice({ pathname, section: section.label })}>
+              <p className="nav-section" id={`nav-${section.id}`}>
                 {section.label}
-              </button>
+              </p>
               <div className="nav-items" id={`nav-items-${section.id}`}><NavList items={section.items} onNavigate={() => setNavOpen(false)} /></div>
             </div>
           ))}
@@ -279,7 +272,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <main className="app-shell__main" id="main" tabIndex={-1}>
           {where.page && (
             <nav className="top-bar__context" aria-label="Breadcrumb">
-              <span className="top-bar__section">{where.section}</span>
+              <span className="top-bar__section">{where.section === 'Inventory' || where.section === 'Sources' ? me?.display_preferences?.organization_name ?? 'ITAM' : where.section}</span>
               <ChevronRight className="top-bar__sep" size={14} aria-hidden="true" />
               <span className="top-bar__page" aria-current="page">{where.page}</span>
             </nav>
