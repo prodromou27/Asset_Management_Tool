@@ -1,6 +1,6 @@
 # Task 021 — Scoped reports and private digests
 
-DEV baseline: ded41a1. Implementation and CI result recorded below.
+DEV baseline: ded41a1. Implementation: **cc88815**, pushed to DEV.
 
 ## Delivered
 
@@ -50,10 +50,19 @@ suite passed **26 tests**. Full frontend: **206 passed**; final focused frontend
 **5 passed**, and lint/typecheck/build passed. Ruff check/format,
 migration drift and OpenAPI validation passed. Synthetic Edge browser review produced
 **53 screenshots**, with no browser errors or unmapped API requests; representative
-desktop lifecycle, mobile coverage and mobile digest dialog were visually inspected.
+desktop lifecycle/group tables, mobile coverage and both mobile dialogs were visually
+inspected.
 
-CI: pending push. PostgreSQL/Redis, migration reversal/reapply, schema drift, Compose,
-production images and real encrypted SFTP/isolated restore must pass before completion.
+[CI run 42090787679](https://github.com/prodromou27/Asset_Management_Tool/actions/runs/42090787679)
+passed on **cc88815**: **827 PostgreSQL/Redis backend tests, no skips; 206 frontend
+tests**. Migration apply/reversal/reapply, schema/type drift, Ruff lint/format,
+frontend lint/typecheck/build, production settings deploy check, dev/prod Compose
+validation and production API/frontend/restricted backup-worker image builds passed.
+Real encrypted SFTP backup and recovery into a new network-disabled PostgreSQL after
+synthetic source deletion passed, including report-table counts and a saved schedule.
+These disposable fixtures do not constitute production recovery approval.
+
+Task 021 is complete. The documentation follow-up records the implementation result.
 
 ## Limits and next action
 
@@ -63,4 +72,4 @@ software-license compliance or new identity policy. Downloaded copies cannot be 
 No scale/throughput guarantee is inferred from functional fixtures. Existing operator
 deployment, identity, relay and DEC-09 backup/restore gates remain open.
 
-Next: finish CI and record its result; Task 022 pilot needs approved target-host inputs.
+Next: Task 022 pilot needs approved target-host inputs. No new epic has been started.

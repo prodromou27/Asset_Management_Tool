@@ -19,6 +19,10 @@ recipient revocation, frontend filters/forms/errors/permissions and desktop/mobi
 checks; schema/type sync, lint/build, PostgreSQL/Redis/migration/Compose/restore CI.
 Non-goals: live SMTP/vendor calls, production commissioning, full BI/report designer,
 new topology/compliance inference, new authentication architecture, Task 022 pilot.
-Status: implemented; local tests and desktop/mobile review passed. Details and rollout
-limits: TASK021_REPORT.md. Next: push DEV, verify all CI gates and record the result.
-No live services or production gates have been enabled.
+Status: COMPLETE. Implementation cc88815 pushed to DEV; CI run 42090787679 passed:
+827 PostgreSQL/Redis backend tests (no skips), 206 frontend tests, migration reversal,
+schema/type drift, lint/typecheck/build, deploy/Compose/images and real encrypted
+SFTP/isolated restore. Local browser review: 53 desktop/mobile captures, no browser
+errors or unmapped API requests. Details and rollout limits: TASK021_REPORT.md.
+Next: Task 022 pilot requires approved target-host/operator inputs. Do not silently
+start it. No live services or production gates have been enabled.
