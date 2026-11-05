@@ -3,7 +3,7 @@ import { chromium } from '@playwright/test'
 import fs from 'node:fs/promises'
 
 // Synthetic API responses only. No backend, vendor connector or SMTP service is contacted.
-const output = 'test-results/task021-review'
+const output = 'test-results/ui-redesign-review'
 await fs.mkdir(output, { recursive: true })
 let screenshots = 0
 const capture = async (page, name, fullPage = true) => {
@@ -124,6 +124,17 @@ try {
   await capture(page, 'assets-selection-desktop')
   await page.setViewportSize({ width: 390, height: 844 })
   await capture(page, 'assets-mobile')
+  const filterToggle = page.getByRole('button', { name: 'Filters & sort', exact: true })
+  await page.getByLabel('Category', { exact: true }).waitFor({ state: 'hidden' })
+  if ((await page.getByRole('table', { name: 'Assets', exact: true }).boundingBox()).y >= 844) throw new Error('Mobile filters obscure the asset table')
+  await filterToggle.focus()
+  await page.keyboard.press('Space')
+  await page.getByLabel('Category', { exact: true }).waitFor({ state: 'visible' })
+  await page.getByLabel('Category', { exact: true }).selectOption('switch')
+  await page.waitForURL('**/assets?category=switch')
+  await capture(page, 'assets-filters-mobile')
+  await page.getByRole('button', { name: 'Filters & sort (1 active)', exact: true }).click()
+  await page.getByLabel('Category', { exact: true }).waitFor({ state: 'hidden' })
   await page.goto('http://127.0.0.1:5197/admin/backups')
   await page.getByRole('heading', { level: 1, name: 'Backups & Recovery' }).waitFor()
   await capture(page, 'backups-mobile')
@@ -231,6 +242,17 @@ try {
   await page.goto('http://127.0.0.1:5197/assets')
   await page.getByText('This browser does not support the organization timezone. Dates are shown in UTC.', { exact: true }).waitFor()
   await capture(page, 'timezone-fallback-mobile')
+  responses.set('/auth/me/', { status: 401, body: { error: { code: 'NOT_AUTHENTICATED', message: 'Sign in.' } } })
+  for (const width of [1440, 390]) {
+    await page.setViewportSize({ width, height: width === 390 ? 844 : 900 })
+    await page.goto('http://127.0.0.1:5197/login')
+    await page.getByRole('heading', { name: 'Sign in', exact: true }).waitFor()
+    if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)) throw new Error('Sign-in page overflows')
+    await capture(page, `sign-in-${width}`)
+  }
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+  await page.getByText('Enter your username.', { exact: true }).waitFor()
+  await capture(page, 'sign-in-validation-mobile')
   const result = { fixture_only: true, errors, unmapped: [...unmapped], screenshots }
   await fs.writeFile(`${output}/results.json`, JSON.stringify(result, null, 2))
   console.log(JSON.stringify(result))

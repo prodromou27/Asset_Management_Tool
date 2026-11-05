@@ -1,19 +1,19 @@
 /* Light theme tokens from docs/07_UI_DESIGN_SYSTEM.md (navy console direction, owner design
- * review 2026-11-04; broader visual refinement requested 2026-11-05). Text colours meet WCAG AA (>= 4.5:1)
+ * review 2026-11-04; workspace redesign requested 2026-11-05). Text colours meet WCAG AA (>= 4.5:1)
  * on their intended background. */
 :root {
-  --color-page-bg: #f6f8fb;
+  --color-page-bg: #eef2f6;
   --color-surface: #ffffff;
-  --color-surface-muted: #f8fafc;
-  --color-text-primary: #152033;
-  --color-text-secondary: #536276;
-  --color-border: #dce3ed;
-  --color-border-strong: #bcc8d8;
-  --color-brand: #2563eb;
-  --color-brand-hover: #1d4ed8;
-  --color-brand-soft: #eaf1fe;
+  --color-surface-muted: #f4f7fa;
+  --color-text-primary: #172b41;
+  --color-text-secondary: #52657a;
+  --color-border: #d8e1ea;
+  --color-border-strong: #b3c2d2;
+  --color-brand: #215ad6;
+  --color-brand-hover: #1848b3;
+  --color-brand-soft: #eaf0ff;
   --color-on-brand: #ffffff;
-  --color-link: #1d4ed8;
+  --color-link: #1848b3;
   --color-success: #15803d;
   --color-warning: #b45309;
   --color-danger: #c62828;
@@ -23,13 +23,13 @@
   --color-backdrop: rgb(15 27 45 / 45%);
 
   /* Navigation (dark navy sidebar). */
-  --color-nav-bg: #0f1b2d;
-  --color-nav-text: #c5cedb;
-  --color-nav-muted: #8391a7;
-  --color-nav-hover: #1a2a40;
-  --color-nav-active: #213552;
-  --color-nav-accent: #60a5fa;
-  --color-nav-border: #1e2d44;
+  --color-nav-bg: #122238;
+  --color-nav-text: #c7d3e2;
+  --color-nav-muted: #93a7bf;
+  --color-nav-hover: #1d334d;
+  --color-nav-active: #254364;
+  --color-nav-accent: #9dc8ff;
+  --color-nav-border: #2b3c52;
 
   --space-1: 4px;
   --space-2: 8px;
@@ -39,18 +39,18 @@
   --space-8: 32px;
 
   --radius-sm: 4px;
-  --radius-md: 6px;
+  --radius-md: 5px;
   --radius-lg: 8px;
 
   --size-control: 36px;
   --size-row: 40px;
-  --size-topbar: 56px;
-  --size-sidebar: 240px;
+  --size-topbar: 64px;
+  --size-sidebar: 232px;
 
   --font-sans: 'Inter Variable', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Consolas, monospace;
 
-  --shadow-surface: 0 1px 3px rgb(15 27 45 / 4%);
+  --shadow-surface: 0 1px 2px rgb(15 27 45 / 3%);
   --shadow-overlay: 0 10px 28px rgb(15 27 45 / 18%);
   --duration-fast: 120ms;
 }

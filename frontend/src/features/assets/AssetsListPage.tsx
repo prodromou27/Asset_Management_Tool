@@ -78,6 +78,7 @@ export function AssetsListPage() {
   const [viewDraft, setViewDraft] = useState<{ id: string; columns: AssetColumn[] } | null>(null)
   const [dialog, setDialog] = useState<'save' | 'delete' | 'columns' | null>(null)
   const [exporting, setExporting] = useState(false)
+  const [filtersOpen, setFiltersOpen] = useState(false)
   const [selection, setSelection] = useState<{ key: string; ids: Set<string> }>({ key: '', ids: new Set() })
   const selectionKey = JSON.stringify(filters)
 
@@ -245,7 +246,7 @@ export function AssetsListPage() {
       </div>
 
       <form
-        className="toolbar"
+        className="toolbar toolbar--assets"
         role="search"
         onSubmit={(event: FormEvent) => {
           event.preventDefault()
@@ -261,6 +262,16 @@ export function AssetsListPage() {
           value={search}
           onChange={(event) => setSearch(event.target.value)}
         />
+        <Button
+          className="asset-filters-toggle"
+          aria-expanded={filtersOpen}
+          aria-controls="asset-filter-options"
+          onClick={() => setFiltersOpen((open) => !open)}
+        >
+          Filters &amp; sort{Object.entries(currentFilters).filter(([key]) => key !== 'q').length > 0
+            ? ` (${Object.entries(currentFilters).filter(([key]) => key !== 'q').length} active)` : ''}
+        </Button>
+        <div id="asset-filter-options" className={`asset-filter-options${filtersOpen ? ' asset-filter-options--open' : ''}`}>
         <SelectField
           label="Category"
           name="category"
@@ -329,6 +340,7 @@ export function AssetsListPage() {
           value={filters.ordering ?? ''}
           onChange={(event) => update({ ordering: event.target.value || undefined })}
         />
+        </div>
         <div className="toolbar__actions">
           <Button type="submit">Search</Button>
           {filtered && (

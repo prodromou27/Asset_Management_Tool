@@ -29,6 +29,22 @@ const reference = {
 }
 
 describe('Assets list', () => {
+  it('keeps active filter state when the mobile filter disclosure is toggled', async () => {
+    mockApi({
+      'GET /auth/me/': { body: readerMe() },
+      ...reference,
+      'GET /assets/': { body: page([]) },
+    })
+    renderApp('/assets?site=site-hq')
+    const toggle = await screen.findByRole('button', { name: 'Filters & sort (1 active)' })
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    fireEvent.click(toggle)
+    expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    expect(document.getElementById('asset-filter-options')).toHaveClass('asset-filter-options--open')
+    fireEvent.click(toggle)
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    expect(toggle).toHaveTextContent('1 active')
+  })
   it('updates the search field when top-bar search changes the URL on the same page', async () => {
     const { calls } = mockApi({
       'GET /auth/me/': { body: readerMe() },

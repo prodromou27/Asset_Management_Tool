@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Boxes, ChevronDown, Menu, Search, X } from 'lucide-react'
+import { Boxes, ChevronDown, ChevronRight, Menu, Search, X } from 'lucide-react'
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { logout, queryKeys } from '../shared/api/accounts'
@@ -30,7 +30,8 @@ function NavList({ items, onNavigate }: { items: NavItem[]; onNavigate: () => vo
             className={`nav-link${active ? ' nav-link--active' : ''}`}
           >
             <Icon className="nav-link__icon" size={18} strokeWidth={1.75} aria-hidden="true" />
-            <span>{label}</span>
+            <span className="nav-link__label">{label}</span>
+            {active && <ChevronRight className="nav-link__current" size={14} aria-hidden="true" />}
           </Link>
         </li>
         )
@@ -211,7 +212,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </span>
           <span className="brand-copy">
             <span className="brand-name" title={me?.display_preferences?.organization_name}>{me?.display_preferences?.organization_name ?? 'ITAM'}</span>
-            <span className="brand-caption">Asset management</span>
+            <span className="brand-caption">ASSET WORKSPACE</span>
           </span>
           <button
             type="button"
@@ -250,9 +251,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           {where.page && (
             <nav className="top-bar__context" aria-label="Breadcrumb">
               <span className="top-bar__section">{where.section}</span>
-              <span className="top-bar__sep" aria-hidden="true">
-                /
-              </span>
+              <ChevronRight className="top-bar__sep" size={14} aria-hidden="true" />
               <span className="top-bar__page" aria-current="page">{where.page}</span>
             </nav>
           )}
