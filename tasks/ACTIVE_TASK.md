@@ -1,6 +1,6 @@
 # Current Task: 019 | Backups, off-host encryption and isolated restore
 
-Status: Implemented, local checks passed; awaiting PostgreSQL/Docker CI (2026-11-05, DEV).
+Status: **Complete (CI run 42006140665 green)** (2026-11-05, DEV; implementation `8b7fd97`).
 Owner also requested a whole-UI/functionality
 review and refinement. Preserve the navy console design and completed workflows.
 
@@ -58,7 +58,15 @@ tokens, headers, toolbar/filter surfaces, table boundaries/selection, segmented 
 empty/error/warning states and sidebar brand hierarchy refreshed across existing screens;
 docs/07 updated. Final frontend and screenshot checks passed after this visual pass.
 
-Next action: monitor CI and record its result. DEC-09 (real target, key recovery, approved
+Final CI 42006140665 on `8b7fd97`: backend **793 passed, 0 skipped**, frontend **189 passed**;
+PostgreSQL migrations applied/reversed/reapplied, schema/type synchronization, Compose
+dev/prod configuration, production API/frontend and restricted backup-worker image builds
+all pass. PostgreSQL/restic binaries load in the backup image. The synthetic backup was
+restored by `ops/restore/drill.py` into a new network-disabled PostgreSQL container and its
+database checksum, migration history and recorded table counts verified successfully.
+
+Proposed next task: **020 | Admin settings, integration catalogue and health screens**.
+DEC-09 (real target, key recovery, approved
 policy/objectives, host sizing and timed staging rehearsal), DEC-08/14 live alert delivery
 and future external media remain operational gates. Do not start Task 020 automatically.
 
