@@ -36,7 +36,23 @@ if database["ENGINE"] != "django.db.backends.sqlite3" and database.get("HOST") n
 ROOT = Path(__file__).resolve().parents[2]
 
 
-@pytest.mark.django_db(transaction=True)
+@pytest.fixture(scope="session")
+def django_db_keepdb():
+    # This rehearsal owns the whole disposable database, including its final drop.
+    return False
+
+
+@pytest.fixture
+def transactional_db(django_db_setup, django_db_blocker):
+    # Live-server writes must commit. Per-test flush would TRUNCATE append-only tables;
+    # retain their protections and let django_db_setup drop the entire test DB instead.
+    with django_db_blocker.unblock():
+        name = str(connection.settings_dict["NAME"])
+        assert name.startswith("test_") or "mode=memory" in name or name == ":memory:"
+        assert connection.get_autocommit()
+        yield
+
+
 def test_real_browser_pilot(live_server, settings):
     name = str(connection.settings_dict["NAME"])
     assert name.startswith("test_") or "mode=memory" in name or name == ":memory:"
@@ -117,7 +133,7 @@ def test_real_browser_pilot(live_server, settings):
     } <= actions
     report_path = ROOT / "frontend/test-results/pilot/report.json"
     report = json.loads(report_path.read_text())
-    report["status"] = "passed"
+    report["status"] = "database_passed"
     report["database_assertions"] = "passed: audit, scope, encryption, revocation, no outbox"
     report_path.write_text(json.dumps(report, indent=2) + "\n")
     print(json.dumps(report))

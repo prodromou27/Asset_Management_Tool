@@ -24,6 +24,9 @@ hosts are accepted, checked during collection before a test database is created.
 The database name used by the rehearsal must have pytest's `test_` prefix (or be
 SQLite's test memory database). It refuses pre-existing asset/user fixture data.
 Use a disposable database service, never a production database server.
+This single rehearsal owns the test database and drops it at session teardown.
+It does not issue per-test TRUNCATE/flush against append-only audit/history/observation
+tables, disable their triggers or keep the database with `--reuse-db`.
 
 Local Windows sandbox without Docker/PostgreSQL, using installed Microsoft Edge:
 
@@ -63,8 +66,9 @@ screenshot is produced. Authenticated screenshots contain synthetic data only.
 
 The harness has four pytest checks: one 14-scenario browser/database rehearsal,
 two invalid API-target guards and a remote-database collection guard. Browser output
-initially says `browser_passed`; only successful backend assertions finalize the
-report as `passed`. Failed runs cannot reuse an old successful report.
+initially says `browser_passed`; backend assertions advance it to `database_passed`.
+Only a successful pytest exit including teardown promotes the report to `passed`.
+Failed runs cannot reuse an old successful report.
 401/403/404 entries in the test-server log are expected for the denial scenarios;
 the final pytest result and report determine success.
 

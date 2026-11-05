@@ -17,11 +17,12 @@ user-admin permission refusal, group member scope, form registration of a non-ne
 monitor, Unknown lifecycle, real UI JSON export and authenticated scoped download,
 and administrator disablement revoking an open browser session. Backend assertions
 then verify audit events, unchanged hidden assets, encrypted file/count, inactive
-account and an empty mail outbox. Only those assertions promote the report from
-`browser_passed` to `passed`; successful evidence is cleared before a fresh run.
+account and an empty mail outbox. Those assertions promote the report from
+`browser_passed` to `database_passed`; only successful pytest teardown finalizes
+`passed`. Successful evidence is cleared before a fresh run.
 
 Local final proof: **4 pytest checks passed** (one 14-scenario browser/database
-rehearsal, two API-target guards, one remote-DB collection guard), in **46.47 s**.
+rehearsal, two API-target guards, one remote-DB collection guard), in **39.03 s**.
 Engine: SQLite test-memory fallback, transport: loopback HTTP, tasks: eager. Ruff
 lint/format, frontend lint/typecheck and production build passed. Existing Vite
 chunk-size advisory remains. The two authenticated synthetic screenshots were
@@ -45,3 +46,8 @@ synthetic evidence; target-host UAT and commissioning remain separate operator g
 Next: **Task 022b — isolated PostgreSQL reference-load measurements** (30k assets,
 1m installations, concurrent p95 and lifecycle timing), with reproducible workload and
 sample counts. Keep live/production gates off; do not claim the full Task 022 is done.
+
+Initial PostgreSQL CI ran all four checks successfully but failed during Django's
+per-test flush: observation immutability correctly rejected TRUNCATE. The harness
+now owns an autocommit test database for the whole rehearsal and lets session
+teardown drop it, with keep/reuse disabled. No application triggers are disabled.
