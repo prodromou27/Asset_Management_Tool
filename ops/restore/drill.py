@@ -18,9 +18,13 @@ from pathlib import Path
 
 def command(args):
     try:
-        return subprocess.run(args, check=True, capture_output=True, timeout=7200).stdout.decode()
+        return subprocess.run(
+            args, check=True, capture_output=True, timeout=7200
+        ).stdout.decode()
     except (OSError, subprocess.SubprocessError) as exc:
-        raise RuntimeError("Drill command failed; restricted command output withheld.") from exc
+        raise RuntimeError(
+            "Drill command failed; restricted command output withheld."
+        ) from exc
 
 
 def drill(directory, report):
@@ -35,7 +39,10 @@ def drill(directory, report):
     if dump.is_symlink() or manifest.get("format") != "itam.backup.v1":
         raise ValueError("Invalid backup format or symlink.")
     with dump.open("rb") as stream:
-        if hashlib.file_digest(stream, "sha256").hexdigest() != manifest["database_sha256"]:
+        if (
+            hashlib.file_digest(stream, "sha256").hexdigest()
+            != manifest["database_sha256"]
+        ):
             raise ValueError("Database checksum mismatch.")
     name = f"itam-drill-{uuid.uuid4().hex}"
     created = False
@@ -156,6 +163,35 @@ def drill(directory, report):
         ]:
             raise ValueError("Restored migration history differs.")
         sql("UPDATE notifications_smtpprofile SET enabled=false")
+        if "synthetic_recovery" in result:
+            # Fixed queries for the known synthetic fixture, never operator-supplied SQL.
+            checks = {
+                "group_asset": "SELECT count(*) FROM groups_assetgroupmembership m "
+                "JOIN groups_assetgroup g ON g.id=m.group_id "
+                "JOIN assets_asset a ON a.id=m.asset_id",
+                "installed_software": "SELECT count(*) FROM software_softwareinstallation i "
+                "JOIN software_softwareversion v ON v.id=i.version_id "
+                "JOIN software_softwareproduct p ON p.id=v.product_id "
+                "JOIN assets_asset a ON a.id=i.asset_id",
+                "lifecycle_evidence": "SELECT count(*) FROM lifecycle_lifecyclemilestone m "
+                "JOIN lifecycle_lifecyclesource s ON s.id=m.source_id "
+                "JOIN lifecycle_lifecycleproduct p ON p.id=m.product_id",
+                "license_product": "SELECT count(*) FROM licensing_licenseentitlement e "
+                "JOIN licensing_licenseproduct p ON p.id=e.product_id",
+                "user_role": "SELECT count(*) FROM accounts_user_roles ur "
+                "JOIN accounts_user u ON u.id=ur.user_id JOIN accounts_role r ON r.code=ur.role_id",
+                "audit_continuity": "SELECT count(*) FROM audit_auditevent "
+                "WHERE action='backups.drill_fixture'",
+                "outbox_preserved": "SELECT count(*) FROM notifications_outboxmessage "
+                "WHERE event_type='fixture'",
+            }
+            result["representative_relationships"] = {
+                key: int(sql(query)) for key, query in checks.items()
+            }
+            if any(
+                count != 1 for count in result["representative_relationships"].values()
+            ):
+                raise ValueError("Synthetic representative relationship check failed.")
         if "extensions" in manifest:
             extensions = dict(
                 line.split(":", 1)
@@ -177,7 +213,9 @@ def drill(directory, report):
         result["finished_at"] = datetime.now(UTC).isoformat()
         result["duration_seconds"] = (datetime.now(UTC) - started).total_seconds()
         if "synthetic_recovery" in result:
-            retrieval = datetime.fromisoformat(result["synthetic_recovery"]["retrieval_started_at"])
+            retrieval = datetime.fromisoformat(
+                result["synthetic_recovery"]["retrieval_started_at"]
+            )
             result["retrieval_and_restore_seconds"] = (
                 datetime.now(UTC) - retrieval
             ).total_seconds()

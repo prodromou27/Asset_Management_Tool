@@ -18,27 +18,50 @@ def _roundtrip(tmp_path):
     import psycopg
     from psycopg import sql
 
-    from apps.accounts.models import User
+    from apps.accounts.models import Role, User
     from apps.assets.models import Asset, AssetCategory
     from apps.audit import services as audit
     from apps.backups import runner
     from apps.domains.models import Certificate, DomainRegistration
-    from apps.groups.models import AssetGroup
-    from apps.imports.crypto import decrypt, encrypt
+    from apps.exports.models import ExportJob
+    from apps.groups.models import AssetGroup, AssetGroupMembership
+    from apps.imports.crypto import EXPORTS, decrypt, encrypt
     from apps.imports.models import ImportJob
     from apps.licensing.models import LicenseEntitlement, LicenseProduct
-    from apps.lifecycle.models import LifecycleProduct
+    from apps.lifecycle.models import LifecycleMilestone, LifecycleProduct, LifecycleSource
+    from apps.notifications.models import OutboxMessage, SmtpProfile
     from apps.organizations.models import Site
+    from apps.software.models import SoftwareInstallation, SoftwareProduct, SoftwareVersion
 
     os.environ["ITAM_APP_REVISION"] = "1" * 40
     os.environ["ITAM_BACKUP_IMAGE_REFERENCE"] = "fixture/backup@sha256:" + "2" * 64
     admin_user = User.objects.create_user(
         "restore.fixture", "disposable-test-password", display_name="Restore Fixture"
     )
+    admin_user.roles.add(Role.objects.get(code="system_admin"))
     site = Site.objects.create(code="RESTORE", name="Restore fixture")
     category = AssetCategory.objects.create(code="restore-fixture", name="Restore fixture")
     asset = Asset.objects.create(name="Restore fixture", site=site, category=category)
     group = AssetGroup.objects.create(name="Restore fixture", kind="static")
+    membership = AssetGroupMembership.objects.create(
+        group=group,
+        asset=asset,
+        source="explicit",
+        added_at=timezone.now(),
+        added_by=admin_user,
+    )
+    software = SoftwareProduct.objects.create(name="Fixture software", name_key="fixture software")
+    software_version = SoftwareVersion.objects.create(
+        product=software, version="1", version_key="1"
+    )
+    installation = SoftwareInstallation.objects.create(
+        version=software_version,
+        asset=asset,
+        raw_name="Fixture software",
+        first_seen_at=timezone.now(),
+        last_seen_at=timezone.now(),
+        created_by=admin_user,
+    )
     domain = DomainRegistration.objects.create(fqdn="restore.example.invalid")
     certificate = Certificate.objects.create(
         fingerprint_sha256="c" * 64,
@@ -66,6 +89,33 @@ def _roundtrip(tmp_path):
         name="Model 1",
         name_key="model 1",
     )
+    evidence = LifecycleSource.objects.create(
+        publisher="Fixture",
+        title="Synthetic lifecycle evidence",
+        source_type="manual",
+        collected_on=timezone.now().date(),
+        document_ref="synthetic-fixture",
+    )
+    milestone = LifecycleMilestone.objects.create(
+        product=product,
+        source=evidence,
+        milestone_type="end_of_support",
+        date=timezone.now().date(),
+        verification="verified",
+        reviewed_by=admin_user,
+        reviewed_at=timezone.now(),
+    )
+    SmtpProfile.objects.create(enabled=False)
+    outbox = OutboxMessage.objects.create(
+        event_type="fixture",
+        template_code="backup_alert",
+        template_version=1,
+        to_address="fixture@example.invalid",
+        subject="Synthetic restore fixture",
+        queued_at=timezone.now(),
+        next_attempt_at=timezone.now(),
+        expires_at=timezone.now(),
+    )
     original = b"asset_tag,name\nfixture,Restore fixture\n"
     imported = ImportJob.objects.create(
         family="assets",
@@ -76,6 +126,16 @@ def _roundtrip(tmp_path):
         checksum="fixture",
         file_encrypted=encrypt(original),
         purge_after=timezone.now(),
+        created_by=admin_user,
+    )
+    exported = ExportJob.objects.create(
+        family="assets",
+        file_format="csv",
+        scope="all",
+        status="completed",
+        row_count=1,
+        filename="fixture.csv",
+        file_encrypted=encrypt(original, EXPORTS),
         created_by=admin_user,
     )
     audit.record(action="backups.drill_fixture", object_type="asset", object_id=asset.pk)
@@ -161,6 +221,10 @@ def _roundtrip(tmp_path):
                     ("domains_domainregistration", domain.pk),
                     ("domains_certificate", certificate.pk),
                     ("licensing_licenseentitlement", entitlement.pk),
+                    ("groups_assetgroupmembership", membership.pk),
+                    ("software_softwareinstallation", installation.pk),
+                    ("lifecycle_lifecyclemilestone", milestone.pk),
+                    ("notifications_outboxmessage", outbox.pk),
                 ]:
                     assert recovered.execute(
                         sql.SQL("SELECT id FROM {} WHERE id=%s").format(sql.Identifier(table)), [pk]
@@ -169,6 +233,10 @@ def _roundtrip(tmp_path):
                     "SELECT file_encrypted FROM imports_importjob WHERE id=%s", [imported.pk]
                 ).fetchone()[0]
                 assert decrypt(bytes(blob)) == original
+                blob = recovered.execute(
+                    "SELECT file_encrypted FROM exports_exportjob WHERE id=%s", [exported.pk]
+                ).fetchone()[0]
+                assert decrypt(bytes(blob), EXPORTS) == original
                 recovered.execute("UPDATE notifications_smtpprofile SET enabled=false")
         finally:
             control.execute(sql.SQL("DROP DATABASE {}").format(sql.Identifier(target)))

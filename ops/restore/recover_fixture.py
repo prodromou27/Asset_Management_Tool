@@ -19,17 +19,23 @@ def recover(directory, key, target):
         "storage_volume_removed",
     ):
         if metadata.get(field) is not True:
-            raise ValueError("Original synthetic source removal must be confirmed first.")
+            raise ValueError(
+                "Original synthetic source removal must be confirmed first."
+            )
     snapshot = metadata["snapshot_id"]
     if not re.fullmatch(r"[0-9a-f]{64}", snapshot):
         raise ValueError("Invalid immutable snapshot ID.")
     env = {k: os.environ[k] for k in ("PATH", "HOME") if k in os.environ}
-    env.update(RESTIC_REPOSITORY=str(directory / "repository"), RESTIC_PASSWORD_FILE=str(key))
+    env.update(
+        RESTIC_REPOSITORY=str(directory / "repository"), RESTIC_PASSWORD_FILE=str(key)
+    )
     for args in (
         ["check", "--read-data"],
         ["restore", snapshot, "--target", str(target)],
     ):
-        subprocess.run(["restic", *args], env=env, check=True, capture_output=True, timeout=7200)
+        subprocess.run(
+            ["restic", *args], env=env, check=True, capture_output=True, timeout=7200
+        )
     metadata.update(
         retrieval_started_at=started.isoformat(),
         retrieval_duration_seconds=(datetime.now(UTC) - started).total_seconds(),
