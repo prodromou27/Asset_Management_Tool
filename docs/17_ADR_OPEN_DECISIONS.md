@@ -155,6 +155,21 @@ separate job after deleting the source DB and storage container/volume. This pro
 synthetic transport/recovery behavior; physical off-host separation, production secrets,
 retention, capacity, SMTP delivery and RPO/RTO approval remain DEC-09 commissioning gates.
 
+### ASM-61 — Task 020 administration and operational evidence (2026-11-05)
+
+Owner authorized Task 020 after Task 019 completion. Reuse accounts settings/audit,
+integration registry and health modules. Add a nonsecret GeneralSettings singleton with
+row-locked version guards; expose only display preferences in authenticated session data.
+English remains the supported language. Shared formatting follows organization timezone/
+date format while calendar dates remain unchanged. No retention or secret policy changes.
+
+Operational health is a separate permission-protected read-only endpoint; public probes
+remain minimal. Existing role expectations in docs/09 determine `health.view` grants.
+Recorded source/SMTP/backup evidence and job states are not active vendor probes, worker
+heartbeats or production approval. Unknown/manual gates remain incomplete. No automatic
+readiness approval, live access, SSO/MFA implementation, commissioning or Task 021 is
+implied. DEC-09 and the existing identity/deployment decisions remain open.
+
 ## GLPI licensing note
 
 GLPI repository is GPLv3. Use product concepts and independently written code. Forking or copying GLPI source is a **separate** licensing/product strategy requiring owner approval. Do not casually mix GPL files into a differently licensed custom codebase.

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'rea
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { logout, queryKeys } from '../shared/api/accounts'
 import { PERMISSIONS } from '../shared/api/types'
+import { getDisplayTimezoneWarning } from '../shared/format'
 import { locate, SECTIONS, type NavItem } from './navigation'
 import { useSession } from './useSession'
 
@@ -159,6 +160,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     ),
   })).filter((section) => section.items.length > 0)
   const where = locate(pathname)
+  const timezoneWarning = getDisplayTimezoneWarning()
 
   useEffect(() => {
     if (!navOpen) return
@@ -208,7 +210,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Boxes size={18} strokeWidth={2} />
           </span>
           <span className="brand-copy">
-            <span className="brand-name">ITAM</span>
+            <span className="brand-name" title={me?.display_preferences?.organization_name}>{me?.display_preferences?.organization_name ?? 'ITAM'}</span>
             <span className="brand-caption">Asset management</span>
           </span>
           <button
@@ -260,6 +262,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         </header>
         <main className="app-shell__main" id="main" tabIndex={-1}>
+          {timezoneWarning && <p className="state state--warning" role="status">{timezoneWarning}</p>}
           {children}
         </main>
       </div>

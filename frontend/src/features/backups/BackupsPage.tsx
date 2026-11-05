@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useSession } from '../../app/useSession'
 import * as api from '../../shared/api/backups'
 import { PERMISSIONS } from '../../shared/api/types'
+import { formatDateTime } from '../../shared/format'
 import { Button } from '../../shared/ui/Button'
 import { Dialog } from '../../shared/ui/Dialog'
 import { Drawer } from '../../shared/ui/Drawer'
@@ -12,7 +13,7 @@ import { PageHeader } from '../../shared/ui/PageHeader'
 import { StatusBadge } from '../../shared/ui/StatusBadge'
 import { EmptyState, ErrorSummary, LoadingState, QueryErrorState } from '../../shared/ui/States'
 
-const date = (value?: string | null) => value ? new Date(value).toLocaleString() : 'Not recorded'
+const date = (value?: string | null) => formatDateTime(value, 'Not recorded')
 
 export function BackupsPage() {
   const { can } = useSession()

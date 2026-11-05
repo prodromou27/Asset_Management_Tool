@@ -37,8 +37,10 @@ def check_redis() -> DependencyStatus:
     from redis.exceptions import RedisError
 
     try:
-        client = Redis.from_url(settings.CELERY_BROKER_URL, socket_connect_timeout=2)
-        client.ping()
+        with Redis.from_url(
+            settings.CELERY_BROKER_URL, socket_connect_timeout=2, socket_timeout=2
+        ) as client:
+            client.ping()
     except (RedisError, OSError):
         logger.exception("Readiness: redis check failed")
         return DependencyStatus(name="redis", healthy=False, detail=UNREACHABLE)

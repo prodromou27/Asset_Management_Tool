@@ -129,6 +129,39 @@ class User(AbstractBaseUser):
         return code in self.permission_codes()
 
 
+class GeneralSettings(models.Model):
+    """Organization display policy; UTC storage and domain retention remain unchanged."""
+
+    id = models.PositiveSmallIntegerField(primary_key=True, default=1, editable=False)
+    organization_name = models.CharField(max_length=100, default="ITAM")
+    timezone = models.CharField(max_length=64, default="Asia/Nicosia")
+    date_format = models.CharField(
+        max_length=20,
+        choices=[
+            ("day_month_year", "Day month year"),
+            ("month_day_year", "Month day year"),
+            ("iso", "ISO 8601"),
+        ],
+        default="day_month_year",
+    )
+    language = models.CharField(max_length=5, choices=[("en", "English")], default="en")
+    support_contact = models.EmailField(blank=True)
+    version = models.PositiveIntegerField(default=1)
+    modified_at = models.DateTimeField(auto_now=True)
+    modified_by = models.ForeignKey(
+        User, null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(condition=models.Q(id=1), name="general_settings_singleton")
+        ]
+
+    @classmethod
+    def load(cls):
+        return cls.objects.get_or_create(pk=1)[0]
+
+
 class SecuritySettings(models.Model):
     """Singleton (pk=1) of admin-configurable authentication policy."""
 

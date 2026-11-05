@@ -3,7 +3,7 @@ import { chromium } from '@playwright/test'
 import fs from 'node:fs/promises'
 
 // Synthetic API responses only. No backend, vendor connector or SMTP service is contacted.
-const output = 'test-results/task019-review'
+const output = 'test-results/task020-review'
 await fs.mkdir(output, { recursive: true })
 let screenshots = 0
 const capture = async (page, name, fullPage = true) => {
@@ -15,6 +15,8 @@ const source = await fs.readFile('src/test/api.tsx', 'utf8')
 const permissions = JSON.parse(source.match(/const ALL_ADMIN = (\[[\s\S]*?\])/)[1].replaceAll("'", '"').replace(/,\s*]/, ']'))
 const me = { id: 'fixture-admin', username: 'fixture.admin', display_name: 'Fixture Admin', email: '', roles: [{ code: 'system_admin', name: 'System Admin' }], permissions, all_sites: true, must_change_password: false }
 const policy = { enabled: false, hour_utc: 2, rpo_hours: 24, rto_hours: 4, keep_daily: 30, keep_weekly: 8, keep_monthly: 12, retention_enabled: false, version: 1, modified_at: '2026-11-05T00:00:00Z' }
+const general = { organization_name: 'ITAM', timezone: 'Asia/Nicosia', date_format: 'day_month_year', language: 'en', support_contact: '', version: 1, modified_at: '2026-11-05T00:00:00Z', modified_by: null }
+me.display_preferences = { ...general }
 const site = { id: 'site', code: 'HQ', name: 'Headquarters', is_active: true, parent: null }
 const category = { id: 'switch', code: 'switch', name: 'Switch', path: 'Networking / Switch', parent: null, depth: 0, is_active: true }
 const assets = Array.from({ length: 28 }, (_, i) => ({
@@ -26,7 +28,7 @@ const assets = Array.from({ length: 28 }, (_, i) => ({
   modified_at: '2026-11-05T00:00:00Z', version: 1,
 }))
 const pageData = (items) => ({ items, next_cursor: null, previous_cursor: null, count: items.length })
-const fixtureSource = { code: 'fixture', name: 'Sanitized fixture import', kind: 'import', availability: 'available', description: 'Synthetic review source', instance_count: 1 }
+const fixtureSource = { code: 'fixture', name: 'Sanitized fixture import', kind: 'import', availability: 'available', description: 'Synthetic review source', instance_count: 1, has_adapter: false, required_permissions: [] }
 const fixtureIntegration = {
   id: 'fixture-integration', source: fixtureSource,
   name: 'Fixture inventory connection with a deliberately long display name',
@@ -35,14 +37,25 @@ const fixtureIntegration = {
   active_links: 0, stale_links: 0, open_candidates: 0,
 }
 const routes = {
+  '/settings/general/': general,
+  '/health/operations/': { checked_at: '2026-11-05T12:00:00Z', production_readiness: 'incomplete', components: [
+    { id: 'database', label: 'Database', status: 'up', detail: 'Reachable.', href: '/' },
+    { id: 'redis', label: 'Redis', status: 'up', detail: 'Reachable.', href: '/' },
+    { id: 'scratch', label: 'Application scratch storage', status: 'up', detail: 'Synthetic capacity fixture; database/off-host storage not measured.', href: '/' },
+    { id: 'workers', label: 'Workers and scheduler', status: 'unknown', detail: 'No worker heartbeat available; queue depth does not establish worker health.', href: '/' },
+    { id: 'backups', label: 'Encrypted backup jobs', status: 'disabled', detail: 'No verified recovery point recorded.', href: '/admin/backups' },
+  ], integrations: [{ id: 'fixture', label: 'Synthetic disabled source', status: 'disabled', detail: 'Disabled; no successful sync implied.', href: '/admin/integrations/fixture' }], queues: ['Imports', 'Exports', 'Backups'].map((name) => ({ name, queued: 0, running: 0, failed: 0, worker_status: 'unknown' })), checklist: [
+    { id: 'https', label: 'Trusted HTTPS and secure cookies', status: 'unknown', detail: 'Verify the deployed certificate and cookies on the target host.', href: '/admin/security' },
+    { id: 'recovery', label: 'Off-host backup and restore rehearsal', status: 'needs_attention', detail: 'Approve destination, key custody and timed staging recovery.', href: '/admin/backups' },
+  ] },
   '/auth/me/': me, '/backups/policy/': policy, '/backups/jobs/': [], '/backups/drills/': [],
   '/backups/summary/': { execution_allowed: false, target_label: 'Not configured', encryption: 'Restic authenticated encryption; key custody approval required', off_host: 'SFTP repository required; validate physical separation at commissioning', last_backup: null, last_drill: null, problems: ['Setup incomplete: deployment approval and repository/key provisioning needed (DEC-09).', 'Nightly backups are disabled.', 'No verified backup recorded.', 'No isolated restore drill recorded.'] },
   '/assets/': pageData(assets), '/asset-categories/': [category], '/sites/': [site], '/saved-views/': [],
-  '/integrations/': [fixtureIntegration], '/health/ready/': { status: 'ok', dependencies: {} },
+  '/integrations/': [fixtureIntegration], '/health/ready/': { status: 'ok', dependencies: { database: { status: 'up', detail: '' }, redis: { status: 'up', detail: '' } } },
   '/locations/': [], '/departments/': [], '/domains/': pageData([]),
   '/certificates/': pageData([]), '/tls-endpoints/': pageData([]),
   '/software/products/': pageData([]), '/software/installations/': pageData([]),
-  '/discovery/candidates/': pageData([]), '/discovery/sources/': [fixtureSource],
+  '/discovery/candidates/': pageData([]), '/discovery/sources/': [fixtureSource, { ...fixtureSource, code: 'librenms', name: 'LibreNMS', kind: 'network', availability: 'beta', has_adapter: true, description: 'Read-only network inventory; fixture tested.' }, { ...fixtureSource, code: 'future', name: 'Future provider', availability: 'planned', instance_count: 0, description: 'No adapter implemented.' }],
   '/integrations/fixture-integration/runs/': pageData([]),
   '/discovery/field-authority/': { precedence: {}, version: 1, modified_at: '2026-11-05T00:00:00Z', modified_by: null },
   '/lifecycle/summary/': [], '/lifecycle/findings/': pageData([]),
@@ -64,6 +77,17 @@ try {
   page.on('pageerror', (error) => errors.push(error.message))
   await page.route('**/api/v1/**', async (route) => {
     const key = new URL(route.request().url()).pathname.replace('/api/v1', '')
+    if (key === '/settings/general/' && route.request().method() === 'PATCH') {
+      const body = route.request().postDataJSON()
+      if (body.timezone === 'Invalid/Zone') {
+        await route.fulfill({ status: 422, contentType: 'application/json', body: JSON.stringify({ error: { code: 'VALIDATION_ERROR', message: 'Check the settings.', field_errors: { timezone: ['Enter a valid IANA timezone.'] } } }) })
+      } else {
+        Object.assign(general, body, { version: general.version + 1 })
+        me.display_preferences = { ...general }
+        await route.fulfill({ contentType: 'application/json', body: JSON.stringify(general) })
+      }
+      return
+    }
     if (!(key in routes)) unmapped.add(key)
     const response = responses.get(key)
     await route.fulfill({ status: response?.status ?? (key in routes ? 200 : 404), contentType: 'application/json', body: JSON.stringify(response?.body ?? routes[key] ?? { error: { message: `Unmocked ${key}` } }) })
@@ -92,6 +116,7 @@ try {
     ['/software', 'software'], ['/domains', 'domains'], ['/admin/sites', 'sites'],
     ['/admin/categories', 'categories'], ['/admin/security', 'security-settings'],
     ['/admin/smtp', 'smtp-settings'],
+    ['/admin/general', 'general-settings'], ['/', 'operational-health'], ['/admin/integrations?tab=catalogue', 'provider-catalogue'],
   ]) {
     for (const width of [1440, 390]) {
       await page.setViewportSize({ width, height: width === 390 ? 844 : 900 })
@@ -105,6 +130,19 @@ try {
       }
     }
   }
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto('http://127.0.0.1:5197/admin/general')
+  await page.getByLabel('Display timezone').fill('Invalid/Zone')
+  await page.getByRole('button', { name: 'Save general settings' }).click()
+  await page.getByRole('alert').waitFor()
+  await capture(page, 'general-validation-1440')
+  await page.getByLabel('Display timezone').fill('UTC')
+  await page.getByLabel('Organization name').fill('Synthetic organization with a long but valid display name')
+  await page.getByRole('button', { name: 'Save general settings' }).click()
+  await page.getByText('General settings saved.', { exact: true }).waitFor()
+  await capture(page, 'general-saved-1440')
+  if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)) throw new Error('Long organization label overflows')
+  await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('http://127.0.0.1:5197/admin/backups')
   await page.getByRole('button', { name: 'Edit policy' }).click()
   const saveBounds = await page.getByRole('button', { name: 'Save policy' }).boundingBox()
@@ -152,6 +190,14 @@ try {
   await page.goto('http://127.0.0.1:5197/assets')
   await page.getByRole('alert').waitFor()
   await capture(page, 'asset-denied-mobile')
+  await page.goto('http://127.0.0.1:5197/admin/general')
+  await page.getByRole('alert').waitFor()
+  await capture(page, 'general-denied-mobile')
+  // Simulate a server timezone that this browser cannot represent.
+  responses.set('/auth/me/', { body: { ...me, display_preferences: { ...me.display_preferences, timezone: 'Fixture/UnsupportedZone' } } })
+  await page.goto('http://127.0.0.1:5197/assets')
+  await page.getByText('This browser does not support the organization timezone. Dates are shown in UTC.', { exact: true }).waitFor()
+  await capture(page, 'timezone-fallback-mobile')
   const result = { fixture_only: true, errors, unmapped: [...unmapped], screenshots }
   await fs.writeFile(`${output}/results.json`, JSON.stringify(result, null, 2))
   console.log(JSON.stringify(result))

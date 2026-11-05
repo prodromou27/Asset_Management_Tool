@@ -3,8 +3,11 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.accounts.permissions import HasPermission
+
 from . import services
-from .serializers import LivenessSerializer, ReadinessSerializer
+from .operations import collect_operations
+from .serializers import LivenessSerializer, OperationalHealthSerializer, ReadinessSerializer
 
 
 class LivenessView(APIView):
@@ -15,6 +18,17 @@ class LivenessView(APIView):
     @extend_schema(responses=LivenessSerializer)
     def get(self, request):
         return Response({"status": "ok"})
+
+
+class OperationalHealthView(APIView):
+    permission_classes = [HasPermission("health.view")]
+
+    @extend_schema(responses=OperationalHealthSerializer)
+    def get(self, request):
+        return Response(
+            OperationalHealthSerializer(collect_operations()).data,
+            headers={"Cache-Control": "no-store"},
+        )
 
 
 class ReadinessView(APIView):

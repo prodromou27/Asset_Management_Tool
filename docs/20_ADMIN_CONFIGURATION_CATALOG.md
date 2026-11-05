@@ -48,3 +48,35 @@ Administrators must see an actionable checklist:
 - [ ] Logs, monitoring, queue alerts, storage free-space and retention configured.
 
 Production Readiness label must stay **Incomplete** until mandatory gates pass. A connector with no grant can be intentionally Disabled, but must never display healthy sync.
+
+## Implemented Task 020 boundary
+
+General settings (`/admin/general`, `GET/PATCH /api/v1/settings/general/`) store organization
+name, display timezone, date format, English language and optional support contact in a
+singleton database record. Patches require `If-Match` and `settings.general.manage`, with
+before/after audit; admin/auditor view access uses `settings.general.view`. Unsupported
+fields are rejected. Display preferences are included in authenticated session responses,
+apply to shared date formatting and organization branding, and never shift calendar-only
+dates. A browser lacking a configured timezone falls back to UTC with a visible warning.
+UTC storage, job schedules and domain-specific retention are unaffected.
+
+The Integrations area retains instance setup/test/sync controls and adds a searchable
+Provider catalogue tab. Adapter maturity, installed adapter, instance count and required
+read permissions are separate facts. Planned providers do not become working connections
+by being configured. Tab selection survives refresh in the URL.
+
+`GET /api/v1/health/operations/` requires `health.view` (system admin, ITAM manager,
+infrastructure engineer, security analyst and auditor by default). It returns redacted
+operational evidence, no-store, without probing vendors, SMTP or off-host storage. Health
+reads do not create configuration records. Infrastructure reachability remains in the
+existing minimal public liveness/readiness probes. Redis probes have bounded connection
+and read timeouts.
+
+Diagnostics report scratch filesystem capacity, recorded source freshness/approval,
+SMTP delivery evidence/backlog, backup evidence and durable import/export/sync/backup
+job counts. Counts are not broker depth or worker heartbeats. Database/off-host capacity,
+host logs/monitoring, IdP/MFA, recipient delivery acceptance, physical off-host separation,
+secret recovery and production approval remain operator checks. The first-run checklist
+stays Incomplete while those checks are unknown; this UI cannot self-certify a production
+deployment. Configuration ownership links reuse existing admin screens. Deployment-only
+controls are described, not exposed as ineffective browser settings.

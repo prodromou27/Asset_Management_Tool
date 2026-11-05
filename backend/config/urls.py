@@ -2,6 +2,7 @@ from django.urls import include, path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 from apps.accounts import views as account_views
+from apps.accounts.general import GeneralSettingsView
 from apps.accounts.urls import auth_urlpatterns, user_urlpatterns
 from apps.assets import saved_views
 from apps.assets.urls import asset_urlpatterns, category_urlpatterns, custom_field_urlpatterns
@@ -30,6 +31,7 @@ from apps.reconciliation.urls import (
 from apps.software.urls import asset_urlpatterns as software_asset_urlpatterns
 
 urlpatterns = [
+    path("api/v1/settings/general/", GeneralSettingsView.as_view(), name="settings-general"),
     path("api/v1/backups/", include("apps.backups.urls")),
     path("api/v1/health/", include("apps.health.urls")),
     path("api/v1/auth/", include(auth_urlpatterns)),

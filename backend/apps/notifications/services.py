@@ -494,7 +494,7 @@ def purge(now=None) -> int:
     )
 
 
-def stats() -> dict:
+def stats(*, profile: SmtpProfile | None = None) -> dict:
     """Queue health for the admin page and System health (docs/14 "notification queue
     backlog" alert)."""
     rows = dict(
@@ -507,7 +507,7 @@ def stats() -> dict:
     )["oldest"]
     since = timezone.now() - timedelta(hours=24)
     dead_recent = OutboxMessage.objects.filter(status=Status.DEAD, finished_at__gte=since).count()
-    profile = get_profile()
+    profile = profile if profile is not None else get_profile()
     waiting = rows.get(Status.QUEUED, 0) + rows.get(Status.RETRYING, 0)
     problems = []
     if dead_recent:

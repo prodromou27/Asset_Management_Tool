@@ -109,6 +109,8 @@ describe('Defender integration page', () => {
         availability: 'beta',
         description: '',
         instance_count: 1,
+        has_adapter: true,
+        required_permissions: [],
       },
       has_adapter: true,
       base_url: 'https://api.security.microsoft.com',

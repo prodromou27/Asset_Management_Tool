@@ -337,6 +337,10 @@ def test_integration_admin_and_planned_sources(client_for, admin_user, hq_manage
     assert sources["librenms"] == "beta" and sources["fixture"] == "available"
     assert sources["intune"] == "beta" and sources["defender"] == "beta"
     assert sources["m365"] == "beta"
+    catalogue = {s["code"]: s for s in client.get("/api/v1/discovery/sources/").json()}
+    assert catalogue["librenms"]["has_adapter"] is True
+    assert catalogue["fixture"]["has_adapter"] is False
+    assert "DeviceManagementManagedDevices.Read.All" in catalogue["intune"]["required_permissions"]
 
     bad = client.post(
         "/api/v1/integrations/",

@@ -429,7 +429,9 @@ describe('Integrations admin', () => {
     })
     renderApp('/admin/integrations')
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Add integration' }))
+    const addIntegration = await screen.findByRole('button', { name: 'Add integration' })
+    await waitFor(() => expect(addIntegration).toBeEnabled())
+    fireEvent.click(addIntegration)
     const dialog = screen.getByRole('dialog', { name: 'Add integration' })
     expect(within(dialog).getByRole('option', { name: 'Microsoft Intune (beta)' })).toBeInTheDocument()
     fireEvent.change(within(dialog).getByLabelText('Source type'), { target: { value: 'intune' } })

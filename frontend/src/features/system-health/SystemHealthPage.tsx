@@ -7,6 +7,7 @@ import { fetchReadiness } from '../../shared/api/health'
 import { PageHeader } from '../../shared/ui/PageHeader'
 import { EmptyState, LoadingState, QueryErrorState } from '../../shared/ui/States'
 import { StatusBadge } from '../../shared/ui/StatusBadge'
+import { OperationalDiagnostics } from './OperationalDiagnostics'
 
 export function SystemHealthPage() {
   const { data, isPending, isError, error } = useQuery({
@@ -54,6 +55,7 @@ export function SystemHealthPage() {
         )}
       </section>
       <MailDelivery />
+      <OperationalDiagnostics />
     </div>
   )
 }

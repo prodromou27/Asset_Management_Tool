@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { assetKeys, fetchSites } from '../../shared/api/assets'
 import { isApiError } from '../../shared/api/client'
 import {
@@ -18,6 +18,7 @@ import { Button } from '../../shared/ui/Button'
 import { Dialog } from '../../shared/ui/Dialog'
 import { CheckboxGroup, SelectField, TextField } from '../../shared/ui/Field'
 import { PageHeader } from '../../shared/ui/PageHeader'
+import { Tabs } from '../../shared/ui/Tabs'
 import { EmptyState, LoadingState, QueryErrorState } from '../../shared/ui/States'
 import { StatusBadge } from '../../shared/ui/StatusBadge'
 import { AVAILABILITY_LABEL, FIELD_LABEL, FRESHNESS, INSTANCE_STATUS } from '../discovery/labels'
@@ -29,6 +30,8 @@ export function IntegrationsPage() {
   const integrations = useQuery({ queryKey: discoveryKeys.integrations, queryFn: fetchIntegrations })
   const sources = useQuery({ queryKey: discoveryKeys.sources, queryFn: fetchSources })
   const [editing, setEditing] = useState<IntegrationInstance | 'new' | null>(null)
+  const [params, setParams] = useSearchParams()
+  const tab = params.get('tab') === 'catalogue' ? 'catalogue' : 'configured'
 
   return (
     <div className="page page--wide">
@@ -36,11 +39,13 @@ export function IntegrationsPage() {
         title="Integrations"
         meta="Read-only source connections. Planned sources have no adapter yet; Beta adapters are fixture-tested and need live validation."
         actions={
-          <Button variant="primary" onClick={() => setEditing('new')}>
+          <Button variant="primary" disabled={!sources.data} onClick={() => setEditing('new')}>
             Add integration
           </Button>
         }
       />
+      <Tabs label="Integration views" selected={tab} onSelect={(value) => setParams({ tab: value })} tabs={[{ id: 'configured', label: 'Configured instances', content: <>
+      {sources.error && <QueryErrorState error={sources.error} what="provider catalogue" />}
       <section className="panel panel--flush" aria-live="polite">
         {integrations.isPending && <LoadingState label="Loading integrations…" />}
         {integrations.isError && <QueryErrorState error={integrations.error} what="integrations" />}
@@ -108,6 +113,7 @@ export function IntegrationsPage() {
         )}
       </section>
       <FieldAuthorityEditor sources={sources.data ?? []} />
+      </> }, { id: 'catalogue', label: 'Provider catalogue', content: <ProviderCatalogue sources={sources.data ?? []} pending={sources.isPending} error={sources.error} /> }]} />
       {editing && sources.data && (
         <IntegrationDialog
           instance={editing === 'new' ? null : editing}
@@ -117,6 +123,35 @@ export function IntegrationsPage() {
       )}
     </div>
   )
+}
+
+function ProviderCatalogue({ sources, pending, error }: { sources: DiscoverySource[]; pending: boolean; error: Error | null }) {
+  const [search, setSearch] = useState('')
+  const [availability, setAvailability] = useState('all')
+  if (pending) return <LoadingState label="Loading provider catalogue…" />
+  if (error) return <QueryErrorState error={error} what="provider catalogue" />
+  const matches = sources.filter((source) => {
+    const text = `${source.name} ${source.description}`.toLowerCase()
+    const statusMatches = availability === 'all' || (availability === 'configured'
+      ? source.instance_count > 0 : source.availability === availability)
+    return text.includes(search.trim().toLowerCase()) && statusMatches
+  })
+  return <>
+    <div className="toolbar">
+      <TextField name="provider_search" label="Search providers" type="search" value={search} onChange={(e) => setSearch(e.target.value)} />
+      <SelectField name="provider_status" label="Provider status" value={availability} onChange={(e) => setAvailability(e.target.value)} options={[{ value: 'all', label: 'All providers' }, { value: 'configured', label: 'Has configured instances' }, { value: 'available', label: 'Available' }, { value: 'beta', label: 'Beta' }, { value: 'planned', label: 'Planned' }]} />
+    </div>
+    <p className="field__help">Availability describes adapter maturity. Configured instances, approved access and successful synchronization are separate states. Planned providers cannot connect or synchronize.</p>
+    {!matches.length ? <EmptyState title="No matching providers." /> : <div className="table-scroll"><table className="data-table provider-catalogue" aria-label="Provider catalogue">
+      <thead><tr><th>Provider</th><th>Availability</th><th>Instances</th><th>Read permissions</th></tr></thead>
+      <tbody>{matches.map((source) => <tr key={source.code}>
+        <td>{source.name}<span className="cell-secondary">{source.description}</span></td>
+        <td><StatusBadge tone={source.availability === 'beta' ? 'warning' : 'neutral'} label={AVAILABILITY_LABEL[source.availability]} /><span className="cell-secondary">{source.has_adapter ? 'Adapter implemented' : 'No adapter'}</span></td>
+        <td>{source.instance_count}</td>
+        <td>{source.required_permissions?.length ? source.required_permissions.join(', ') : source.has_adapter ? 'Read-only token; confirm provider API permissions.' : 'Not available'}</td>
+      </tr>)}</tbody>
+    </table></div>}
+  </>
 }
 
 // Cloud sources whose endpoint is fixed by the connector (the server enforces it too).

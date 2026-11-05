@@ -2711,6 +2711,20 @@ paths:
               schema:
                 $ref: '#/components/schemas/Liveness'
           description: ''
+  /api/v1/health/operations/:
+    get:
+      operationId: health_operations_retrieve
+      tags:
+      - health
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationalHealth'
+          description: ''
   /api/v1/health/ready/:
     get:
       operationId: health_ready_retrieve
@@ -5633,6 +5647,50 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/v1/settings/general/:
+    get:
+      operationId: settings_general_retrieve
+      tags:
+      - settings
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralSettings'
+          description: ''
+    patch:
+      operationId: settings_general_partial_update
+      parameters:
+      - in: header
+        name: If-Match
+        schema:
+          type: string
+        required: true
+      tags:
+      - settings
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedGeneralSettingsRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedGeneralSettingsRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedGeneralSettingsRequest'
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneralSettings'
+          description: ''
   /api/v1/settings/security/:
     get:
       operationId: settings_security_retrieve
@@ -8586,6 +8644,16 @@ components:
       - required
       - sort_order
       - version
+    DateFormatEnum:
+      enum:
+      - day_month_year
+      - month_day_year
+      - iso
+      type: string
+      description: |-
+        * `day_month_year` - Day month year
+        * `month_day_year` - Month day year
+        * `iso` - ISO 8601
     DecisionEnum:
       enum:
       - verified
@@ -8769,13 +8837,23 @@ components:
         instance_count:
           type: integer
           readOnly: true
+        has_adapter:
+          type: boolean
+          readOnly: true
+        required_permissions:
+          type: array
+          items:
+            type: string
+          readOnly: true
       required:
       - availability
       - code
       - description
+      - has_adapter
       - instance_count
       - kind
       - name
+      - required_permissions
     DiscoverySourceKindEnum:
       enum:
       - network
@@ -8790,6 +8868,33 @@ components:
         * `security` - Security
         * `directory` - Directory and licensing
         * `import` - Import
+    DisplayPreferences:
+      type: object
+      properties:
+        organization_name:
+          type: string
+          readOnly: true
+        timezone:
+          type: string
+          readOnly: true
+        date_format:
+          allOf:
+          - $ref: '#/components/schemas/DateFormatEnum'
+          readOnly: true
+        language:
+          allOf:
+          - $ref: '#/components/schemas/LanguageEnum'
+          readOnly: true
+        support_contact:
+          type: string
+          format: email
+          readOnly: true
+      required:
+      - date_format
+      - language
+      - organization_name
+      - support_contact
+      - timezone
     Domain:
       type: object
       properties:
@@ -9684,6 +9789,46 @@ components:
         * `open` - Open
         * `dismissed` - Dismissed (accepted as is)
         * `resolved` - Resolved
+    GeneralSettings:
+      type: object
+      properties:
+        organization_name:
+          type: string
+          maxLength: 100
+        timezone:
+          type: string
+          maxLength: 64
+        date_format:
+          $ref: '#/components/schemas/DateFormatEnum'
+        language:
+          $ref: '#/components/schemas/LanguageEnum'
+        support_contact:
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 254
+          - type: string
+            maxLength: 0
+        version:
+          type: integer
+          readOnly: true
+        modified_at:
+          type: string
+          format: date-time
+          readOnly: true
+        modified_by:
+          type: string
+          readOnly: true
+          nullable: true
+      required:
+      - date_format
+      - language
+      - modified_at
+      - modified_by
+      - organization_name
+      - support_contact
+      - timezone
+      - version
     Group:
       type: object
       properties:
@@ -10599,6 +10744,11 @@ components:
       - totals
       - version
       - warnings
+    LanguageEnum:
+      enum:
+      - en
+      type: string
+      description: '* `en` - English'
     LicenseAllocateRequest:
       type: object
       properties:
@@ -12463,9 +12613,14 @@ components:
         must_change_password:
           type: boolean
           readOnly: true
+        display_preferences:
+          allOf:
+          - $ref: '#/components/schemas/DisplayPreferences'
+          readOnly: true
       required:
       - all_sites
       - display_name
+      - display_preferences
       - email
       - id
       - must_change_password
@@ -12995,6 +13150,89 @@ components:
       - observed_at
       - received_at
       - source_version
+    OperationalCheck:
+      type: object
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        status:
+          $ref: '#/components/schemas/OperationalCheckStatusEnum'
+        detail:
+          type: string
+        href:
+          type: string
+      required:
+      - detail
+      - href
+      - id
+      - label
+      - status
+    OperationalCheckStatusEnum:
+      enum:
+      - up
+      - down
+      - unknown
+      - disabled
+      - needs_attention
+      type: string
+      description: |-
+        * `up` - up
+        * `down` - down
+        * `unknown` - unknown
+        * `disabled` - disabled
+        * `needs_attention` - needs_attention
+    OperationalHealth:
+      type: object
+      properties:
+        checked_at:
+          type: string
+          format: date-time
+        production_readiness:
+          $ref: '#/components/schemas/ProductionReadinessEnum'
+        components:
+          type: array
+          items:
+            $ref: '#/components/schemas/OperationalCheck'
+        integrations:
+          type: array
+          items:
+            $ref: '#/components/schemas/OperationalCheck'
+        queues:
+          type: array
+          items:
+            $ref: '#/components/schemas/OperationalQueue'
+        checklist:
+          type: array
+          items:
+            $ref: '#/components/schemas/OperationalCheck'
+      required:
+      - checked_at
+      - checklist
+      - components
+      - integrations
+      - production_readiness
+      - queues
+    OperationalQueue:
+      type: object
+      properties:
+        name:
+          type: string
+        queued:
+          type: integer
+        running:
+          type: integer
+        failed:
+          type: integer
+        worker_status:
+          $ref: '#/components/schemas/WorkerStatusEnum'
+      required:
+      - failed
+      - name
+      - queued
+      - running
+      - worker_status
     OrderingEnum:
       enum:
       - name
@@ -13967,6 +14205,28 @@ components:
             items:
               type: string
               minLength: 1
+    PatchedGeneralSettingsRequest:
+      type: object
+      properties:
+        organization_name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        timezone:
+          type: string
+          minLength: 1
+          maxLength: 64
+        date_format:
+          $ref: '#/components/schemas/DateFormatEnum'
+        language:
+          $ref: '#/components/schemas/LanguageEnum'
+        support_contact:
+          oneOf:
+          - type: string
+            format: email
+            maxLength: 254
+          - type: string
+            maxLength: 0
     PatchedGroupWriteRequest:
       type: object
       properties:
@@ -14491,6 +14751,11 @@ components:
         rule: {}
       required:
       - rule
+    ProductionReadinessEnum:
+      enum:
+      - incomplete
+      type: string
+      description: '* `incomplete` - incomplete'
     Provenance:
       type: object
       properties:
@@ -16725,6 +16990,11 @@ components:
           maxLength: 500
       required:
       - note
+    WorkerStatusEnum:
+      enum:
+      - unknown
+      type: string
+      description: '* `unknown` - unknown'
   securitySchemes:
     sessionAuth:
       type: apiKey

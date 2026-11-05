@@ -18,10 +18,28 @@ from .models import DiscoverySource, FieldAuthorityPolicy, IntegrationInstance, 
 
 class DiscoverySourceSerializer(serializers.ModelSerializer):
     instance_count = serializers.IntegerField(read_only=True)
+    has_adapter = serializers.SerializerMethodField()
+    required_permissions = serializers.SerializerMethodField()
+
+    def get_has_adapter(self, obj) -> bool:
+        return registry.get(obj.code) is not None
+
+    def get_required_permissions(self, obj) -> list[str]:
+        connector = registry.get(obj.code)
+        return list(connector.permissions) if connector else []
 
     class Meta:
         model = DiscoverySource
-        fields = ["code", "name", "kind", "availability", "description", "instance_count"]
+        fields = [
+            "code",
+            "name",
+            "kind",
+            "availability",
+            "description",
+            "instance_count",
+            "has_adapter",
+            "required_permissions",
+        ]
         read_only_fields = fields
 
 

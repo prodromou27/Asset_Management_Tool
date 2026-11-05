@@ -39,8 +39,14 @@ NOTIFICATIONS_VIEW = "notifications.view"
 NOTIFICATIONS_MANAGE = "notifications.manage"
 BACKUPS_VIEW = "backups.view"
 BACKUPS_MANAGE = "backups.manage"
+GENERAL_SETTINGS_VIEW = "settings.general.view"
+GENERAL_SETTINGS_MANAGE = "settings.general.manage"
+HEALTH_VIEW = "health.view"
 
 PERMISSIONS: dict[str, str] = {
+    GENERAL_SETTINGS_VIEW: "View organization display settings",
+    GENERAL_SETTINGS_MANAGE: "Change organization display settings",
+    HEALTH_VIEW: "View operational diagnostics and production readiness (no secrets)",
     BACKUPS_VIEW: "View backup operations and recovery reports (never backup files or secrets)",
     BACKUPS_MANAGE: (
         "Configure backup policy, request backups and verification, record restore drills"

@@ -80,6 +80,9 @@ export function renderApp(path: string) {
 // --- Fixtures (fictitious) -------------------------------------------------------
 
 const ALL_ADMIN = [
+  'settings.general.view',
+  'settings.general.manage',
+  'health.view',
   'assets.archive',
   'assets.create',
   'assets.edit',
@@ -119,6 +122,7 @@ const ALL_ADMIN = [
 
 export function makeMe(overrides: Partial<Me> = {}): Me {
   return {
+    display_preferences: { organization_name: 'ITAM', timezone: 'Asia/Nicosia', date_format: 'day_month_year', language: 'en', support_contact: '' },
     id: '00000000-0000-4000-8000-000000000001',
     username: 'admin.one',
     display_name: 'Admin One',
@@ -397,6 +401,8 @@ export function makeIntegration(overrides: Partial<IntegrationInstance> = {}): I
       availability: 'available',
       description: '',
       instance_count: 1,
+      has_adapter: false,
+      required_permissions: [],
     },
     name: 'NMS HQ',
     status: 'available',

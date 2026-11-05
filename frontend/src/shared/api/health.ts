@@ -3,6 +3,8 @@ import type { components } from './schema'
 
 export type ReadinessResponse = components['schemas']['Readiness']
 export type LivenessResponse = components['schemas']['Liveness']
+export type OperationalHealth = components['schemas']['OperationalHealth']
+export const fetchOperationalHealth = () => apiGet<OperationalHealth>('/health/operations/')
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/api/v1'
 

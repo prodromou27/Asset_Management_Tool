@@ -1,4 +1,5 @@
 import { apiGet, apiRequest } from './client'
+import { configureDisplay } from '../format'
 import type {
   AuditEvent,
   Me,
@@ -23,11 +24,17 @@ export const queryKeys = {
 // --- Auth ---------------------------------------------------------------------
 
 export const fetchCsrf = () => apiRequest<void>('GET', '/auth/csrf/')
-export const fetchMe = () => apiGet<Me>('/auth/me/')
+export async function fetchMe() {
+  const me = await apiGet<Me>('/auth/me/')
+  configureDisplay(me.display_preferences)
+  return me
+}
 
 export async function login(username: string, password: string): Promise<Me> {
   await fetchCsrf()
-  return apiRequest<Me>('POST', '/auth/local/login/', { body: { username, password } })
+  const me = await apiRequest<Me>('POST', '/auth/local/login/', { body: { username, password } })
+  configureDisplay(me.display_preferences)
+  return me
 }
 
 export const logout = () => apiRequest<void>('POST', '/auth/logout/')

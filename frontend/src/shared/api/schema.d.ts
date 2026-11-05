@@ -261,6 +261,9 @@ export interface paths {
     /** @description Process is up and able to serve requests. No dependency checks. */
     get: operations["health_live_retrieve"];
   };
+  "/api/v1/health/operations/": {
+    get: operations["health_operations_retrieve"];
+  };
   "/api/v1/health/ready/": {
     /** @description Process and its required dependencies (DB, Redis) are reachable. */
     get: operations["health_ready_retrieve"];
@@ -538,6 +541,10 @@ export interface paths {
   "/api/v1/saved-views/{id}/": {
     delete: operations["saved_views_destroy"];
     patch: operations["saved_views_partial_update"];
+  };
+  "/api/v1/settings/general/": {
+    get: operations["settings_general_retrieve"];
+    patch: operations["settings_general_partial_update"];
   };
   "/api/v1/settings/security/": {
     get: operations["settings_security_retrieve"];
@@ -1341,6 +1348,13 @@ export interface components {
       version: number;
     };
     /**
+     * @description * `day_month_year` - Day month year
+     * * `month_day_year` - Month day year
+     * * `iso` - ISO 8601
+     * @enum {string}
+     */
+    DateFormatEnum: "day_month_year" | "month_day_year" | "iso";
+    /**
      * @description * `verified` - verified
      * * `rejected` - rejected
      * @enum {string}
@@ -1410,6 +1424,8 @@ export interface components {
       availability: components["schemas"]["AvailabilityEnum"];
       description: string;
       instance_count: number;
+      has_adapter: boolean;
+      required_permissions: readonly string[];
     };
     /**
      * @description * `network` - Network inventory
@@ -1420,6 +1436,14 @@ export interface components {
      * @enum {string}
      */
     DiscoverySourceKindEnum: "network" | "endpoint" | "security" | "directory" | "import";
+    DisplayPreferences: {
+      organization_name: string;
+      timezone: string;
+      date_format: components["schemas"]["DateFormatEnum"];
+      language: components["schemas"]["LanguageEnum"];
+      /** Format: email */
+      support_contact: string;
+    };
     Domain: {
       /** Format: uuid */
       id: string;
@@ -1764,6 +1788,17 @@ export interface components {
      * @enum {string}
      */
     FindingStatusEnum: "open" | "dismissed" | "resolved";
+    GeneralSettings: {
+      organization_name: string;
+      timezone: string;
+      date_format: components["schemas"]["DateFormatEnum"];
+      language: components["schemas"]["LanguageEnum"];
+      support_contact: string;
+      version: number;
+      /** Format: date-time */
+      modified_at: string;
+      modified_by: string | null;
+    };
     Group: {
       /** Format: uuid */
       id: string;
@@ -2062,6 +2097,11 @@ export interface components {
       version: number;
       sample: readonly string[][];
     };
+    /**
+     * @description * `en` - English
+     * @enum {string}
+     */
+    LanguageEnum: "en";
     LicenseAllocateRequest: {
       /** Format: uuid */
       asset?: string | null;
@@ -2727,6 +2767,7 @@ export interface components {
       permissions: readonly string[];
       all_sites: boolean;
       must_change_password: boolean;
+      display_preferences: components["schemas"]["DisplayPreferences"];
     };
     MemberAsset: {
       /** Format: uuid */
@@ -2916,6 +2957,38 @@ export interface components {
       normalized: {
         [key: string]: unknown;
       };
+    };
+    OperationalCheck: {
+      id: string;
+      label: string;
+      status: components["schemas"]["OperationalCheckStatusEnum"];
+      detail: string;
+      href: string;
+    };
+    /**
+     * @description * `up` - up
+     * * `down` - down
+     * * `unknown` - unknown
+     * * `disabled` - disabled
+     * * `needs_attention` - needs_attention
+     * @enum {string}
+     */
+    OperationalCheckStatusEnum: "up" | "down" | "unknown" | "disabled" | "needs_attention";
+    OperationalHealth: {
+      /** Format: date-time */
+      checked_at: string;
+      production_readiness: components["schemas"]["ProductionReadinessEnum"];
+      components: components["schemas"]["OperationalCheck"][];
+      integrations: components["schemas"]["OperationalCheck"][];
+      queues: components["schemas"]["OperationalQueue"][];
+      checklist: components["schemas"]["OperationalCheck"][];
+    };
+    OperationalQueue: {
+      name: string;
+      queued: number;
+      running: number;
+      failed: number;
+      worker_status: components["schemas"]["WorkerStatusEnum"];
     };
     /**
      * @description * `` -
@@ -3250,6 +3323,13 @@ export interface components {
         [key: string]: string[];
       };
     };
+    PatchedGeneralSettingsRequest: {
+      organization_name?: string;
+      timezone?: string;
+      date_format?: components["schemas"]["DateFormatEnum"];
+      language?: components["schemas"]["LanguageEnum"];
+      support_contact?: string;
+    };
     PatchedGroupWriteRequest: {
       name?: string;
       description?: string;
@@ -3446,6 +3526,11 @@ export interface components {
     PreviewRequestRequest: {
       rule: unknown;
     };
+    /**
+     * @description * `incomplete` - incomplete
+     * @enum {string}
+     */
+    ProductionReadinessEnum: "incomplete";
     Provenance: {
       kind: components["schemas"]["ProvenanceKindEnum"];
       instance: components["schemas"]["InstanceRef"] | null;
@@ -4254,6 +4339,11 @@ export interface components {
     VersionRejectRequest: {
       note: string;
     };
+    /**
+     * @description * `unknown` - unknown
+     * @enum {string}
+     */
+    WorkerStatusEnum: "unknown";
   };
   responses: never;
   parameters: never;
@@ -5882,6 +5972,15 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["Liveness"];
+        };
+      };
+    };
+  };
+  health_operations_retrieve: {
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["OperationalHealth"];
         };
       };
     };
@@ -7689,6 +7788,36 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["SavedView"];
+        };
+      };
+    };
+  };
+  settings_general_retrieve: {
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["GeneralSettings"];
+        };
+      };
+    };
+  };
+  settings_general_partial_update: {
+    parameters: {
+      header: {
+        "If-Match": string;
+      };
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["PatchedGeneralSettingsRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["PatchedGeneralSettingsRequest"];
+        "multipart/form-data": components["schemas"]["PatchedGeneralSettingsRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["GeneralSettings"];
         };
       };
     };

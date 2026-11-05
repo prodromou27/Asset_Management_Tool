@@ -1,5 +1,6 @@
 import {
   Activity,
+  Settings,
   AppWindow,
   Boxes,
   Building2,
@@ -76,6 +77,7 @@ export const SECTIONS: NavSection[] = [
     id: 'admin',
     label: 'Administration',
     items: [
+      { to: '/admin/general', label: 'General settings', icon: Settings, permission: PERMISSIONS.generalView },
       { to: '/admin/sites', label: 'Sites & locations', icon: Building2, permission: PERMISSIONS.sitesManage },
       { to: '/admin/categories', label: 'Categories & fields', icon: Shapes, permission: PERMISSIONS.categoriesManage },
       { to: '/admin/integrations', label: 'Integrations', icon: PlugZap, permission: PERMISSIONS.integrationsManage },

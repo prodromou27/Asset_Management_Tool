@@ -123,6 +123,9 @@ export type Paginated<T> = {
 }
 
 export const PERMISSIONS = {
+  generalView: 'settings.general.view',
+  generalManage: 'settings.general.manage',
+  healthView: 'health.view',
   usersView: 'users.view',
   usersManage: 'users.manage',
   rolesView: 'roles.view',

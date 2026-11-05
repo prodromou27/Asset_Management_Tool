@@ -1,7 +1,9 @@
 from django.core.exceptions import ValidationError as DjangoValidationError
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
-from .models import USERNAME_VALIDATOR, Permission, Role, SecuritySettings, User
+from .general import DisplayPreferencesSerializer
+from .models import USERNAME_VALIDATOR, GeneralSettings, Permission, Role, SecuritySettings, User
 
 
 class PermissionSerializer(serializers.ModelSerializer):
@@ -117,6 +119,7 @@ class ChangePasswordSerializer(serializers.Serializer):
 class MeSerializer(serializers.ModelSerializer):
     roles = RoleSummarySerializer(many=True, read_only=True)
     permissions = serializers.SerializerMethodField()
+    display_preferences = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -129,11 +132,16 @@ class MeSerializer(serializers.ModelSerializer):
             "permissions",
             "all_sites",
             "must_change_password",
+            "display_preferences",
         ]
         read_only_fields = fields
 
     def get_permissions(self, obj) -> list[str]:
         return sorted(obj.permission_codes())
+
+    @extend_schema_field(DisplayPreferencesSerializer)
+    def get_display_preferences(self, obj):
+        return DisplayPreferencesSerializer(GeneralSettings.load()).data
 
 
 class SecuritySettingsSerializer(serializers.ModelSerializer):

@@ -192,7 +192,7 @@ describe('Integration software switch', () => {
   it('offers "Collect installed software" only for Endpoint Central and Intune', async () => {
     const ec = makeIntegration({
       name: 'Endpoint Central',
-      source: { code: 'endpoint_central', name: 'Endpoint Central', kind: 'endpoint', availability: 'beta', description: '', instance_count: 1 },
+      source: { code: 'endpoint_central', name: 'Endpoint Central', kind: 'endpoint', availability: 'beta', description: '', instance_count: 1, has_adapter: true, required_permissions: [] },
     })
     const { calls } = mockApi({
       'GET /auth/me/': { body: makeMe() },

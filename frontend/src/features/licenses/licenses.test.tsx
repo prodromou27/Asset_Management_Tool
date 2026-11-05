@@ -166,6 +166,8 @@ describe('Licenses', () => {
             availability: 'beta',
             description: '',
             instance_count: 1,
+            has_adapter: true,
+            required_permissions: [],
           },
           base_url: 'https://graph.microsoft.com',
           auth_scheme: 'client_certificate',

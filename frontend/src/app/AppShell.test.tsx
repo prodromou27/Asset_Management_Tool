@@ -41,6 +41,7 @@ describe('application shell', () => {
     mockApi({
       'GET /auth/me/': { body: makeMe() },
       'GET /health/ready/': readyOk,
+      'GET /health/operations/': { body: { checked_at: '2026-11-05T12:00:00Z', production_readiness: 'incomplete', components: [], integrations: [], queues: [], checklist: [] } },
       'POST /auth/logout/': () => ++attempts === 1
         ? { status: 503, body: { error: { message: 'Fixture network failure' } } }
         : { status: 204 },

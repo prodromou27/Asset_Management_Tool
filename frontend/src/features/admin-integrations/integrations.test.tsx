@@ -26,6 +26,23 @@ const CONNECTOR = {
   uses_detail_refresh: true, supports_software: false,
 }
 
+it('searches provider catalogue and keeps Planned separate from configuration', async () => {
+  const planned = { code: 'future', name: 'Future provider', kind: 'endpoint', availability: 'planned', description: 'Not implemented', instance_count: 0, has_adapter: false, required_permissions: [] }
+  mockApi({
+    'GET /auth/me/': { body: makeMe() }, 'GET /integrations/': { body: [] },
+    'GET /discovery/sources/': { body: [planned, { ...planned, code: 'librenms', name: 'LibreNMS', availability: 'beta', instance_count: 1, has_adapter: true }] },
+    'GET /discovery/field-authority/': { body: { precedence: {}, version: 1, modified_at: '2026-11-05T00:00:00Z' } },
+  })
+  renderApp('/admin/integrations')
+  fireEvent.click(await screen.findByRole('tab', { name: 'Provider catalogue' }))
+  const table = await screen.findByRole('table', { name: 'Provider catalogue' })
+  expect(within(table).getByText('Planned')).toBeInTheDocument()
+  fireEvent.change(screen.getByLabelText('Provider status'), { target: { value: 'configured' } })
+  expect(within(table).queryByText('Future provider')).not.toBeInTheDocument()
+  fireEvent.change(screen.getByLabelText('Search providers'), { target: { value: 'missing' } })
+  expect(screen.getByText('No matching providers.')).toBeInTheDocument()
+})
+
 function librenms(overrides: Partial<IntegrationInstance> = {}): IntegrationInstance {
   return makeIntegration({
     id: ID,
@@ -37,6 +54,8 @@ function librenms(overrides: Partial<IntegrationInstance> = {}): IntegrationInst
       availability: 'beta',
       description: '',
       instance_count: 1,
+      has_adapter: true,
+      required_permissions: [],
     },
     base_url: 'https://librenms.corp.example',
     credential_ref: 'env:ITAM_INTEGRATION_LIBRENMS_TOKEN',
@@ -233,7 +252,7 @@ describe('LibreNMS integration page', () => {
       routes(
         librenms({
           has_adapter: false,
-          source: { code: 'intune', name: 'Microsoft Intune', kind: 'endpoint', availability: 'planned', description: '', instance_count: 1 },
+          source: { code: 'intune', name: 'Microsoft Intune', kind: 'endpoint', availability: 'planned', description: '', instance_count: 1, has_adapter: false, required_permissions: [] },
         }),
         [],
       ),
@@ -348,6 +367,8 @@ describe('Endpoint Central integration page', () => {
         availability: 'beta',
         description: '',
         instance_count: 1,
+        has_adapter: true,
+        required_permissions: [],
       },
       base_url: 'https://ec.corp.example:8383',
       auth_scheme: 'authorization',
@@ -394,6 +415,8 @@ describe('Microsoft Intune integration page', () => {
         availability: 'beta',
         description: '',
         instance_count: 1,
+        has_adapter: true,
+        required_permissions: [],
       },
       base_url: 'https://graph.microsoft.com',
       credential_ref: 'file:intune-app.pem',
