@@ -1,0 +1,15 @@
+Port 22
+PidFile /run/sshd/sshd.pid
+HostKey /run/fixture-keys/host_key
+AuthorizedKeysFile /run/fixture-keys/authorized_keys
+PermitRootLogin no
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+PermitEmptyPasswords no
+PubkeyAuthentication yes
+StrictModes yes
+AllowUsers backup
+AllowTcpForwarding no
+X11Forwarding no
+Subsystem sftp internal-sftp
+ForceCommand internal-sftp

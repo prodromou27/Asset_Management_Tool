@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 
 from django.conf import settings
 from django.db import IntegrityError, transaction
+from django.db.models import Q
 from django.utils import timezone
 
 from apps.accounts.models import User
@@ -194,6 +195,13 @@ def summary():
     p = policy()
     last = BackupJob.objects.filter(kind="backup", status="succeeded").first()
     drill = RestoreDrill.objects.first()
+    last_verification = (
+        BackupJob.objects.filter(
+            Q(kind="verify", finished_at__isnull=False) | Q(kind="backup", status="succeeded")
+        )
+        .order_by("-finished_at")
+        .first()
+    )
     problems = []
     if not settings.ITAM_BACKUP_ALLOW_RUN:
         problems.append(
@@ -222,5 +230,6 @@ def summary():
         "off_host": "SFTP repository required; validate physical separation at commissioning",
         "last_backup": last,
         "last_drill": drill,
+        "last_verification": last_verification,
         "problems": problems,
     }

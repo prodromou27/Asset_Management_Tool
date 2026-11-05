@@ -1209,6 +1209,27 @@ paths:
               schema:
                 $ref: '#/components/schemas/RestoreDrill'
           description: ''
+  /api/v1/backups/drills/{id}/report/:
+    get:
+      operationId: backups_drills_report_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - backups
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RestoreDrill'
+          description: ''
   /api/v1/backups/jobs/:
     get:
       operationId: backups_jobs_list
@@ -1241,6 +1262,27 @@ paths:
   /api/v1/backups/jobs/{id}/:
     get:
       operationId: backups_jobs_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - backups
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BackupJob'
+          description: ''
+  /api/v1/backups/jobs/{id}/report/:
+    get:
+      operationId: backups_jobs_report_retrieve
       parameters:
       - in: path
         name: id
@@ -7520,9 +7562,18 @@ components:
         warning:
           type: string
           readOnly: true
+        duration_seconds:
+          type: number
+          format: double
+          nullable: true
+          readOnly: true
+        verification_result:
+          type: string
+          readOnly: true
       required:
       - created_at
       - created_by
+      - duration_seconds
       - error_message
       - finished_at
       - id
@@ -7535,6 +7586,7 @@ components:
       - started_at
       - status
       - target_label
+      - verification_result
       - warning
     BackupJobKindEnum:
       enum:
@@ -7622,6 +7674,10 @@ components:
           allOf:
           - $ref: '#/components/schemas/RestoreDrill'
           nullable: true
+        last_verification:
+          allOf:
+          - $ref: '#/components/schemas/BackupJob'
+          nullable: true
         problems:
           type: array
           items:
@@ -7631,6 +7687,7 @@ components:
       - execution_allowed
       - last_backup
       - last_drill
+      - last_verification
       - off_host
       - problems
       - target_label
@@ -14612,14 +14669,31 @@ components:
           type: string
           format: date-time
           readOnly: true
+        duration_seconds:
+          type: number
+          format: double
+          readOnly: true
+        recovery_point:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        recovery_point_age_seconds:
+          type: number
+          format: double
+          nullable: true
+          readOnly: true
       required:
       - backup
+      - duration_seconds
       - finished_at
       - id
       - notes
       - passed
       - recorded_at
       - recorded_by
+      - recovery_point
+      - recovery_point_age_seconds
       - started_at
       - target_label
     RestoreDrillRequest:

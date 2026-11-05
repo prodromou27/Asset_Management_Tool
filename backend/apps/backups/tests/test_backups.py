@@ -216,6 +216,7 @@ def test_alerts_reuse_outbox_dedup_only_admins(allowed, admin_user, auditor_user
 
 def test_restore_attestation_validation_audit_and_rpo(allowed, client_for, admin_user):
     job = successful_job()
+    BackupJob.objects.filter(pk=job.pk).update(recovery_point=timezone.now() - timedelta(hours=1))
     client = client_for(admin_user)
     body = {
         "backup": str(job.pk),
@@ -235,6 +236,55 @@ def test_restore_attestation_validation_audit_and_rpo(allowed, client_for, admin
     assert any("RPO" in message for message in services.summary()["problems"])
     body["finished_at"] = (timezone.now() + timedelta(days=1)).isoformat()
     assert client.post(URL + "drills/", body, format="json").status_code == 422
+
+
+def test_job_and_drill_reports_are_audited_and_permission_protected(
+    allowed, client_for, admin_user, auditor_user, operator_user
+):
+    from apps.backups.models import RestoreDrill
+
+    job = successful_job()
+    job.started_at = timezone.now() - timedelta(seconds=30)
+    job.finished_at = timezone.now()
+    job.recovery_point = timezone.now() - timedelta(hours=1)
+    job.save()
+    drill = RestoreDrill.objects.create(
+        backup=job,
+        target_label="Isolated fixture",
+        passed=True,
+        notes="Fixture checks",
+        started_at=timezone.now() - timedelta(minutes=5),
+        finished_at=timezone.now(),
+        recorded_by=admin_user,
+    )
+    for user in [admin_user, auditor_user]:
+        client = client_for(user)
+        response = client.get(URL + f"jobs/{job.pk}/report/")
+        assert response.status_code == 200 and response["Cache-Control"] == "no-store"
+        assert response.json()["verification_result"] == "passed"
+        assert 29 <= response.json()["duration_seconds"] <= 31
+        report = client.get(URL + f"drills/{drill.pk}/report/")
+        assert report.status_code == 200 and report.json()["duration_seconds"] >= 299
+        assert report.json()["recovery_point_age_seconds"] >= 3000
+    denied = client_for(operator_user)
+    assert denied.get(URL + f"jobs/{job.pk}/report/").status_code == 403
+    assert denied.get(URL + f"drills/{drill.pk}/report/").status_code == 403
+    assert AuditEvent.objects.filter(action="backups.report_download").count() == 4
+
+
+def test_retention_is_scoped_and_explicitly_opt_in(monkeypatch):
+    policy = services.policy()
+    command = Mock()
+    monkeypatch.setattr(runner, "restic", command)
+    monkeypatch.setattr(runner, "repository_env", lambda: {})
+    runner.retention(policy)
+    command.assert_not_called()
+    policy.retention_enabled = True
+    runner.retention(policy)
+    args = command.call_args.args[0]
+    assert args[args.index("--tag") + 1] == "itam"
+    assert args[args.index("--host") + 1] == "itam-backup"
+    assert args[args.index("--keep-daily") + 1] == "30"
 
 
 @pytest.mark.parametrize(
@@ -258,15 +308,43 @@ def test_secret_path_and_environment_sanitized(tmp_path, settings, monkeypatch):
     root.mkdir()
     password = root / "password"
     password.write_text("fixture-only")
+    (root / "restic_ssh_key").write_text("fixture-private-key")
+    (root / "restic_known_hosts").write_text("fixture-known-host")
     monkeypatch.setenv("RESTIC_REPOSITORY", "sftp://backup@example.test/repo")
     monkeypatch.setenv("RESTIC_PASSWORD_FILE", str(password))
     monkeypatch.setenv("RESTIC_PASSWORD_COMMAND", "untrusted-command")
     monkeypatch.setenv("ITAM_SMTP_PASSWORD", "fixture-only-secret")
     env = runner.repository_env()
     assert "RESTIC_PASSWORD_COMMAND" not in env and "ITAM_SMTP_PASSWORD" not in env
+    command = runner.transport_options(env)[1]
+    assert "StrictHostKeyChecking=yes" in command and "BatchMode=yes" in command
+    assert "PasswordAuthentication=no" in command and "/dev/null" in command
     password.write_text("")
     with pytest.raises(runner.RunnerError):
         runner.repository_env()
+
+
+def test_sftp_requires_pinned_host_and_key(tmp_path, settings):
+    settings.ITAM_SECRETS_DIR = str(tmp_path)
+    with pytest.raises(runner.RunnerError, match="pinned"):
+        runner.transport_options({"RESTIC_REPOSITORY": "sftp://backup@example.test/repository"})
+
+
+def test_repository_command_obeys_gate_and_uses_verified_transport(settings, monkeypatch):
+    from django.core.management import call_command
+    from django.core.management.base import CommandError
+
+    command = Mock()
+    monkeypatch.setattr(runner, "restic", command)
+    monkeypatch.setattr(runner, "repository_env", lambda: {"fixture": "safe"})
+    settings.ITAM_BACKUP_ALLOW_RUN = False
+    with pytest.raises(CommandError, match="disabled"):
+        call_command("backup_repository", "init")
+    command.assert_not_called()
+    settings.ITAM_BACKUP_ALLOW_RUN = True
+    call_command("backup_repository", "check")
+    command.assert_called_once_with(["check", "--read-data"], env={"fixture": "safe"})
+    assert AuditEvent.objects.filter(action="backups.repository_check", source="cli").exists()
 
 
 def test_command_errors_never_expose_stderr(monkeypatch):

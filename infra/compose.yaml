@@ -160,7 +160,6 @@ services:
       ITAM_BACKUP_IMAGE_REFERENCE: ${ITAM_BACKUP_IMAGE_REFERENCE:-unrecorded}
     volumes:
       - ${ITAM_BACKUP_SECRETS_DIR:-./backup-no-secrets}:/run/secrets:ro
-      - ${ITAM_BACKUP_SSH_DIR:-./backup-no-secrets}:/home/itam/.ssh:ro
     depends_on: *backend-depends
     read_only: true
     tmpfs:

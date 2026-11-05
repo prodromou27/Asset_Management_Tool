@@ -117,12 +117,18 @@ export interface paths {
     get: operations["backups_drills_list"];
     post: operations["backups_drills_create"];
   };
+  "/api/v1/backups/drills/{id}/report/": {
+    get: operations["backups_drills_report_retrieve"];
+  };
   "/api/v1/backups/jobs/": {
     get: operations["backups_jobs_list"];
     post: operations["backups_jobs_create"];
   };
   "/api/v1/backups/jobs/{id}/": {
     get: operations["backups_jobs_retrieve"];
+  };
+  "/api/v1/backups/jobs/{id}/report/": {
+    get: operations["backups_jobs_report_retrieve"];
   };
   "/api/v1/backups/jobs/{id}/verify/": {
     post: operations["backups_jobs_verify_create"];
@@ -970,6 +976,9 @@ export interface components {
       manifest: unknown;
       error_message: string;
       warning: string;
+      /** Format: double */
+      duration_seconds: number | null;
+      verification_result: string;
     };
     /**
      * @description * `backup` - Backup
@@ -1005,6 +1014,7 @@ export interface components {
       off_host: string;
       last_backup: components["schemas"]["BackupJob"] | null;
       last_drill: components["schemas"]["RestoreDrill"] | null;
+      last_verification: components["schemas"]["BackupJob"] | null;
       problems: string[];
     };
     /** @enum {unknown} */
@@ -3525,6 +3535,12 @@ export interface components {
       recorded_by: string;
       /** Format: date-time */
       recorded_at: string;
+      /** Format: double */
+      duration_seconds: number;
+      /** Format: date-time */
+      recovery_point: string | null;
+      /** Format: double */
+      recovery_point_age_seconds: number | null;
     };
     RestoreDrillRequest: {
       /** Format: uuid */
@@ -4962,6 +4978,20 @@ export interface operations {
       };
     };
   };
+  backups_drills_report_retrieve: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["RestoreDrill"];
+        };
+      };
+    };
+  };
   backups_jobs_list: {
     responses: {
       200: {
@@ -4981,6 +5011,20 @@ export interface operations {
     };
   };
   backups_jobs_retrieve: {
+    parameters: {
+      path: {
+        id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["BackupJob"];
+        };
+      };
+    };
+  };
+  backups_jobs_report_retrieve: {
     parameters: {
       path: {
         id: string;

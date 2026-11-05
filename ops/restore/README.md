@@ -26,6 +26,10 @@ PostgreSQL 16 Bookworm family as the backup client.
    jobs cannot run. On exit only its uniquely named container is removed; a JSON report
    records timestamps, duration, counts and result. Failed checks raise an error and
    leave a failed report where possible. It never changes the source application database.
+   New manifests must declare PostgreSQL major 16; extension versions must match after
+   restore. Older v1 manifests remain readable. The report records recovery-point age
+   and preserves a failed result even if container cleanup fails; inspect `target_removed`
+   and remove only that unique drill container after diagnosing cleanup errors.
 3. The automated drill checks structural recovery, not all business semantics. On a
    separately approved isolated application staging stack, restore the separately escrowed
    signing/import encryption keys, disable **SMTP, integration approvals and schedules,
@@ -46,3 +50,8 @@ PostgreSQL 16 Bookworm family as the backup client.
 Keep staging data confidential. Remove only the explicitly created staging directory after
 the rehearsal according to the organization's data handling procedure. The script does not
 delete operator-provided directories or encrypted off-host snapshots.
+
+CI additionally uses `recover_fixture.py` for synthetic artifacts only. It refuses recovery
+without the original source-removal flags, checks the encrypted repository, restores the
+full immutable snapshot, and passes retrieval metadata to the isolated drill. Reported
+retrieval-plus-restore time is a small-fixture observation, not production RTO acceptance.

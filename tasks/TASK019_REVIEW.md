@@ -40,10 +40,37 @@ and navigation focus return. Artifacts: `frontend/test-results/task019-review/` 
 Forty focused UI tests, typecheck, oxlint and production build passed. The existing
 large-bundle warning remains; no performance claim is made from screenshots.
 
-## Remaining phase
+## Phase 3 implementation and local proof
 
-Phase 3: close backup manifest/reporting and isolated-storage/restore evidence gaps against
-the new request, preserving the current architecture and migration history.
+Strict SSH identity/host pinning is now enforced by fixed runner options. The existing
+backup-only secret mount contains the repository password, private SSH identity and host
+pin; inherited hooks and unrelated credentials are excluded. Explicit `backup_repository
+init|check` operator commands use the same gated transport and audit operations.
+
+Additive v1 manifests include PostgreSQL version/major/extensions, owner/ACL recovery
+information, capture timings, file sizes/checksums, destination and expanded RBAC/outbox
+counts. Capture metadata precedes upload; the job report records final verification and
+duration. Job/drill report endpoints enforce view permission, audit downloads and disable
+caching. UI details/report links, last verification and field-validation summaries use
+existing shared components. No new schema migration is required; migration drift is clean.
+
+The new synthetic SFTP fixture generates fresh keys and pins the generated host identity;
+it tests real encrypted transfer/read-back, wrong password and wrong host pin. CI exports
+the encrypted repository and a separate disposable key, destroys source DB/storage, then
+retrieves and restores on another runner into PostgreSQL with `--network none`. Reports
+include recovery-point age, retrieval/restore duration and source-removal evidence. Real
+Docker/SFTP execution awaits CI because Docker is unavailable on this workstation.
+
+Local verification: **795 backend tests passed, 7 PostgreSQL/Redis-only skips** (explicit
+SQLite fallback); **192 frontend tests passed**. Ruff lint/format, migration drift,
+validated OpenAPI/type generation, frontend typecheck/oxlint and production build passed.
+The browser suite additionally covers job-detail drawers at both requested sizes.
+The existing >500 kB frontend bundle warning remains. No production performance/SLA claim.
+
+Changed areas: backend backups runner/services/API/management/tests; generated OpenAPI
+and frontend types; Backups & Recovery UI/tests; synthetic SFTP image; CI; backup/restore
+runbooks; ASM-60; active task and this evidence. Earlier phase commits are `98cf2f3`
+(targeted fixes) and `73cd62f` (separate UI polish).
 
 Production readiness still requires approved off-host storage, pinned host identity,
 separate recoverable keys, retention/RPO/RTO approval, target-host capacity and timed staging

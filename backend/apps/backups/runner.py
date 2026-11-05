@@ -9,10 +9,11 @@ import hashlib
 import json
 import os
 import re
+import shlex
 import subprocess
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from urllib.parse import urlsplit
+from urllib.parse import unquote, urlsplit
 
 from django.conf import settings
 from django.db import connection, transaction
@@ -39,12 +40,16 @@ def run(args, *, cwd=None, env=None):
 
 def repository_env():
     repo = os.environ.get("RESTIC_REPOSITORY", "")
-    parsed = urlsplit(repo.removeprefix("sftp:"))
+    try:
+        parsed = urlsplit(repo)
+        _ = parsed.port
+    except ValueError as exc:
+        raise RunnerError("The SFTP repository address or port is invalid.") from exc
     # Only administrator-provisioned SFTP repositories; no HTTP, local paths or passwords.
     if (
         not repo.startswith("sftp://")
         or not parsed.hostname
-        or parsed.password
+        or parsed.password is not None
         or parsed.query
         or parsed.fragment
         or not parsed.path.strip("/")
@@ -65,7 +70,56 @@ def repository_env():
     env = {k: os.environ[k] for k in ("PATH", "HOME", "TMPDIR") if k in os.environ}
     env.update(RESTIC_REPOSITORY=repo, RESTIC_PASSWORD_FILE=str(password_file))
     env["RESTIC_CACHE_DIR"] = "/tmp/restic-cache"
+    transport_options(env)
     return env
+
+
+def transport_options(env):
+    """Force host pinning and key-only authentication, independently of ~/.ssh/config."""
+    repo = env.get("RESTIC_REPOSITORY", "")
+    if not repo.startswith("sftp://"):
+        return []  # Local repositories exist only in disposable test/operator harnesses.
+    parsed = urlsplit(repo)
+    root = Path(settings.ITAM_SECRETS_DIR).resolve()
+    files = [root / name for name in ("restic_ssh_key", "restic_known_hosts")]
+    if any(
+        not file.is_file() or not file.resolve().is_relative_to(root) or file.stat().st_size == 0
+        for file in files
+    ):
+        raise RunnerError(
+            "Provision the SSH identity and pinned known-hosts files in the secrets directory."
+        )
+    args = [
+        "ssh",
+        "-F",
+        "/dev/null",
+        "-o",
+        "BatchMode=yes",
+        "-o",
+        "StrictHostKeyChecking=yes",
+        "-o",
+        f"UserKnownHostsFile={files[1]}",
+        "-o",
+        "GlobalKnownHostsFile=/dev/null",
+        "-o",
+        "IdentitiesOnly=yes",
+        "-o",
+        "PasswordAuthentication=no",
+        "-o",
+        "KbdInteractiveAuthentication=no",
+        "-i",
+        str(files[0]),
+        "-p",
+        str(parsed.port or 22),
+    ]
+    if parsed.username:
+        args += ["-l", unquote(parsed.username)]
+    args += ["-s", "--", parsed.hostname, "sftp"]
+    return ["-o", "sftp.command=" + shlex.join(args)]
+
+
+def restic(args, *, env, cwd=None):
+    return run(["restic", *transport_options(env), *args], env=env, cwd=cwd)
 
 
 def checksum(path):
@@ -93,12 +147,17 @@ def dump_database(directory, job_id):
         PGPASSWORD=str(db["PASSWORD"]),
         PGDATABASE=str(db["NAME"]),
     )
+    started_at = timezone.now()
     with transaction.atomic():
         with connection.cursor() as cursor:
             cursor.execute("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY")
             cursor.execute("SELECT pg_export_snapshot()")
             snapshot = cursor.fetchone()[0]
             recovery_point = timezone.now()
+            cursor.execute("SELECT current_setting('server_version')")
+            database_version = cursor.fetchone()[0]
+            cursor.execute("SELECT extname, extversion FROM pg_extension ORDER BY extname")
+            extensions = dict(cursor.fetchall())
             migrations = list(
                 MigrationRecorder.Migration.objects.order_by("app", "name").values_list(
                     "app", "name"
@@ -110,6 +169,12 @@ def dump_database(directory, job_id):
                 if table.startswith(
                     (
                         "assets_",
+                        "accounts_",
+                        "auth_",
+                        "organizations_",
+                        "integrations_",
+                        "reconciliation_",
+                        "notifications_",
                         "groups_",
                         "lifecycle_",
                         "software_",
@@ -128,7 +193,6 @@ def dump_database(directory, job_id):
                     "pg_dump",
                     "--format=custom",
                     "--no-owner",
-                    "--no-acl",
                     f"--snapshot={snapshot}",
                     "--file=database.dump",
                 ],
@@ -136,14 +200,25 @@ def dump_database(directory, job_id):
                 env=env,
             )
     dump = directory / "database.dump"
+    digest = checksum(dump)
     manifest = {
         "format": "itam.backup.v1",
         "job_id": str(job_id),
+        "started_at": started_at.isoformat(),
+        "completed_at": timezone.now().isoformat(),
         "recovery_point": recovery_point.isoformat(),
+        "database_version": database_version,
+        "database_major": connection.pg_version // 10000,
+        "extensions": extensions,
+        "owner_role": str(db["USER"]),
+        "database_acl": "Preserved in custom dump; isolated drills skip ACL/owner application",
         "migrations": [list(item) for item in migrations],
         "counts": counts,
-        "database_sha256": checksum(dump),
+        "database_sha256": digest,
         "size_bytes": dump.stat().st_size,
+        "files": {"database.dump": {"size_bytes": dump.stat().st_size, "sha256": digest}},
+        "destination_label": settings.ITAM_BACKUP_TARGET_LABEL,
+        "verification_result": "pending_destination_verification",
         "blob_storage": "PostgreSQL import/export binary fields; no external media configured",
         "prerequisites": "Compatible application revision, PostgreSQL 16, separately recovered "
         "Django/import encryption secrets and deployment configuration",
@@ -157,10 +232,10 @@ def dump_database(directory, job_id):
 def verify(snapshot, expected, env):
     if not re.fullmatch(r"[0-9a-f]{64}", snapshot):
         raise RunnerError("A full immutable snapshot ID is required.")
-    run(["restic", "check", "--read-data"], env=env)
+    restic(["check", "--read-data"], env=env)
     with TemporaryDirectory(prefix="itam-verify-") as temp:
         directory = Path(temp)
-        run(["restic", "restore", snapshot, "--target", str(directory)], env=env)
+        restic(["restore", snapshot, "--target", str(directory)], env=env)
         try:
             manifest = json.loads((directory / "manifest.json").read_text(encoding="utf-8"))
             if (
@@ -179,9 +254,8 @@ def backup(job_id):
     with TemporaryDirectory(prefix="itam-backup-") as temp:
         directory = Path(temp)
         manifest = dump_database(directory, job_id)
-        output = run(
+        output = restic(
             [
-                "restic",
                 "backup",
                 "--json",
                 "--host",
@@ -207,9 +281,8 @@ def backup(job_id):
 
 def retention(policy):
     if policy.retention_enabled:
-        run(
+        restic(
             [
-                "restic",
                 "forget",
                 "--tag",
                 "itam",

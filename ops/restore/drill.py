@@ -29,6 +29,8 @@ def drill(directory, report):
     if manifest_path.is_symlink():
         raise ValueError("Manifest must be a regular file.")
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if manifest.get("database_major", 16) != 16:
+        raise ValueError("This isolated drill requires a PostgreSQL 16 backup.")
     dump = directory / "database.dump"
     if dump.is_symlink() or manifest.get("format") != "itam.backup.v1":
         raise ValueError("Invalid backup format or symlink.")
@@ -45,7 +47,16 @@ def drill(directory, report):
         "counts": {},
         "isolated": True,
         "outbound_disabled": True,
+        "recovery_point": manifest.get("recovery_point"),
+        "app_revision": manifest.get("app_revision"),
+        "image_reference": manifest.get("image_reference"),
     }
+    if result["recovery_point"]:
+        point = datetime.fromisoformat(result["recovery_point"])
+        result["recovery_point_age_seconds"] = (started - point).total_seconds()
+    metadata_path = directory / "recovery-metadata.json"
+    if metadata_path.is_file():
+        result["synthetic_recovery"] = json.loads(metadata_path.read_text())
     try:
         command(
             [
@@ -73,7 +84,20 @@ def drill(directory, report):
         ready = False
         for _ in range(60):
             try:
-                command(["docker", "exec", name, "pg_isready", "-U", "drill", "-d", "itam_drill"])
+                command(
+                    [
+                        "docker",
+                        "exec",
+                        name,
+                        "pg_isready",
+                        "-h",
+                        "127.0.0.1",
+                        "-U",
+                        "drill",
+                        "-d",
+                        "itam_drill",
+                    ]
+                )
                 ready = True
                 break
             except RuntimeError:
@@ -132,6 +156,16 @@ def drill(directory, report):
         ]:
             raise ValueError("Restored migration history differs.")
         sql("UPDATE notifications_smtpprofile SET enabled=false")
+        if "extensions" in manifest:
+            extensions = dict(
+                line.split(":", 1)
+                for line in sql(
+                    "SELECT extname || ':' || extversion FROM pg_extension ORDER BY extname"
+                ).splitlines()
+            )
+            if extensions != manifest["extensions"]:
+                raise ValueError("Restored PostgreSQL extensions differ.")
+            result["extensions"] = extensions
         # No app/worker is started, and --network none also blocks any outbound action.
         result["passed"] = True
         result["notes"] = (
@@ -142,12 +176,24 @@ def drill(directory, report):
     finally:
         result["finished_at"] = datetime.now(UTC).isoformat()
         result["duration_seconds"] = (datetime.now(UTC) - started).total_seconds()
+        if "synthetic_recovery" in result:
+            retrieval = datetime.fromisoformat(result["synthetic_recovery"]["retrieval_started_at"])
+            result["retrieval_and_restore_seconds"] = (
+                datetime.now(UTC) - retrieval
+            ).total_seconds()
         # Refuse overwriting an existing report. The only removed container is the unique
         # one created by this invocation; its data is tmpfs, never a production volume.
-        if created:
-            command(["docker", "rm", "--force", name])
-        with report.open("x", encoding="utf-8") as stream:
-            json.dump(result, stream, indent=2)
+        try:
+            if created:
+                command(["docker", "rm", "--force", name])
+            result["target_removed"] = True
+        except RuntimeError:
+            result["target_removed"] = False
+            result["passed"] = False
+            raise
+        finally:
+            with report.open("x", encoding="utf-8") as stream:
+                json.dump(result, stream, indent=2)
     return result
 
 

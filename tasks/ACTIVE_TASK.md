@@ -22,6 +22,14 @@ readable mobile record names and concise Discovery filter labels. Browser review
 29 screenshots covering all requested areas/states, no exceptions/unmapped fixtures/page
 overflow, and keyboard checks passed. Forty focused UI tests, typecheck, lint/build passed.
 
+Phase 3 local implementation complete; CI proof pending. Strict SFTP key/host pinning,
+expanded additive manifests, audited downloadable reports and UI job details/durations;
+synthetic SFTP destination and encrypted-repository recovery after source deletion wired
+into CI. Local full backend 795 passed/7 environment skips; frontend 192 passed;
+lint/typecheck/build/OpenAPI and migration drift passed. No new schema migrations.
+Next action: verify PostgreSQL/SFTP and network-isolated Docker restore in CI, record
+measured fixture recovery time, then commission only after DEC-09 approval.
+
 Status: **Complete (CI run 42006140665 green)** (2026-11-05, DEV; implementation `8b7fd97`).
 Owner also requested a whole-UI/functionality
 review and refinement. Preserve the navy console design and completed workflows.

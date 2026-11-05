@@ -2,10 +2,10 @@
 
 import json
 import os
-import shutil
 import subprocess
 import sys
 import uuid
+from contextlib import nullcontext
 from pathlib import Path
 
 import pytest
@@ -86,8 +86,18 @@ def _roundtrip(tmp_path):
         RESTIC_PASSWORD_FILE=str(password),
         RESTIC_CACHE_DIR=str(tmp_path / "cache"),
     )
-    runner.run(["restic", "init"], env=env)
-    runner.repository_env = lambda: env  # Only this disposable child process uses a local repo.
+    if repo := os.environ.get("ITAM_TEST_SFTP_REPOSITORY"):
+        from django.conf import settings
+
+        settings.ITAM_SECRETS_DIR = os.environ["ITAM_TEST_SFTP_SECRETS"]
+        os.environ["RESTIC_REPOSITORY"] = repo
+        os.environ["RESTIC_PASSWORD_FILE"] = str(
+            Path(settings.ITAM_SECRETS_DIR) / "restic_password"
+        )
+        env = runner.repository_env()
+    else:
+        runner.repository_env = lambda: env  # Local-only fixture validation fallback.
+    runner.restic(["init"], env=env)
     snapshot, manifest = runner.backup(uuid.uuid4())
     assert len(snapshot) == 64
     assert manifest["counts"]["assets_asset"] >= 1
@@ -97,14 +107,21 @@ def _roundtrip(tmp_path):
         runner.verify(snapshot, manifest, dict(env, RESTIC_PASSWORD_FILE=str(wrong)))
     restored = tmp_path / "restore"
     restored.mkdir()
-    runner.run(["restic", "restore", snapshot, "--target", str(restored)], env=env)
+    if repo:
+        pin = Path(settings.ITAM_SECRETS_DIR) / "restic_known_hosts"
+        correct_pin = pin.read_text()
+        wrong_public = (Path(settings.ITAM_SECRETS_DIR) / "restic_ssh_key.pub").read_text().split()
+        pin.write_text(correct_pin.split()[0] + " " + " ".join(wrong_public[:2]) + "\n")
+        with pytest.raises(runner.RunnerError):
+            runner.verify(snapshot, manifest, env)
+        pin.write_text(correct_pin)
+    runner.restic(["restore", snapshot, "--target", str(restored)], env=env)
     assert json.loads((restored / "manifest.json").read_text()) == manifest
     # CI passes this entirely synthetic database to the Docker-isolated drill job.
     if output := os.environ.get("ITAM_BACKUP_DRILL_ARTIFACT_DIR"):
         artifact = Path(output)
         artifact.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(restored / "manifest.json", artifact / "manifest.json")
-        shutil.copy2(restored / "database.dump", artifact / "database.dump")
+        (artifact / "recovery.json").write_text(json.dumps({"snapshot_id": snapshot}))
     db = connection.settings_dict
     target = "itam_drill_" + uuid.uuid4().hex
     params = dict(host=db["HOST"], port=db["PORT"], user=db["USER"], password=db["PASSWORD"])
@@ -169,28 +186,33 @@ def test_real_dump_encrypted_repository_and_isolated_restore(tmp_path):
     params = dict(host=db["HOST"], port=db["PORT"], user=db["USER"], password=db["PASSWORD"])
     # Normal pytest transaction rollback remains intact. The actual source DB has its own
     # committed fixtures and production audit triggers; cleanup drops only this new DB.
-    with psycopg.connect(dbname="postgres", autocommit=True, **params) as control:
-        control.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(source)))
-        try:
-            env = dict(
-                os.environ,
-                POSTGRES_DB=source,
-                POSTGRES_HOST=str(db["HOST"]),
-                POSTGRES_PORT=str(db["PORT"]),
-                POSTGRES_USER=db["USER"],
-                POSTGRES_PASSWORD=db["PASSWORD"],
-                DJANGO_SETTINGS_MODULE="config.settings.test",
-            )
-            env.pop("ITAM_TEST_DB_SQLITE", None)
-            result = subprocess.run(
-                [sys.executable, str(Path(__file__).resolve()), str(tmp_path)],
-                env=env,
-                capture_output=True,
-                timeout=300,
-            )
-            assert result.returncode == 0, result.stderr.decode()
-        finally:
-            control.execute(sql.SQL("DROP DATABASE {}").format(sql.Identifier(source)))
+    from apps.backups.tests.sftp_fixture import destination
+
+    storage = destination(tmp_path) if os.environ.get("ITAM_BACKUP_TEST_SFTP") else nullcontext({})
+    with storage as storage_env:
+        with psycopg.connect(dbname="postgres", autocommit=True, **params) as control:
+            control.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(source)))
+            try:
+                env = dict(
+                    os.environ,
+                    POSTGRES_DB=source,
+                    POSTGRES_HOST=str(db["HOST"]),
+                    POSTGRES_PORT=str(db["PORT"]),
+                    POSTGRES_USER=db["USER"],
+                    POSTGRES_PASSWORD=db["PASSWORD"],
+                    DJANGO_SETTINGS_MODULE="config.settings.test",
+                    **storage_env,
+                )
+                env.pop("ITAM_TEST_DB_SQLITE", None)
+                result = subprocess.run(
+                    [sys.executable, str(Path(__file__).resolve()), str(tmp_path)],
+                    env=env,
+                    capture_output=True,
+                    timeout=300,
+                )
+                assert result.returncode == 0, result.stderr.decode()
+            finally:
+                control.execute(sql.SQL("DROP DATABASE {}").format(sql.Identifier(source)))
 
 
 @pytest.mark.django_db

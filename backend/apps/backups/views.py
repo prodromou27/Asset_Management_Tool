@@ -40,6 +40,17 @@ class BackupPolicySerializer(serializers.ModelSerializer):
 
 
 class BackupJobSerializer(serializers.ModelSerializer):
+    duration_seconds = serializers.SerializerMethodField()
+    verification_result = serializers.SerializerMethodField()
+
+    def get_duration_seconds(self, obj) -> float | None:
+        if obj.started_at and obj.finished_at:
+            return (obj.finished_at - obj.started_at).total_seconds()
+        return None
+
+    def get_verification_result(self, obj) -> str:
+        return {"succeeded": "passed", "failed": "failed"}.get(obj.status, "pending")
+
     class Meta:
         model = BackupJob
         fields = [
@@ -58,6 +69,8 @@ class BackupJobSerializer(serializers.ModelSerializer):
             "manifest",
             "error_message",
             "warning",
+            "duration_seconds",
+            "verification_result",
         ]
         read_only_fields = fields
 
@@ -65,6 +78,19 @@ class BackupJobSerializer(serializers.ModelSerializer):
 class RestoreDrillSerializer(serializers.ModelSerializer):
     isolated = serializers.BooleanField(write_only=True)
     outbound_disabled = serializers.BooleanField(write_only=True)
+    duration_seconds = serializers.SerializerMethodField()
+    recovery_point = serializers.DateTimeField(
+        source="backup.recovery_point", read_only=True, allow_null=True
+    )
+    recovery_point_age_seconds = serializers.SerializerMethodField()
+
+    def get_duration_seconds(self, obj) -> float:
+        return (obj.finished_at - obj.started_at).total_seconds()
+
+    def get_recovery_point_age_seconds(self, obj) -> float | None:
+        if obj.backup.recovery_point:
+            return (obj.started_at - obj.backup.recovery_point).total_seconds()
+        return None
 
     class Meta:
         model = RestoreDrill
@@ -80,6 +106,9 @@ class RestoreDrillSerializer(serializers.ModelSerializer):
             "recorded_at",
             "isolated",
             "outbound_disabled",
+            "duration_seconds",
+            "recovery_point",
+            "recovery_point_age_seconds",
         ]
         read_only_fields = ["id", "recorded_by", "recorded_at"]
 
@@ -93,6 +122,10 @@ class RestoreDrillSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Choose a successfully verified backup.")
         if attrs["finished_at"] < attrs["started_at"] or attrs["finished_at"] > timezone.now():
             raise serializers.ValidationError("Drill timestamps must be in order and in the past.")
+        if backup.recovery_point and attrs["started_at"] < backup.recovery_point:
+            raise serializers.ValidationError(
+                "A restore drill cannot start before its backup recovery point."
+            )
         return attrs
 
 
@@ -103,6 +136,7 @@ class BackupSummarySerializer(serializers.Serializer):
     off_host = serializers.CharField()
     last_backup = BackupJobSerializer(allow_null=True)
     last_drill = RestoreDrillSerializer(allow_null=True)
+    last_verification = BackupJobSerializer(allow_null=True)
     problems = serializers.ListField(child=serializers.CharField())
 
 
@@ -192,6 +226,39 @@ class JobDetailView(APIView):
         return Response(BackupJobSerializer(get_object_or_404(BackupJob, pk=pk)).data)
 
 
+def report_response(request, obj, serializer, filename):
+    audit.record(
+        action="backups.report_download",
+        actor=request.user,
+        request=request,
+        object_type=obj._meta.model_name,
+        object_id=obj.pk,
+    )
+    return Response(
+        serializer(obj).data,
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Cache-Control": "no-store",
+        },
+    )
+
+
+class JobReportView(JobDetailView):
+    @extend_schema(responses=BackupJobSerializer)
+    def get(self, request, pk):
+        obj = get_object_or_404(BackupJob, pk=pk)
+        return report_response(request, obj, BackupJobSerializer, f"backup-{obj.pk}.json")
+
+
+class DrillReportView(APIView):
+    permission_classes = [HasPermission("backups.view")]
+
+    @extend_schema(responses=RestoreDrillSerializer)
+    def get(self, request, pk):
+        obj = get_object_or_404(RestoreDrill.objects.select_related("backup"), pk=pk)
+        return report_response(request, obj, RestoreDrillSerializer, f"restore-drill-{obj.pk}.json")
+
+
 class VerifyView(APIView):
     permission_classes = [HasPermission("backups.manage")]
 
@@ -210,7 +277,11 @@ class DrillListView(APIView):
 
     @extend_schema(responses=RestoreDrillSerializer(many=True))
     def get(self, request):
-        return Response(RestoreDrillSerializer(RestoreDrill.objects.all()[:100], many=True).data)
+        return Response(
+            RestoreDrillSerializer(
+                RestoreDrill.objects.select_related("backup")[:100], many=True
+            ).data
+        )
 
     @extend_schema(request=RestoreDrillSerializer, responses={201: RestoreDrillSerializer})
     def post(self, request):

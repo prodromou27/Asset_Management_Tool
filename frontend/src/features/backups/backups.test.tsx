@@ -17,6 +17,22 @@ function routes(permissions = ['backups.view', 'backups.manage']) {
 }
 
 describe('backups and recovery', () => {
+  it('shows audited job and drill report links with measured durations', async () => {
+    const job = { id: 'fixture-job', kind: 'backup', status: 'succeeded', target_label: 'Synthetic storage', created_at: '2026-11-05T00:00:00Z', started_at: '2026-11-05T00:00:00Z', finished_at: '2026-11-05T00:00:12Z', recovery_point: '2026-11-05T00:00:00Z', size_bytes: 1024, snapshot_id: 'a'.repeat(64), manifest: { database_major: 16 }, duration_seconds: 12, verification_result: 'passed' }
+    mockApi({ ...routes(['backups.view']),
+      'GET /backups/jobs/': { body: [job] },
+      'GET /backups/drills/': { body: [{ id: 'fixture-drill', target_label: 'Isolated fixture', finished_at: '2026-11-05T00:10:00Z', passed: true, duration_seconds: 35, notes: 'Counts verified' }] },
+      'GET /backups/summary/': { body: { ...summary, last_verification: job } },
+    })
+    renderApp('/admin/backups')
+    fireEvent.click(await screen.findByRole('button', { name: 'View details' }))
+    const drawer = screen.getByRole('dialog', { name: 'Backup job details' })
+    expect(within(drawer).getByText('12.0 seconds')).toBeInTheDocument()
+    expect(within(drawer).getByRole('link', { name: 'Download job report' })).toHaveAttribute('href', '/api/v1/backups/jobs/fixture-job/report/')
+    fireEvent.click(within(drawer).getByRole('button', { name: 'Close' }))
+    expect(screen.getByText('35.0 seconds')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Download JSON' })).toHaveAttribute('href', '/api/v1/backups/drills/fixture-drill/report/')
+  })
   it('shows incomplete setup without fabricated backup success', async () => {
     mockApi(routes())
     renderApp('/admin/backups')

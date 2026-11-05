@@ -116,6 +116,18 @@ try {
   if (!(await close.evaluate((element) => element === document.activeElement))) throw new Error('Navigation focus missing')
   await page.keyboard.press('Escape')
   if (!(await page.getByRole('button', { name: 'Open navigation' }).evaluate((element) => element === document.activeElement))) throw new Error('Navigation focus did not return')
+  const job = { id: 'synthetic-backup', kind: 'backup', status: 'succeeded', created_at: '2026-11-05T00:00:00Z', started_at: '2026-11-05T00:00:00Z', finished_at: '2026-11-05T00:00:12Z', recovery_point: '2026-11-05T00:00:00Z', target_label: 'Synthetic test storage', snapshot_id: 'a'.repeat(64), size_bytes: 1048576, verification_result: 'passed', duration_seconds: 12, manifest: { format: 'itam.backup.v1', app_revision: 'a'.repeat(40), database_sha256: 'b'.repeat(64), counts: { assets_asset: 28 } } }
+  responses.set('/backups/jobs/', { body: [job] })
+  for (const width of [1440, 390]) {
+    await page.setViewportSize({ width, height: width === 390 ? 844 : 900 })
+    await page.goto('http://127.0.0.1:5197/admin/backups')
+    await page.getByRole('button', { name: 'View details' }).click()
+    await page.getByRole('dialog', { name: 'Backup job details' }).waitFor()
+    await capture(page, `backup-job-details-${width}`)
+    if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)) throw new Error('Backup details overflow')
+    await page.keyboard.press('Escape')
+  }
+  await page.setViewportSize({ width: 390, height: 844 })
   let release
   const pending = new Promise((resolve) => { release = resolve })
   const delayedAssets = async (route) => {

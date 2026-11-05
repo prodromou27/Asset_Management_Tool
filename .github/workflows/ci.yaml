@@ -45,6 +45,7 @@ jobs:
       POSTGRES_PORT: "5432"
       REDIS_URL: redis://localhost:6379/0
       ITAM_BACKUP_DRILL_ARTIFACT_DIR: /tmp/itam-drill-fixture
+      ITAM_BACKUP_TEST_SFTP: "1"
     defaults:
       run:
         shell: bash
@@ -107,6 +108,13 @@ jobs:
         with:
           name: backup-drill-fixture
           path: /tmp/itam-drill-fixture
+          retention-days: 1
+          if-no-files-found: error
+      - name: Preserve separate synthetic recovery key (never a production key)
+        uses: actions/upload-artifact@v4
+        with:
+          name: backup-drill-key
+          path: /tmp/itam-drill-key
           retention-days: 1
           if-no-files-found: error
 
@@ -179,4 +187,21 @@ jobs:
           name: backup-drill-fixture
           path: /tmp/itam-drill-fixture
       - name: Restore into new network-disabled PostgreSQL and verify recovery
-        run: python3 ops/restore/drill.py /tmp/itam-drill-fixture --report /tmp/itam-drill-report.json
+        # Both artifacts contain synthetic CI data only, with a one-day lifetime.
+        uses: actions/download-artifact@v4
+        with:
+          name: backup-drill-key
+          path: /tmp/itam-drill-key
+      - name: Verify encrypted repository and restore after source removal
+        run: |
+          sudo apt-get update && sudo apt-get install -y restic
+          python3 ops/restore/recover_fixture.py /tmp/itam-drill-fixture /tmp/itam-drill-key/restic_password /tmp/itam-drill-input
+          python3 ops/restore/drill.py /tmp/itam-drill-input --report /tmp/itam-drill-report.json
+      - name: Preserve measured isolated restore report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backup-drill-report
+          path: /tmp/itam-drill-report.json
+          retention-days: 7
+          if-no-files-found: warn

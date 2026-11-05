@@ -71,3 +71,34 @@ def test_failed_restore_records_failure_and_removes_only_created_target(
     result = json.loads(report.read_text())
     assert not result["passed"]
     assert commands[-1] == ["docker", "rm", "--force", result["target_label"]]
+
+
+def test_cleanup_failure_still_preserves_failed_report(drill_module, tmp_path, monkeypatch):
+    files(tmp_path)
+
+    def command(args):
+        if "pg_restore" in args or "rm" in args:
+            raise RuntimeError("Fixture failure")
+        return ""
+
+    monkeypatch.setattr(drill_module, "command", command)
+    report = tmp_path / "cleanup.json"
+    with pytest.raises(RuntimeError):
+        drill_module.drill(tmp_path, report)
+    result = json.loads(report.read_text())
+    assert not result["passed"] and not result["target_removed"]
+
+
+def test_incompatible_database_rejected_before_container_creation(
+    drill_module, tmp_path, monkeypatch
+):
+    files(tmp_path)
+    path = tmp_path / "manifest.json"
+    manifest = json.loads(path.read_text())
+    manifest["database_major"] = 17
+    path.write_text(json.dumps(manifest))
+    commands = []
+    monkeypatch.setattr(drill_module, "command", lambda args: commands.append(args))
+    with pytest.raises(ValueError, match="PostgreSQL 16"):
+        drill_module.drill(tmp_path, tmp_path / "report.json")
+    assert not commands

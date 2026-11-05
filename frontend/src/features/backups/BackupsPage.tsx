@@ -5,10 +5,12 @@ import * as api from '../../shared/api/backups'
 import { PERMISSIONS } from '../../shared/api/types'
 import { Button } from '../../shared/ui/Button'
 import { Dialog } from '../../shared/ui/Dialog'
+import { Drawer } from '../../shared/ui/Drawer'
+import { isApiError } from '../../shared/api/client'
 import { SelectField, TextAreaField, TextField } from '../../shared/ui/Field'
 import { PageHeader } from '../../shared/ui/PageHeader'
 import { StatusBadge } from '../../shared/ui/StatusBadge'
-import { EmptyState, LoadingState, QueryErrorState } from '../../shared/ui/States'
+import { EmptyState, ErrorSummary, LoadingState, QueryErrorState } from '../../shared/ui/States'
 
 const date = (value?: string | null) => value ? new Date(value).toLocaleString() : 'Not recorded'
 
@@ -22,6 +24,7 @@ export function BackupsPage() {
   const drills = useQuery({ queryKey: ['backups', 'drills'], queryFn: api.getRestoreDrills })
   const [editing, setEditing] = useState<api.BackupPolicy | null>(null)
   const [recording, setRecording] = useState(false)
+  const [selected, setSelected] = useState<api.BackupJob | null>(null)
   const [action, setAction] = useState<string | null>(null)
   const [confirmation, setConfirmation] = useState<'backup' | string | null>(null)
   const refresh = () => client.invalidateQueries({ queryKey: ['backups'] })
@@ -57,6 +60,7 @@ export function BackupsPage() {
           <div><dt>Recovery objectives</dt><dd>RPO {p.rpo_hours}h / RTO {p.rto_hours}h (validate by drill)</dd></div>
           <div><dt>Retention</dt><dd>{p.retention_enabled ? `${p.keep_daily} daily / ${p.keep_weekly} weekly / ${p.keep_monthly} monthly` : 'Automatic deletion disabled'}</dd></div>
           <div><dt>Last verified recovery point</dt><dd>{date(s.last_backup?.recovery_point)}</dd></div>
+          <div><dt>Last verification</dt><dd>{s.last_verification ? `${date(s.last_verification.finished_at)} · ${s.last_verification.verification_result}` : 'Not recorded'}</dd></div>
           <div><dt>Last restore drill</dt><dd>{s.last_drill ? `${date(s.last_drill.finished_at)} · ${s.last_drill.passed ? 'Passed (operator recorded)' : 'Failed'}` : 'Not recorded'}</dd></div>
         </dl>
         <p className="muted">{s.encryption}. {s.off_host}.</p>
@@ -67,7 +71,7 @@ export function BackupsPage() {
           Provision an approved off-host repository and recovery key, then enable the backup worker.
         </EmptyState>
       ) : (
-        <JobTable jobs={jobs.data} manage={manage} disabled={!allowed || busy} onVerify={setConfirmation} />
+        <JobTable jobs={jobs.data} manage={manage} disabled={!allowed || busy} onVerify={setConfirmation} onDetails={setSelected} />
       )}
       <section className="panel">
         <div className="page-header">
@@ -83,14 +87,16 @@ export function BackupsPage() {
         ) : (
           <div className="table-scroll">
             <table className="data-table">
-              <thead><tr><th>Finished</th><th>Isolated target</th><th>Result</th><th>Notes</th></tr></thead>
+              <thead><tr><th>Finished</th><th>Isolated target</th><th>Result</th><th>Duration</th><th>Notes</th><th>Report</th></tr></thead>
               <tbody>
                 {drills.data.map((drill) => (
                   <tr key={drill.id}>
                     <td>{date(drill.finished_at)}</td>
                     <td>{drill.target_label}</td>
                     <td>{drill.passed ? 'Passed (operator recorded)' : 'Failed'}</td>
+                    <td>{duration(drill.duration_seconds)}</td>
                     <td>{drill.notes}</td>
+                    <td><a href={`/api/v1/backups/drills/${drill.id}/report/`}>Download JSON</a></td>
                   </tr>
                 ))}
               </tbody>
@@ -112,18 +118,36 @@ export function BackupsPage() {
           ))}
           <label className="checkbox"><input type="checkbox" checked={editing.retention_enabled} onChange={(e) => setEditing({ ...editing, retention_enabled: e.target.checked })} />Apply retention after a verified backup (deletes older ITAM snapshots)</label>
         </div>}
-        {save.error && <p role="alert">{save.error.message}</p>}
+        {save.error && <ErrorSummary message={save.error.message} fieldErrors={isApiError(save.error) ? save.error.fieldErrors : {}} fieldLabels={POLICY_LABELS} />}
       </Dialog>
       {recording && <DrillDialog jobs={jobs.data.filter((j) => j.kind === 'backup' && j.status === 'succeeded')} close={() => setRecording(false)} done={() => { setRecording(false); void refresh() }} />}
+      <Drawer open={selected !== null} title="Backup job details" onClose={() => setSelected(null)}>
+        {selected && <>
+          <dl className="detail-grid">
+            <div><dt>Status</dt><dd>{selected.status}</dd></div>
+            <div><dt>Verification</dt><dd>{selected.verification_result}</dd></div>
+            <div><dt>Destination</dt><dd>{selected.target_label}</dd></div>
+            <div><dt>Started</dt><dd>{date(selected.started_at)}</dd></div>
+            <div><dt>Finished</dt><dd>{date(selected.finished_at)}</dd></div>
+            <div><dt>Duration</dt><dd>{duration(selected.duration_seconds)}</dd></div>
+            <div><dt>Recovery point</dt><dd>{date(selected.recovery_point)}</dd></div>
+          </dl>
+          {(selected.error_message || selected.warning) && <p role="status">{selected.error_message || selected.warning}</p>}
+          <a className="button" href={`/api/v1/backups/jobs/${selected.id}/report/`}>Download job report</a>
+          <h3>Capture manifest</h3>
+          <pre className="pre-wrap">{JSON.stringify(selected.manifest, null, 2)}</pre>
+        </>}
+      </Drawer>
     </div>
   )
 }
 
-function JobTable({ jobs, manage, disabled, onVerify }: {
+function JobTable({ jobs, manage, disabled, onVerify, onDetails }: {
   jobs: api.BackupJob[]
   manage: boolean
   disabled: boolean
   onVerify: (id: string) => void
+  onDetails: (job: api.BackupJob) => void
 }) {
   const labels = { succeeded: 'Verified', failed: 'Failed', running: 'Running', queued: 'Queued' }
   return (
@@ -141,6 +165,7 @@ function JobTable({ jobs, manage, disabled, onVerify }: {
               <td>{date(job.created_at)}</td>
               <td>{job.kind === 'backup' ? 'Backup' : 'Verify'}</td>
               <td>
+                <Button onClick={() => onDetails(job)}>View details</Button>
                 <StatusBadge label={labels[job.status]}
                   tone={job.status === 'succeeded' ? 'success' : job.status === 'failed' ? 'danger' : 'neutral'} />
               </td>
@@ -196,7 +221,7 @@ function DrillDialog({ jobs, close, done }: { jobs: api.BackupJob[]; close: () =
       <label className="checkbox"><input type="checkbox" checked={isolated} onChange={(e) => setIsolated(e.target.checked)} />Used a new isolated target</label>
       <label className="checkbox"><input type="checkbox" checked={outbound} onChange={(e) => setOutbound(e.target.checked)} />Outgoing mail and integrations were disabled</label>
     </div>
-    {(error || mutation.error) && <p role="alert">{error || mutation.error?.message}</p>}
+    {(error || mutation.error) && <ErrorSummary message={error || mutation.error?.message || 'Could not record drill.'} fieldErrors={isApiError(mutation.error) ? mutation.error.fieldErrors : {}} fieldLabels={{ target_label: 'Isolated target', started_at: 'Started', finished_at: 'Finished', notes: 'Recovery checks' }} />}
   </Dialog>
 }
 
@@ -208,3 +233,8 @@ const POLICY_FIELDS = [
   { key: 'keep_weekly', label: 'Weekly snapshots', max: 104 },
   { key: 'keep_monthly', label: 'Monthly snapshots', max: 120 },
 ] as const
+const POLICY_LABELS = Object.fromEntries(POLICY_FIELDS.map(({ key, label }) => [key, label]))
+
+function duration(seconds?: number | null) {
+  return seconds == null ? 'Not recorded' : `${seconds.toFixed(1)} seconds`
+}
