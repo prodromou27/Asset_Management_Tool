@@ -29,7 +29,12 @@ def destination(directory):
     (keys / "authorized_keys").chmod(0o644)
     (client / "restic_password").write_text(secrets.token_urlsafe(48))
     root = Path(__file__).resolve().parents[4]
-    command(["docker", "build", "-t", "itam-sftp-fixture", str(root / "infra/backup-test")])
+    # This build contains no mounted fixture keys. Preserve its package/build diagnostics.
+    subprocess.run(
+        ["docker", "build", "-t", "itam-sftp-fixture", str(root / "infra/backup-test")],
+        check=True,
+        timeout=300,
+    )
     command(["docker", "volume", "create", name])
     created = False
     try:
