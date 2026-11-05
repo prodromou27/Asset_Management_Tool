@@ -1,20 +1,20 @@
-# Current task: UI redesign (2026-11-05)
+# Current task: Full UI replacement (2026-11-05)
 
-Owner explicitly requested redesign after Task 021 completion. Baseline 3d337a9.
-Task 021 history: TASK021_OUTCOME.md and TASK021_REPORT.md. Do not start Task 022.
+Owner rejected the previous navy refresh and explicitly requested different colours,
+themes, layouts and CSS. Baseline 47d608e. This supersedes earlier navy constraints.
 Read: AGENTS.md, docs/00_MASTER_DECISIONS.md, docs/07_UI_DESIGN_SYSTEM.md.
+History: UI_REDESIGN_REPORT.md / UI_REDESIGN_OUTCOME.md; Task 021 is complete.
 
-Scope: refresh shared design tokens, application shell, typography, navigation,
-tables, forms, tabs, dialogs and sign-in using existing React/CSS/Lucide modules.
-Retain the previously chosen navy sidebar, restrained enterprise styling, existing
-workflows and authorization. No new dependencies, API/schema changes or live calls.
+Deliver a forest/stone light theme and charcoal dark theme, persistent local theme
+selection, full-width top section/module navigation instead of a sidebar, desktop
+inventory filter rail, redesigned shared surfaces/forms/tables/dialogs and sign-in.
+Retain existing workflows, permissions, URL state and API contracts. No new packages,
+live services or Task 022 commissioning.
 
-Acceptance: frontend workflow tests, lint/typecheck/build, representative desktop
-and mobile visual inspection; browser script checks exceptions, unmapped fixtures,
-page overflow and focus behavior. Document final visual direction and real results.
-
-Status: COMPLETE for the requested UI implementation and local acceptance.
-Implementation 61a2bec is pushed to DEV. 207 frontend tests, lint/typecheck/build
-and 57 browser captures passed. Details and CI evidence link: UI_REDESIGN_REPORT.md.
-Next: verify DEV CI and hand off the design for owner review; no new epic is started.
-Production gates remain disabled.
+Acceptance: frontend workflow and theme/navigation tests, lint/typecheck/build;
+desktop/mobile browser evidence in both themes, no overflow or unmapped fixtures;
+keyboard navigation, theme persistence, disclosure behavior, contrast spot checks.
+Status: COMPLETE for implementation and local acceptance. 210 frontend tests,
+lint/typecheck/build and 100 browser captures across both themes passed.
+Details: FULL_UI_REDESIGN_REPORT.md. Next: push DEV, verify CI and hand off for
+owner design review. Production gates remain disabled; no new epic is started.

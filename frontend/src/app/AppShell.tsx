@@ -7,6 +7,7 @@ import { PERMISSIONS } from '../shared/api/types'
 import { getDisplayTimezoneWarning } from '../shared/format'
 import { locate, SECTIONS, type NavItem } from './navigation'
 import { useSession } from './useSession'
+import { ThemeToggle } from './theme'
 
 function initials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean)
@@ -16,8 +17,28 @@ function initials(name: string): string {
 
 function NavList({ items, onNavigate }: { items: NavItem[]; onNavigate: () => void }) {
   const { pathname } = useLocation()
+  const list = useRef<HTMLUListElement>(null)
+  useEffect(() => {
+    const container = list.current
+    const active = container?.querySelector<HTMLElement>('[aria-current="page"]')
+    if (!active || !container) return
+    const reveal = () => {
+      const bounds = container.getBoundingClientRect()
+      const link = active.getBoundingClientRect()
+      if (!bounds.width) return
+      if (link.right > bounds.right) container.scrollLeft += link.right - bounds.right + 12
+      if (link.left < bounds.left) container.scrollLeft -= bounds.left - link.left + 12
+    }
+    reveal()
+    // Font loading and responsive layout can change module widths after the first paint.
+    if (typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(reveal)
+    observer.observe(container)
+    observer.observe(active)
+    return () => observer.disconnect()
+  }, [pathname])
   return (
-    <ul className="nav-list">
+    <ul className="nav-list" ref={list}>
       {items.map(({ to, label, icon: Icon, end, also }) => {
         const under = (root: string) => pathname === root || pathname.startsWith(`${root}/`)
         const active = pathname === to || (!end && to !== '/' && under(to)) || (also ?? []).some(under)
@@ -110,6 +131,7 @@ function UserMenu() {
       <button
         type="button"
         className="user-menu__trigger"
+        aria-label={`Account menu for ${me.display_name || me.username}`}
         aria-expanded={open}
         aria-controls="user-menu-panel"
         onClick={() => setOpen((value) => !value)}
@@ -161,16 +183,20 @@ export function AppShell({ children }: { children: ReactNode }) {
     ),
   })).filter((section) => section.items.length > 0)
   const where = locate(pathname)
+  const [sectionChoice, setSectionChoice] = useState({ pathname: '', section: '' })
+  const currentSection = sectionChoice.pathname === pathname ? sectionChoice.section : where.section
   const timezoneWarning = getDisplayTimezoneWarning()
 
   useEffect(() => {
     if (!navOpen) return
     const nav = document.getElementById('app-nav')
     const body = document.querySelector<HTMLElement>('.app-shell__body')
+    const masthead = document.querySelector<HTMLElement>('.workspace-masthead')
     const opener = document.activeElement
     const previousOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     if (body) body.inert = true
+    if (masthead) masthead.inert = true
     const controls = () => [...(nav?.querySelectorAll<HTMLElement>('a[href], button:not([disabled])') ?? [])]
     controls()[0]?.focus()
     const onKey = (event: KeyboardEvent) => {
@@ -196,6 +222,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       media?.removeEventListener('change', onResize)
       document.body.style.overflow = previousOverflow
       if (body) body.inert = false
+      if (masthead) masthead.inert = false
       if (opener instanceof HTMLElement) opener.focus()
     }
   }, [navOpen])
@@ -205,15 +232,26 @@ export function AppShell({ children }: { children: ReactNode }) {
       <a className="skip-link" href="#main">
         Skip to content
       </a>
-      <nav className="app-shell__nav" id="app-nav" aria-label="Primary">
+      <header className="workspace-masthead">
         <div className="app-shell__brand">
           <span className="brand-mark" aria-hidden="true">
             <Boxes size={18} strokeWidth={2} />
           </span>
           <span className="brand-copy">
             <span className="brand-name" title={me?.display_preferences?.organization_name}>{me?.display_preferences?.organization_name ?? 'ITAM'}</span>
-            <span className="brand-caption">ASSET WORKSPACE</span>
+            <span className="brand-caption">Inventory & operations</span>
           </span>
+        </div>
+        <div className="masthead-tools">
+          {!restricted && <GlobalSearch />}
+          <ThemeToggle />
+          <UserMenu />
+          <button type="button" className="nav-toggle" aria-label="Open navigation" aria-controls="app-nav" aria-expanded={navOpen} onClick={() => setNavOpen(true)}>
+            <Menu size={20} aria-hidden="true" />
+          </button>
+        </div>
+      </header>
+      <nav className="app-shell__nav" id="app-nav" aria-label="Primary">
           <button
             type="button"
             className="nav-close"
@@ -222,32 +260,23 @@ export function AppShell({ children }: { children: ReactNode }) {
           >
             <X size={18} aria-hidden="true" />
           </button>
-        </div>
+        <div className="workspace-navigation">
         {!restricted &&
           sections.map((section) => (
-            <div className="nav-group" key={section.id}>
-              <p className="nav-section" id={`nav-${section.id}`}>
+            <div className={`nav-group${currentSection === section.label ? ' nav-group--current' : ''}`} key={section.id}>
+              <button type="button" className="nav-section" id={`nav-${section.id}`} aria-expanded={navOpen || currentSection === section.label} aria-controls={`nav-items-${section.id}`} onClick={() => setSectionChoice({ pathname, section: section.label })}>
                 {section.label}
-              </p>
-              <NavList items={section.items} onNavigate={() => setNavOpen(false)} />
+              </button>
+              <div className="nav-items" id={`nav-items-${section.id}`}><NavList items={section.items} onNavigate={() => setNavOpen(false)} /></div>
             </div>
           ))}
+        </div>
       </nav>
       {navOpen && (
         <div className="nav-backdrop" aria-hidden="true" onClick={() => setNavOpen(false)} />
       )}
       <div className="app-shell__body">
-        <header className="top-bar">
-          <button
-            type="button"
-            className="nav-toggle"
-            aria-label="Open navigation"
-            aria-controls="app-nav"
-            aria-expanded={navOpen}
-            onClick={() => setNavOpen(true)}
-          >
-            <Menu size={20} aria-hidden="true" />
-          </button>
+        <main className="app-shell__main" id="main" tabIndex={-1}>
           {where.page && (
             <nav className="top-bar__context" aria-label="Breadcrumb">
               <span className="top-bar__section">{where.section}</span>
@@ -255,12 +284,6 @@ export function AppShell({ children }: { children: ReactNode }) {
               <span className="top-bar__page" aria-current="page">{where.page}</span>
             </nav>
           )}
-          <div className="top-bar__end">
-            {!restricted && <GlobalSearch />}
-            <UserMenu />
-          </div>
-        </header>
-        <main className="app-shell__main" id="main" tabIndex={-1}>
           {timezoneWarning && <p className="state state--warning" role="status">{timezoneWarning}</p>}
           {children}
         </main>

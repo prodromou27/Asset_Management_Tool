@@ -8,6 +8,7 @@ import { Button } from '../../shared/ui/Button'
 import { TextField } from '../../shared/ui/Field'
 import { ErrorSummary, LoadingState } from '../../shared/ui/States'
 import { safeNext } from './safeNext'
+import { ThemeToggle } from '../../app/theme'
 
 export function LoginPage() {
   const { me, isPending } = useSession()
@@ -49,6 +50,7 @@ export function LoginPage() {
 
   return (
     <div className="auth-layout">
+      <div className="auth-appearance"><ThemeToggle /></div>
       <main className="auth-panel" id="main">
         <p className="auth-panel__product">ITAM</p>
         <h1 className="auth-panel__title">Sign in</h1>

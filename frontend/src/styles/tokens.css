@@ -1,56 +1,72 @@
-/* Light theme tokens from docs/07_UI_DESIGN_SYSTEM.md (navy console direction, owner design
- * review 2026-11-04; workspace redesign requested 2026-11-05). Text colours meet WCAG AA (>= 4.5:1)
- * on their intended background. */
+/* Forest / stone and charcoal themes. User request supersedes the former navy design. */
 :root {
-  --color-page-bg: #eef2f6;
+  color-scheme: light;
+  --color-page-bg: #f4f2ed;
   --color-surface: #ffffff;
-  --color-surface-muted: #f4f7fa;
-  --color-text-primary: #172b41;
-  --color-text-secondary: #52657a;
-  --color-border: #d8e1ea;
-  --color-border-strong: #b3c2d2;
-  --color-brand: #215ad6;
-  --color-brand-hover: #1848b3;
-  --color-brand-soft: #eaf0ff;
+  --color-surface-muted: #f7f6f2;
+  --color-text-primary: #292e28;
+  --color-text-secondary: #60695e;
+  --color-border: #e0e3da;
+  --color-border-strong: #84917b;
+  --color-brand: #256347;
+  --color-brand-hover: #194a34;
+  --color-brand-soft: #e5efe6;
   --color-on-brand: #ffffff;
-  --color-link: #1848b3;
-  --color-success: #15803d;
-  --color-warning: #b45309;
-  --color-danger: #c62828;
-  --color-danger-hover: #a51f1f;
-  --color-neutral: #64748b;
-  --color-focus-ring: #3b82f6;
-  --color-backdrop: rgb(15 27 45 / 45%);
-
-  /* Navigation (dark navy sidebar). */
-  --color-nav-bg: #122238;
-  --color-nav-text: #c7d3e2;
-  --color-nav-muted: #93a7bf;
-  --color-nav-hover: #1d334d;
-  --color-nav-active: #254364;
-  --color-nav-accent: #9dc8ff;
-  --color-nav-border: #2b3c52;
-
+  --color-link: #215a3e;
+  --color-success: #207347;
+  --color-warning: #99540a;
+  --color-danger: #b33a3a;
+  --color-danger-hover: #912c2c;
+  --color-neutral: #626e61;
+  --color-focus-ring: #327752;
+  --color-backdrop: rgb(18 28 22 / 55%);
+  --color-masthead: #183f32;
+  --color-masthead-text: #ffffff;
+  --color-nav-bg: var(--color-surface);
+  --color-nav-text: var(--color-text-primary);
+  --color-nav-muted: var(--color-text-secondary);
+  --color-nav-hover: var(--color-surface-muted);
+  --color-nav-active: var(--color-brand-soft);
+  --color-nav-accent: var(--color-brand);
+  --color-nav-border: var(--color-border);
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
   --space-4: 16px;
   --space-6: 24px;
   --space-8: 32px;
-
-  --radius-sm: 4px;
-  --radius-md: 5px;
-  --radius-lg: 8px;
-
-  --size-control: 36px;
-  --size-row: 40px;
-  --size-topbar: 64px;
-  --size-sidebar: 232px;
-
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --size-control: 38px;
+  --size-row: 46px;
   --font-sans: 'Inter Variable', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Consolas, monospace;
-
-  --shadow-surface: 0 1px 2px rgb(15 27 45 / 3%);
-  --shadow-overlay: 0 10px 28px rgb(15 27 45 / 18%);
-  --duration-fast: 120ms;
+  --shadow-surface: 0 1px 3px rgb(29 45 33 / 8%);
+  --shadow-overlay: 0 16px 48px rgb(18 28 22 / 18%);
+  --duration-fast: 140ms;
+}
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --color-page-bg: #181c1a;
+  --color-surface: #222825;
+  --color-surface-muted: #2a322e;
+  --color-text-primary: #edf2ec;
+  --color-text-secondary: #b0beb4;
+  --color-border: #3b4740;
+  --color-border-strong: #7e9286;
+  --color-brand: #a0d8ad;
+  --color-brand-hover: #b4e5bf;
+  --color-brand-soft: #304a38;
+  --color-on-brand: #173321;
+  --color-link: #a9dfb4;
+  --color-success: #8cd5a5;
+  --color-warning: #efc076;
+  --color-danger: #f49b98;
+  --color-danger-hover: #ffc0bd;
+  --color-neutral: #b0beb4;
+  --color-focus-ring: #a0d8ad;
+  --color-masthead: #122c23;
+  --shadow-surface: 0 1px 4px rgb(0 0 0 / 20%);
+  --shadow-overlay: 0 20px 56px rgb(0 0 0 / 40%);
 }

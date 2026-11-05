@@ -41,6 +41,7 @@ import { EmptyState } from '../shared/ui/States'
 import { AppShell } from './AppShell'
 import { createQueryClient } from './queryClient'
 import { RequireAuth, RequirePermission } from './session'
+import { ThemeProvider } from './theme'
 
 function Protected({
   children,
@@ -67,6 +68,10 @@ function Protected({
 }
 
 export function AppRoutes() {
+  return <ThemeProvider><AppRouteContent /></ThemeProvider>
+}
+
+function AppRouteContent() {
   return (
     <Routes>
       <Route path="/reports" element={<Protected permission={PERMISSIONS.reportsView} what="reports"><ReportsPage /></Protected>} />

@@ -1,113 +1,87 @@
-# 07 | UI Art Direction: Serious, Calm, Information-Dense
+# 07 | Forest workspace design system
 
-**This is a business operations tool, not a SaaS marketing site or a generic AI-generated dashboard.** Visual references are understated professional enterprise tools, modern network consoles and thoughtfully designed admin software. The UI must feel deliberately designed for an infrastructure/security engineer who spends hours investigating assets.
+Owner direction: 5 November 2026. The owner rejected the navy refresh and explicitly
+requested a full new design with different colours, themes, layouts and CSS. This
+replaces all previous navy-sidebar requirements. Keep a professional, useful ITAM
+interface with real data, readable density and traceable evidence.
 
-## Visual principles (non-negotiable)
+## Visual direction
 
-1. Information hierarchy before decoration. Prioritize data tables, context, filters, status and traceable evidence.
-2. Neutral canvas with restrained color. No gradients, purple/blue neon, glassmorphism, playful illustrations, oversized floating cards or excessive shadows.
-3. Dense but readable. More rows above the fold; persistent table header; generous whitespace **between sections**, efficient spacing **within data**.
-4. Realistic empty/error/loading states, no fake 100% metrics or fabricated company names.
-5. Consistent alignment, one icon family and predictable components. Distinguish business, observation and support statuses.
-6. No emoji icons in navigation or dashboard. No giant welcoming hero/banner.
-7. Make dangerous actions visually quieter until intentionally selected, then explicit confirmation.
+Warm stone canvas, white paper-like surfaces and forest-green actions in light mode;
+charcoal canvas, layered dark surfaces and mint accents in dark mode. No neon,
+decorative charts, invented metrics or external fonts/images. Reuse bundled Inter,
+IBM Plex Mono and Lucide. Main headings are 32px (28px mobile), section headings 15px,
+body 14px, table text 13px. Control heights 38px, default rows 46px, corners 8-12px,
+dialog corners 16px. Use subtle shadows for overlays; keep content surfaces quiet.
 
-## Design tokens (navy console; broader visual refinement requested 2026-11-05)
+## Themes and tokens
 
-The owner rejected the first implementation as plain and dated (style, colours, navigation) and chose a dark navy sidebar with a blue accent. Values live in `frontend/src/styles/tokens.css`; change them only through design review. Dark mode is deferred (the tokens are structured for it).
+Source: frontend/src/styles/tokens.css. Shared components use semantic variables.
 
-| Token | Light | Use |
+| Token | Forest light | Charcoal dark |
 |---|---|---|
-| Page background | #EEF2F6 | Canvas |
-| Main surface | #FFFFFF | Panels, tables, top bar |
-| Muted surface | #F4F7FA | Table header band, filter strip, search field |
-| Primary text | #172B41 | Body |
-| Secondary text | #52657A | Metadata, labels (5.58:1 on muted surface) |
-| Hairline / strong border | #D8E1EA / #B3C2D2 | Dividers / control outlines |
-| Brand/action | #215AD6 (hover #1848B3) | Primary buttons, brand mark (white text 6.00:1) |
-| Link | #1848B3 | Links |
-| Success | #15803D | Supported, healthy |
-| Warning | #B45309 | Expiring, needs attention |
-| Danger | #C62828 | End of support, destructive |
-| Neutral/unknown | #64748B | Unknown, stale |
-| Focus ring | #3B82F6 | Keyboard focus (halo on inputs) |
-| Navigation | #122238 background, #C7D3E2 text, #93A7BF section labels, #254364 active, #9DC8FF accent | Sidebar |
+| Canvas | #F4F2ED | #181C1A |
+| Surface | #FFFFFF | #222825 |
+| Muted surface | #F7F6F2 | #2A322E |
+| Primary text | #292E28 | #EDF2EC |
+| Secondary text | #60695E | #B0BEB4 |
+| Border | #E0E3DA | #3B4740 |
+| Strong border | #84917B | #7E9286 |
+| Primary action | #256347 | #A0D8AD |
+| Action label | #FFFFFF | #173321 |
+| Link | #215A3E | #A9DFB4 |
+| Masthead | #183F32 | #122C23 |
 
-Font: **Inter** (variable, bundled with the app, no external CDN), numeric/technical values in **IBM Plex Mono**. 14px body, 13px dense table, 11px uppercase table headers, 12px metadata, 26px page title (24px mobile), 15px section. Icons: **Lucide** only (one family), 16–18px, 1.75 stroke, always next to a text label in navigation.
+The sun/moon control changes theme immediately; `itam.appearance` stores only the
+local browser preference. Storage failure leaves the control usable. The ThemeProvider
+wraps authenticated and sign-in routes, so the preference survives navigation/reload.
+No account, organization, API or authorization setting is changed. Native form controls
+follow color-scheme. Email HTML previews intentionally retain their own white document.
 
-Spacing scale 4/8/12/16/24/32 px. Standard control 36px, dense table row 40–44px, sidebar 232px, top bar 64px. Border radius 5px for controls, 8px for panels and drawers, 10px for dialogs, pill for status badges; no 20px rounded giant cards. Shadows subtle only for popovers/dialogs.
+## Navigation and workspace
 
-## Redesign approved by owner request (2026-11-05)
+Remove the persistent sidebar. A full-width forest masthead contains organization,
+asset search, theme and account actions. Below it are section buttons (Inventory,
+Sources, Administration, System) and a horizontally scrolling module navigation row.
+Selecting a section reveals its modules without changing the current record; following
+a module updates the URL and restores the appropriate section. Permissions determine
+both sections and modules. Active links retain aria-current and explicit text/icons.
 
-The owner requested a complete UI redesign after Task 021. Retain navy navigation
-and the established dense enterprise direction. Shared tokens now use a cooler
-slate canvas, stronger ink, quieter borders and a deeper blue action colour.
-Navigation is 232px wide with separated group labels, an outlined current item and
-a trailing chevron. The top bar is 64px. Page titles are 26px (24px on mobile),
-controls retain 36px height and tables retain 40px rows. Control radius is 5px.
+At <=767px, the masthead remains compact; navigation becomes a right-hand drawer with
+all authorized sections. Opening it makes page/masthead inert, traps focus, locks body
+scroll and focuses Close. Escape/link/close returns focus; resizing to desktop closes
+it. The account menu has an explicit accessible name even when its visual text is hidden.
 
-Detail tabs use a baseline with an active underline. Tables use aligned tabular
-numbers and restrained un-underlined row links (underline on hover); text labels
-remain explicit. Filter strips use the muted surface, while saved views and data
-use white. Dialog titles and actions have clear dividers. Sign-in is centred on a
-solid navy background with a compact white form; no new illustration or dependency.
-
-On mobile, asset search stays visible and secondary filters/sorting use a keyboard
-operable disclosure showing the active filter count. Collapsing it never clears
-filters. Desktop keeps all filter controls visible. Other filter forms span the
-available width; tables scroll inside their own containers. Existing permissions,
-URL filters, focus handling, user account actions and reduced-motion support remain.
-Contrast spot checks: primary text/white 14.40:1; secondary/muted 5.58:1;
-white/action blue 6.00:1; navigation label/navy 6.50:1.
-
-Visual evidence is generated by `pnpm review:ui` under
-`frontend/test-results/ui-redesign-review/`, using synthetic fixtures only.
-
-## Layout
-
-Desktop >=1280px: persistent dark navy left navigation grouped into Inventory, Sources, Administration and System sections with icons; 64px top bar with section / page context, asset search and the user menu (initials avatar, roles); jobs and notifications join it when those features exist, content max-width adaptable, section header with title + metadata + primary action, filter toolbar followed by table/content. Use 12-column grid internally where needed, but do not make everything a card grid.
-
-At 768–1279px collapse optional panels; at <=767px use overlay nav and responsive stacked detail sections. Read-only inventory table may horizontally scroll on small screens with first column pinned. No essential content hidden behind hover alone.
+Content fills the workspace, capped at 1920px, with 4vw margins on desktop and 16px on
+mobile. Breadcrumbs sit above page titles; a ruled title/action row anchors each page.
+Inventory uses a 240px filter/saved-view rail beside the table (210px on small desktop).
+On mobile the rail stacks above the table and secondary filters use a disclosure with
+an active-filter count. Closing filters never clears them or changes URL semantics.
 
 ## Components
 
-Owner requested a broader visual refresh on 2026-11-05 while preserving the navy sidebar.
-Shared headers wrap actions responsively; filters use muted bordered strips and saved
-views use white toolbars. Tables have consistent surface boundaries, restrained
-header bands and a pale-blue selected row. Tabs use a baseline and active underline.
-Feedback has a clear bordered surface, small monochrome icon for
-empty states, and a left status rule for errors/warnings. No new font/icon dependency,
-gradients, oversized cards or decorative data. Existing 36px controls/40px rows remain.
+- Tables: sentence-case headers, tabular numbers, gentle alternating rows, forest/mint
+  selection, internal horizontal scrolling and text-based statuses. Preserve column
+  selection, saved views, bulk actions and evidence links.
+- Detail: segmented tabs, bordered status summary, wider main evidence panel and
+  separate ownership/record panels. Stack on narrower screens.
+- Forms: muted filled controls with a lower border; visible labels/help, explicit
+  validation and clear focus. No placeholder-only labels. Preserve fields and actions.
+- Dialogs: larger title, rounded surface, separated muted action footer, independently
+  scrolling body and persistent actions within viewport. Retain focus/escape behavior.
+- Sign-in: centred paper surface on the theme canvas, large heading, full-width action
+  and its own theme control. No changes to authentication or password behavior.
+- Status: supported green, near EOS amber, EOS red, Unknown/stale neutral. Adjust each
+  theme's semantic colours for legibility. Text carries meaning alongside colour.
 
-Supplemental review: long modal bodies scroll independently while title/actions remain
-within the viewport; settings actions and section headers wrap on mobile. The account
-panel moves focus to its first action and Escape returns focus to its opener. The top-bar
-context is a labelled breadcrumb navigation. `pnpm review:ui` exercises synthetic local
-fixtures at 1440×900 and 390×844, records screenshots under `test-results/ui-redesign-review`,
-and fails on browser exceptions, unmapped API fixtures, page overflow or lost drawer focus.
+## Accessibility and verification
 
-- AssetTable: sticky header, column chooser, inline status chips, last-seen tooltip, keyboard focus, row selection, bulk toolbar, column widths remembered, saved views.
-- AssetIdentityHeader: hostname + asset ID + category + 3 status dimensions, source freshness and verified/manual badges; not a banner.
-- SourceEvidenceDrawer: observed value, normalized value, integration name, timestamp, confidence, conflict, override action.
-- EOLFindingRow: explicit dimension, date type, evidence link, days left, exception badge, owner.
-- IntegrationCard: small rectangular list/card with actual state Available/Configured/Degraded/Planned; no fake 'Connect' on Planned.
-- GroupRuleBuilder: typed rows, AND/OR nesting, preview count, validation, explain why membership changed.
-- ImportWizard: 4-step deterministic flow (file, mapping, validation, confirm) with detailed error table; do not disguise errors.
-- ExportDialog: scope, format, related data, column selection, privacy note and queued progress.
-- SettingsForm: grouped labels/help text, test connection button, save confirmation, saved status and audit link.
-
-## Status color discipline
-
-Supported=muted green, Near EOS=amber, End of Support=red, Unknown=gray, Stale=muted gray, Unmanaged=amber outline. Always show status text in addition to color; do not conflate device availability with EOL.
-
-## Microinteractions
-
-Fast subtle 100–160ms hover/focus; no bouncy animation, confetti, shimmer-heavy skeletons or meaningless motion. Navigation state must survive reload, table filter state may be encoded in URL. Toast only for completed actions; long jobs have durable progress panel. Confirm irreversible operations by naming affected record count.
-
-## Accessibility
-
-WCAG AA aim; visible keyboard focus, meaningful labels, tab order, contrast >=4.5:1 for normal text, screen-reader announcements for async job status, escape closes drawers, descriptive empty states and no color-only meaning.
-
-## UI quality gate
-
-Compare 1440x900 screenshot to this document. Check 25+ table rows with sensible density, text clipping, filter alignment, dialog consistency, long serial/hostname values and error states. Reject UI with big gradient title, every metric as giant rounded card, random icon colors, decorative graph with dummy data or inconsistent typography.
+Aim for WCAG AA contrast, visible keyboard focus and no colour-only status. Preserve
+existing reduced-motion handling, labelled fields, async/error messages, tables and
+keyboard tabs. Functional regression tests cover workflow permissions, theme persistence,
+blocked storage and section selection. Browser fixtures exercise both themes at
+1440x900 and 390x844, plus dialogs, error/denied/loading states and sign-in validation.
+Check theme persistence on reload, page overflow, mobile filter state and drawer focus.
+Synthetic evidence: frontend/test-results/forest-workspace-review/. No live API/SMTP
+calls are part of UI verification. These checks do not constitute a full accessibility
+or production commissioning audit.

@@ -212,6 +212,9 @@ export function AssetsListPage() {
         )}
       />
 
+      <div className="inventory-workspace">
+      <aside className="inventory-filters" aria-label="Inventory filters and views">
+      <h2 className="inventory-filters__title">Refine inventory</h2>
       <div className="view-bar">
         <SelectField
           label="Saved view"
@@ -356,7 +359,7 @@ export function AssetsListPage() {
           )}
         </div>
       </form>
-
+      </aside>
       <section className="panel panel--flush" aria-live="polite">
         {selectedIds.length > 0 && (
           <div className="selection-toolbar">
@@ -423,6 +426,7 @@ export function AssetsListPage() {
           </div>
         )}
       </section>
+      </div>
 
       {dialog === 'columns' && (
         <ColumnsDialog value={columns} onChange={changeColumns} onClose={() => setDialog(null)} />

@@ -45,7 +45,7 @@ function SettingsForm({ initial, saved, setSaved }: { initial: GeneralSettings; 
         {saved && <p className="inline-success" role="status">General settings saved.</p>}
         <fieldset disabled={!manage || mutation.isPending} className="form-fieldset">
           <div className="form-grid">
-            <TextField label="Organization name" name="organization_name" value={draft.organization_name} required maxLength={100} onChange={(e) => update('organization_name', e.target.value)} error={errors.organization_name} help="Shown in the navigation sidebar." />
+            <TextField label="Organization name" name="organization_name" value={draft.organization_name} required maxLength={100} onChange={(e) => update('organization_name', e.target.value)} error={errors.organization_name} help="Shown in the workspace header." />
             <TextField label="Display timezone" name="timezone" value={draft.timezone} required maxLength={64} onChange={(e) => update('timezone', e.target.value)} error={errors.timezone} help="IANA timezone, for example Asia/Nicosia, Europe/London or UTC." />
             <SelectField label="Date format" name="date_format" value={draft.date_format} options={[{ value: 'day_month_year', label: 'Day month year' }, { value: 'month_day_year', label: 'Month day year' }, { value: 'iso', label: 'ISO 8601' }]} onChange={(e) => update('date_format', e.target.value)} />
             <SelectField label="Language" name="language" value="en" options={[{ value: 'en', label: 'English' }]} onChange={() => {}} help="English is the supported application language." />

@@ -5,7 +5,7 @@ import { locate } from './navigation'
 
 const readyOk = { body: { status: 'ok', dependencies: {} } }
 
-afterEach(() => vi.unstubAllGlobals())
+afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); localStorage.removeItem('itam.appearance'); delete document.documentElement.dataset.theme })
 
 describe('locate', () => {
   it.each([
@@ -25,10 +25,39 @@ describe('locate', () => {
 })
 
 describe('application shell', () => {
+  it('switches and remembers theme across a remount', async () => {
+    mockApi({ 'GET /auth/me/': { body: makeMe() }, 'GET /health/ready/': readyOk })
+    const first = renderApp('/')
+    fireEvent.click(await screen.findByRole('button', { name: 'Switch to dark theme' }))
+    expect(document.documentElement).toHaveAttribute('data-theme', 'dark')
+    expect(localStorage.getItem('itam.appearance')).toBe('dark')
+    first.unmount()
+    renderApp('/')
+    expect(await screen.findByRole('button', { name: 'Switch to light theme' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Switch to light theme' }))
+    expect(document.documentElement).toHaveAttribute('data-theme', 'light')
+  })
+  it('keeps appearance usable when browser storage is blocked', async () => {
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new Error('Storage blocked') })
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('Storage blocked') })
+    mockApi({ 'GET /auth/me/': { body: makeMe() }, 'GET /health/ready/': readyOk })
+    renderApp('/')
+    fireEvent.click(await screen.findByRole('button', { name: 'Switch to dark theme' }))
+    expect(document.documentElement).toHaveAttribute('data-theme', 'dark')
+  })
+  it('switches top navigation sections without changing the current page', async () => {
+    mockApi({ 'GET /auth/me/': { body: makeMe() }, 'GET /health/ready/': readyOk })
+    renderApp('/')
+    const section = await screen.findByRole('button', { name: 'Administration' })
+    expect(section).toHaveAttribute('aria-expanded', 'false')
+    fireEvent.click(section)
+    expect(section).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByRole('heading', { name: 'System health', level: 1 })).toBeInTheDocument()
+  })
   it('moves focus into the account panel and restores it on Escape', async () => {
     mockApi({ 'GET /auth/me/': { body: makeMe() }, 'GET /health/ready/': readyOk })
     renderApp('/')
-    const trigger = await screen.findByRole('button', { expanded: false, name: /admin/i })
+    const trigger = await screen.findByRole('button', { expanded: false, name: /Account menu for/i })
     fireEvent.click(trigger)
     expect(screen.getByRole('link', { name: 'Change password' })).toHaveFocus()
     fireEvent.keyDown(document, { key: 'Escape' })
@@ -49,7 +78,7 @@ describe('application shell', () => {
       'GET /auth/csrf/': { body: {} },
     })
     renderApp('/')
-    fireEvent.click(await screen.findByRole('button', { name: /admin/i, expanded: false }))
+    fireEvent.click(await screen.findByRole('button', { name: /Account menu for/i, expanded: false }))
     fireEvent.click(screen.getByRole('button', { name: 'Sign out' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('Your session may still be active')
     expect(screen.getByRole('heading', { level: 1, name: 'System health' })).toBeInTheDocument()
@@ -86,7 +115,7 @@ describe('application shell', () => {
 
     renderApp('/')
 
-    const trigger = await screen.findByRole('button', { expanded: false, name: /admin/i })
+    const trigger = await screen.findByRole('button', { expanded: false, name: /Account menu for/i })
     expect(trigger.querySelector('.avatar')?.textContent).toMatch(/^[A-Z]{1,2}$/)
     fireEvent.click(trigger)
     expect(screen.getByRole('link', { name: 'Change password' })).toBeInTheDocument()

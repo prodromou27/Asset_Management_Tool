@@ -3,7 +3,7 @@ import { chromium } from '@playwright/test'
 import fs from 'node:fs/promises'
 
 // Synthetic API responses only. No backend, vendor connector or SMTP service is contacted.
-const output = 'test-results/ui-redesign-review'
+const output = 'test-results/forest-workspace-review'
 await fs.mkdir(output, { recursive: true })
 let screenshots = 0
 const capture = async (page, name, fullPage = true) => {
@@ -114,7 +114,17 @@ try {
   await page.route(/^(?!http:\/\/127\.0\.0\.1:5197\/).*/, (route) => route.abort())
   await page.goto('http://127.0.0.1:5197/admin/backups')
   await page.getByRole('heading', { level: 1, name: 'Backups & Recovery' }).waitFor()
+  await page.waitForFunction(() => {
+    const active = document.querySelector('.nav-link[aria-current="page"]')?.getBoundingClientRect()
+    return active && active.left >= 0 && active.right <= innerWidth
+  })
+  const currentModule = await page.locator('.nav-link[aria-current="page"]').boundingBox()
+  if (!currentModule || currentModule.x < 0 || currentModule.x + currentModule.width > 1440) throw new Error('Current module is clipped in top navigation')
   await capture(page, 'backups-desktop')
+  await page.getByRole('button', { name: 'Inventory', exact: true }).click()
+  await page.getByRole('link', { name: 'Assets', exact: true }).waitFor({ state: 'visible' })
+  await page.getByRole('link', { name: 'Backups & Recovery', exact: true }).waitFor({ state: 'hidden' })
+  await page.getByRole('button', { name: 'Administration', exact: true }).click()
   await page.getByRole('button', { name: 'Edit policy' }).click()
   await capture(page, 'backup-policy')
   await page.getByRole('button', { name: 'Cancel', exact: true }).click()
@@ -122,8 +132,16 @@ try {
   await page.getByRole('table', { name: 'Assets', exact: true }).waitFor()
   await page.getByLabel('Select sw-floor-01', { exact: true }).check()
   await capture(page, 'assets-selection-desktop')
+  await page.getByRole('button', { name: 'Switch to dark theme' }).click()
+  await capture(page, 'assets-selection-desktop-dark')
+  await page.reload()
+  await page.getByRole('button', { name: 'Switch to light theme' }).waitFor()
+  await page.getByRole('button', { name: 'Switch to light theme' }).click()
   await page.setViewportSize({ width: 390, height: 844 })
   await capture(page, 'assets-mobile')
+  await page.getByRole('button', { name: 'Switch to dark theme' }).click()
+  await capture(page, 'assets-mobile-dark')
+  await page.getByRole('button', { name: 'Switch to light theme' }).click()
   const filterToggle = page.getByRole('button', { name: 'Filters & sort', exact: true })
   await page.getByLabel('Category', { exact: true }).waitFor({ state: 'hidden' })
   if ((await page.getByRole('table', { name: 'Assets', exact: true }).boundingBox()).y >= 844) throw new Error('Mobile filters obscure the asset table')
@@ -155,6 +173,10 @@ try {
       await page.waitForLoadState('networkidle')
       if (await page.locator('.state--error, .error-summary').count()) throw new Error(`Unexpected error on ${url}; check fixture coverage`)
       await capture(page, `${label}-${width}`)
+      await page.getByRole('button', { name: 'Switch to dark theme' }).click()
+      await capture(page, `${label}-${width}-dark`)
+      if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)) throw new Error(`Dark theme overflow on ${url}`)
+      await page.getByRole('button', { name: 'Switch to light theme' }).click()
       if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)) {
         console.log(await page.evaluate(() => [...document.querySelectorAll('*')].map((element) => ({ tag: element.tagName, class: element.className?.toString(), right: element.getBoundingClientRect().right, position: getComputedStyle(element).position })).filter((element) => element.right > innerWidth).slice(-12)))
         throw new Error(`${label} overflows at ${width}`)
@@ -165,14 +187,18 @@ try {
     await page.setViewportSize({ width, height: width === 390 ? 844 : 900 })
     await page.goto('http://127.0.0.1:5197/reports?report=lifecycle')
     await page.getByRole('table', { name: 'Report results' }).waitFor()
+    for (const theme of ['light', 'dark']) {
+    if (theme === 'dark') await page.getByRole('button', { name: 'Switch to dark theme' }).click()
     await page.getByRole('button', { name: 'Schedule digest' }).click()
     await page.getByRole('dialog', { name: 'Schedule report digest' }).waitFor()
-    await capture(page, `report-digest-dialog-${width}`, false)
+    await capture(page, `report-digest-dialog-${width}-${theme}`, false)
     await page.keyboard.press('Escape')
     await page.getByRole('button', { name: 'Export report' }).click()
     await page.getByRole('dialog', { name: 'Export lifecycle report' }).waitFor()
-    await capture(page, `report-export-dialog-${width}`, false)
+    await capture(page, `report-export-dialog-${width}-${theme}`, false)
     await page.keyboard.press('Escape')
+    }
+    await page.getByRole('button', { name: 'Switch to light theme' }).click()
   }
   await page.setViewportSize({ width: 1440, height: 900 })
   await page.goto('http://127.0.0.1:5197/admin/general')
@@ -196,6 +222,11 @@ try {
   await page.getByRole('button', { name: 'Open navigation' }).click()
   const close = page.getByRole('button', { name: 'Close navigation' })
   if (!(await close.evaluate((element) => element === document.activeElement))) throw new Error('Navigation focus missing')
+  await capture(page, 'navigation-mobile')
+  await page.keyboard.press('Shift+Tab')
+  if (!(await page.getByRole('link', { name: 'System health', exact: true }).evaluate((element) => element === document.activeElement))) throw new Error('Navigation focus did not wrap backwards')
+  await page.keyboard.press('Tab')
+  if (!(await close.evaluate((element) => element === document.activeElement))) throw new Error('Navigation focus did not wrap forwards')
   await page.keyboard.press('Escape')
   if (!(await page.getByRole('button', { name: 'Open navigation' }).evaluate((element) => element === document.activeElement))) throw new Error('Navigation focus did not return')
   const job = { id: 'synthetic-backup', kind: 'backup', status: 'succeeded', created_at: '2026-11-05T00:00:00Z', started_at: '2026-11-05T00:00:00Z', finished_at: '2026-11-05T00:00:12Z', recovery_point: '2026-11-05T00:00:00Z', target_label: 'Synthetic test storage', snapshot_id: 'a'.repeat(64), size_bytes: 1048576, verification_result: 'passed', duration_seconds: 12, manifest: { format: 'itam.backup.v1', app_revision: 'a'.repeat(40), database_sha256: 'b'.repeat(64), counts: { assets_asset: 28 } } }
@@ -249,6 +280,9 @@ try {
     await page.getByRole('heading', { name: 'Sign in', exact: true }).waitFor()
     if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)) throw new Error('Sign-in page overflows')
     await capture(page, `sign-in-${width}`)
+    await page.getByRole('button', { name: 'Switch to dark theme' }).click()
+    await capture(page, `sign-in-${width}-dark`)
+    await page.getByRole('button', { name: 'Switch to light theme' }).click()
   }
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
   await page.getByText('Enter your username.', { exact: true }).waitFor()
