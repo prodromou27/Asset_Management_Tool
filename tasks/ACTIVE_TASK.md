@@ -1,4 +1,4 @@
-﻿# Current Task: 020 | Admin settings, integration catalogue and health screens
+# Current Task: 020 | Admin settings, integration catalogue and health screens
 
 Authorized by owner on 2026-11-05 after Task 019 completion. Work on DEV.
 Task 019 outcome is preserved in TASK019_OUTCOME.md; latest baseline CI 42017098215 green.
@@ -25,7 +25,7 @@ real browser desktop/mobile checks; PostgreSQL/Redis and image/Compose CI.
 Non-goals: live commissioning, production secret/destination changes, SSO/MFA architecture,
 retention deletion, custom queue controls, Task 021. DEC-09 and other operator gates remain.
 
-Status: implementation complete; CI verification pending.
+Status: complete. Implementation `79469ba`; CI run **42058286320** green.
 
 Outcome: General settings API/UI, shared display preferences and organization branding;
 searchable provider catalogue with URL-preserved tab; protected operational services,
@@ -40,5 +40,10 @@ unsupported-timezone fallback. Typecheck, lint/build, schema validation and migr
 drift passed. Browser review: 41 synthetic screenshots, no errors/unmapped calls/overflow.
 Details and limitations: TASK020_REPORT.md. Task 019 history: TASK019_OUTCOME.md.
 
-Next: verify PostgreSQL/Redis, migration reversal, schema drift, Compose/images and
-isolated restore in CI; record final results. Do not start Task 021 in this run.
+CI: **818 backend tests passed on PostgreSQL/Redis with no skips; 201 frontend tests
+passed**. Migration drift/apply/reversal, OpenAPI/type drift, lint/format/typecheck/build,
+production deploy settings, dev/prod Compose configuration, production and restricted
+backup image builds and the real encrypted SFTP/network-isolated restore all passed.
+
+Next: review Task 021 separately. Production commissioning/IdP/secret recovery and the
+manual readiness gates remain pending operator decisions. Task 021 was not started.

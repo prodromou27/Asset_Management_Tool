@@ -71,8 +71,17 @@ Commands: backend `python -m pytest -q -p no:cacheprovider`, focused suites, `ru
 --validate --fail-on-warn`; frontend `pnpm gen:api`, `pnpm test`, focused `pnpm exec vitest
 run ...`, `pnpm typecheck`, `pnpm lint`, `pnpm build`, `pnpm review:ui`.
 
-CI PostgreSQL/Redis, migration reversal, schema/type drift, deploy checks, Compose/image
-builds and the existing real encrypted SFTP/isolated restore proof are pending the DEV push.
+[CI run 42058286320](https://github.com/prodromou27/Asset_Management_Tool/actions/runs/42058286320)
+passed on implementation **79469ba**: **818 PostgreSQL/Redis backend tests, no skips;
+201 frontend tests**. Migration drift/apply/reversal, OpenAPI/type drift, Ruff lint/format,
+frontend lint/typecheck/build, production settings deploy check, dev/prod Compose validation,
+production API/frontend and restricted backup-worker image builds, and the existing real
+encrypted SFTP/isolated restore proof all passed. That restore uses a new network-disabled
+PostgreSQL after deleting the synthetic source database/storage; it does not restore user
+or production data. Local Docker limitations are covered by this actual CI execution.
+
+Task 020 is complete. Documentation-only follow-up records this result; no production
+service, credential, destination or live integration was enabled.
 
 ## Deliberate limits and next action
 
