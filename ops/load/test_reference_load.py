@@ -12,6 +12,7 @@ from urllib.parse import urlsplit
 
 import httpx
 import pytest
+from apps.accounts.middleware import SESSION_AUTH_AT, SESSION_LAST_SEEN
 from apps.accounts.models import Role, User
 from apps.assets.models import Asset, AssetCategory, AssetHostname, AssetIPAddress
 from apps.lifecycle.models import (
@@ -155,6 +156,9 @@ def test_reference_load(live_server, settings):
         )
         session = Client()
         session.force_login(user)
+        authenticated = session.session
+        authenticated[SESSION_AUTH_AT] = authenticated[SESSION_LAST_SEEN] = time.time()
+        authenticated.save()
         cookies = {
             settings.SESSION_COOKIE_NAME: session.cookies[settings.SESSION_COOKIE_NAME].value
         }
