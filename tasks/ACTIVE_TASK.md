@@ -14,8 +14,9 @@ No new dependencies, public listeners, vendor/SMTP calls or production migration
 Acceptance: real backend/browser roundtrip and DB audit assertions, secret-free
 summary, loopback network guard, test-only DB guard, lint/types/build and PostgreSQL
 CI. SQLite can support local functional proof but cannot prove PostgreSQL scale.
-Status: implemented and locally verified. Four pytest checks passed, including the
-14-scenario real browser/API rehearsal; lint/types/build passed. TASK022A_REPORT.md
-records proof and limits. Next: push DEV and verify PostgreSQL/Chromium CI, then
-Task 022b reference-load measurements. Task 022 overall remains open for load/security/
+Status: complete. Four pytest checks passed locally and on PostgreSQL/Chromium CI,
+including the 14-scenario real browser/API rehearsal. CI run 42114558567 passed for
+38e7343: 827 backend tests, 214 frontend tests, lint/types/build and Compose gates.
+TASK022A_REPORT.md records proof and limits. Next: Task 022b reference-load
+measurements. Task 022 overall remains open for load/security/
 UAT/recovery and AlmaLinux host gates; operator decisions remain required.

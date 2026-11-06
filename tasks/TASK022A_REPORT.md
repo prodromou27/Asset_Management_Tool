@@ -29,8 +29,12 @@ chunk-size advisory remains. The two authenticated synthetic screenshots were
 produced; desktop inventory was visually inspected with the real seeded category tree.
 No application UI/API/schema code changed; the existing 214 frontend and 827 backend
 tests remain normal CI gates. A new independent PostgreSQL/Chromium CI job runs the
-rehearsal and preserves report/screenshots for seven days. Actual CI result is provided
-in the handoff after push.
+rehearsal and preserves report/screenshots for seven days.
+
+CI proof: [run 42114558567](https://github.com/prodromou27/Asset_Management_Tool/actions/runs/42114558567)
+passed for commit `38e7343`. PostgreSQL/Chromium pilot: **4 checks passed in 19.60 s**,
+including all 14 browser scenarios and successful teardown. The existing **827 backend**
+and **214 frontend** tests passed, together with lint/type/build and Compose gates.
 
 Files: `frontend/e2e/pilot.mjs`, `frontend/scripts/run-pilot.mjs`, package E2E command,
 `ops/pilot/` harness/runbook, CI workflow, README, docs/12/15 and ASM-63. The obsolete
