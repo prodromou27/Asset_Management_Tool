@@ -34,7 +34,7 @@ in the report; one slow shape cannot be hidden by pooling all requests.
 
 After search, 10k laptop assessments use a synthetic exact hardware match and a verified
 cached future support date. Every resulting hardware assessment must have that product,
-date and Supported status. This is one measured initial assessment run, including writes,
+date and EOL announced status. This is one measured initial assessment run, including writes,
 not a percentile estimate. No vendor requests, mail, workers or network scanning occur.
 The IPs are stored synthetic facts, never contacted. Installation data has no prior
 removal history; the assessment itself creates history. Historical growth is a separate

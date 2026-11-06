@@ -234,22 +234,22 @@ def test_reference_load(live_server, settings):
         began = time.perf_counter()
         counts = reassess_assets([a.pk for a in assets[:10000]])
         elapsed = time.perf_counter() - began
-        assert counts["assets"] == 10000
-        assert (
-            LifecycleAssessment.objects.filter(
-                dimension="hardware",
-                product=hardware,
-                milestone_date=deadline,
-                effective_status="supported",
-            ).count()
-            == 10000
-        )
         report["lifecycle"] = {
             "assets": counts["assets"],
             "seconds": elapsed,
             "cached_catalogue": True,
             "runs": 1,
         }
+        assert counts["assets"] == 10000
+        assert (
+            LifecycleAssessment.objects.filter(
+                dimension="hardware",
+                product=hardware,
+                milestone_date=deadline,
+                effective_status="eol_announced",
+            ).count()
+            == 10000
+        )
         assert all(m["p95_seconds"] < 2 for m in measurements.values()), measurements
         assert elapsed < 900, elapsed
         report["status"] = "measurements_passed"
