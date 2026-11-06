@@ -375,7 +375,7 @@ try {
     const email = page.frameLocator('iframe[title="HTML preview"]').getByText('Policy preview content')
     await email.waitFor()
     if (await email.evaluate((element) => getComputedStyle(element).color) !== 'rgb(40, 125, 75)') throw new Error('CSP broke email preview styling')
-    await email.scrollIntoViewIfNeeded()
+    await page.locator('iframe[title="HTML preview"]').evaluate((element) => element.scrollIntoView({ block: 'center' }))
     if (await page.locator('iframe[title="HTML preview"]').getAttribute('sandbox') !== '') throw new Error('Email preview sandbox changed')
     await capture(page, 'smtp-sandboxed-preview-csp')
   }
