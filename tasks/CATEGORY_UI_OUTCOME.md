@@ -29,13 +29,19 @@ ACTIVE_TASK. No API, database or security configuration changed.
 
 Validation: lint, typecheck and production build passed; existing Vite chunk-size
 advisory remains. The full frontend suite passed (217), including navigation,
-inheritance/fallback and collapse behavior. CI results are recorded in the final
-handoff. Synthetic Playwright review passed
-with no browser errors or unmapped responses. It now includes all thirteen default
+inheritance/fallback and collapse behavior; the final shell/navigation focus checks
+also passed (26). Synthetic Playwright review passed with 115 screenshot captures,
+no browser errors and no unmapped responses. It now includes all thirteen default
 roots plus a custom root, keyboard disclosure, parent highlighting, mobile navigation,
 theme switching, filters, focus and other screen states. Screenshots are ignored under
 `frontend/test-results/category-icons-review/`; desktop light/dark category pages,
 category administration and mobile dark navigation were visually inspected.
+
+Code commit: `59be932`. CI evidence:
+[run 42218091838](https://github.com/prodromou27/Asset_Management_Tool/actions/runs/42218091838).
+All jobs passed: frontend checks (217 tests), backend PostgreSQL/Redis, real API/browser
+pilot, reference load, Compose/image builds and isolated synthetic recovery. No CI
+failure remains for this code commit.
 
 Limits: this is a focused UI refinement, not a claim of a complete accessibility audit
 or a new full product redesign. Security/release gates from TASK022C_REPORT.md remain

@@ -12,9 +12,10 @@ lists do not obscure other modules. Reuse Lucide, current category metadata and 
 Acceptance: correct category symbols, preserved names/RBAC/filter behavior, custom
 category inheritance/fallback and collapse/reopen behavior, desktop/mobile light/dark
 browser evidence, no page overflow; relevant tests plus lint/types/build.
-Status: implemented. 217 frontend tests passed; after the final focus-trap adjustment,
-26 focused checks plus lint/types passed. Build and synthetic browser review passed;
-final browser/CI verification is in progress. See CATEGORY_UI_OUTCOME.md.
+Status: complete. 217 frontend tests and 26 focused shell/navigation checks passed;
+lint/types/build and final synthetic browser review passed (115 screenshot captures).
+CI run 42218091838 passed for 59be932: frontend, PostgreSQL/Redis, real browser/API,
+reference load, Compose and isolated restore. See CATEGORY_UI_OUTCOME.md.
 No API/schema/category data changes.
 Next after this UI slice: resume Task 022d shared connector DNS connection pinning.
 Task 022/G6 remains open; AlmaLinux choice is accepted (DEC-01).
