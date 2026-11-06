@@ -2,9 +2,10 @@
 
 Outcome: the evidence review is complete; the production security gate remains open.
 
-Follow-up on 2026-11-06: Task 022d addresses G01 with a pinned HTTPS transport and
-verified regression evidence (see TASK022D_REPORT.md). The matrix below preserves
-the reviewed baseline; G02-G05 remain open. This does not establish host commissioning.
+Follow-up on 2026-11-06: Task 022d addresses G01 with a pinned HTTPS transport;
+Task 022e addresses G03 with enforced CSP and browser/real Nginx regression proof
+(see TASK022D_REPORT.md and TASK022E_REPORT.md). The matrix below preserves the
+reviewed baseline; G02/G04/G05 remain open. This does not establish host commissioning.
 Owner reaffirmed AlmaLinux acceptance on 2026-11-06. DEC-01 records that approval;
 architecture/runtime/SELinux/TLS checks still need observed host evidence. No further
 OS-choice question is required, and no host installation or live access occurred.

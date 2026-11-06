@@ -14,8 +14,10 @@ Acceptance: zero CSP violations during normal desktop/mobile/theme flows; styled
 sandboxed email preview works; script/handler/eval/connection/base/object/framing
 probes blocked; exactly one canonical CSP on 19 real Nginx responses (including API
 401/403/404/500, generated 502 and HTTPS redirect). Config tests/Ruff/frontend/CI green.
-Status: implemented; 217 frontend tests, lint/types/build, 3 config tests and local
-production CSP browser review passed (116 screenshots). Real Nginx/CI proof pending.
-See ops/csp/README.md. Task 022/G6 remains open; AlmaLinux choice is accepted.
+Status: complete. CI run 42282210154 passed for 79376d9: 851 backend tests,
+217 frontend tests, real API pilot, 116 production CSP browser captures with zero
+ordinary violations/all denial probes passing, all 19 real Nginx response checks,
+reference load and isolated restore. Local checks also passed. See TASK022E_REPORT.md
+and ops/csp/README.md. G03 is addressed; Task 022/G6 and commissioning remain open.
 Next bounded slice: 022f dependency/image vulnerability evidence (G02); MFA and
 commissioning remain separate open gates.

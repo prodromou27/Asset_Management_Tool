@@ -45,7 +45,18 @@ network and temporary image tags are cleaned up. Commands/limits: ops/csp/README
 Files: canonical policy, frontend Docker/Nginx and proxy configs/mount, UI review mode
 and verification helper, package script, configuration tests, ops/csp fixture/runbook,
 CI steps, docs/15, ASM-67 and task handoff. No UI source, API or schema changes.
-CI result will be recorded after verification.
+Policy commit: `90b425b`; final browser helper correction: `79376d9`.
+The first CI run passed 851 backend tests and all 19 Nginx checks but caught a
+Playwright timeout trying to stabilize/scroll text inside the sandboxed iframe.
+The content/style assertions had already passed. The fixture now scrolls the outer
+iframe in the parent document, keeping all preview and CSP assertions intact.
+
+Final CI evidence: [run 42282210154](https://github.com/prodromou27/Asset_Management_Tool/actions/runs/42282210154).
+The Chromium review passed with 116 production-build captures, zero ordinary CSP
+violations and every denial probe. All jobs are green: 851 PostgreSQL/Redis backend
+tests, 217 frontend tests, real API/browser pilot, reference load, production builds,
+all 19 Nginx response checks and isolated synthetic recovery. G03's source/regression
+gap is addressed; this does not close the remaining security or commissioning gates.
 
 Limits: Chromium-family browser proof and the current source configuration; no full
 cross-browser/a11y audit, live-host security sign-off or dependency/image vulnerability
