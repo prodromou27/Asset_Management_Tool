@@ -64,6 +64,11 @@ scope and the remaining Task 022 load/host/security/recovery gates are in
 `ops/pilot/README.md`. SQLite can prove local functional paths only; CI uses PostgreSQL.
 This does not satisfy G6 production pilot sign-off by itself.
 
+Task 022b's isolated PostgreSQL workload is documented in `ops/load/README.md`.
+It records 30k assets, 1m installations, concurrent per-shape search p95 and 10k
+cached-date lifecycle assessments. CI hardware/test HTTP results are a reference
+baseline; approved-host production stack capacity and historical growth remain open.
+
 - Requirement/AC ID cited in commit/task report.
 - DB migration, typed API, backend authorization and audit present if relevant.
 - Unit/contract/E2E tests added at proportional level.

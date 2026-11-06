@@ -207,6 +207,53 @@ jobs:
           retention-days: 7
           if-no-files-found: warn
 
+  reference-load:
+    name: PostgreSQL synthetic reference load
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: itam_load
+          POSTGRES_USER: itam
+          POSTGRES_PASSWORD: ci-only-load-ephemeral
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U itam -d itam_load"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      POSTGRES_DB: itam_load
+      POSTGRES_USER: itam
+      POSTGRES_PASSWORD: ci-only-load-ephemeral
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: "5432"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.13.6"
+      - name: Sync test dependencies
+        working-directory: backend
+        run: uv sync --frozen --group dev
+      - name: Load harness lint and guards
+        run: |
+          backend/.venv/bin/ruff check --config backend/pyproject.toml ops/load
+          backend/.venv/bin/ruff format --check --config backend/pyproject.toml ops/load
+          backend/.venv/bin/python -m pytest ops/load/test_guards.py -q -p no:cacheprovider
+      - name: Measure synthetic reference workload
+        run: backend/.venv/bin/python ops/load/run_reference.py
+      - name: Preserve reference measurements
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: synthetic-reference-load
+          path: ops/load/results/report.json
+          retention-days: 7
+          if-no-files-found: warn
+
   compose:
     name: Compose config + image build
     needs: backend

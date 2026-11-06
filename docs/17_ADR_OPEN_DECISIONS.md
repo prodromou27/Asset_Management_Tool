@@ -204,6 +204,16 @@ Eager tasks do not establish worker/broker/scheduler behavior. G6, AlmaLinux hos
 live-source, SMTP, load, supply-chain and recovery commissioning remain open. Existing
 operator decisions and approvals in this document are not superseded.
 
+### ASM-64 - Task 022b reference workload (2026-11-06)
+
+Use four concurrent scoped HTTP clients and 40 measured samples per search shape
+(nearest-rank p95, per-client warm-up excluded) on a disposable PostgreSQL test DB.
+Seed 10k IP assets, 20k other assets and 1m active installations; assess 10k assets
+against an exact synthetic hardware match and cached verified date. Record raw
+timings and environment, fail thresholds and retain immutability protections.
+This is Ubuntu CI/test-server baseline evidence, not AlmaLinux production capacity;
+history growth, proxy/TLS, workers and commissioning still need separate proof.
+
 ## GLPI licensing note
 
 GLPI repository is GPLv3. Use product concepts and independently written code. Forking or copying GLPI source is a **separate** licensing/product strategy requiring owner approval. Do not casually mix GPL files into a differently licensed custom codebase.
