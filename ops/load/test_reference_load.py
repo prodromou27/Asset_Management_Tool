@@ -74,7 +74,9 @@ def test_reference_load(live_server, settings):
         remote = Site.objects.create(code="LOAD-REMOTE", name="Synthetic remote site")
         category = AssetCategory.objects.get(code="workstations-laptop")
         monitor = AssetCategory.objects.get(code="monitors")
-        user = User.objects.create_user("load.scoped")
+        user = User.objects.create_user(
+            "load.scoped", password=None, display_name="Synthetic load operator"
+        )
         user.roles.add(Role.objects.get(code="itam_manager"))
         UserSiteGrant.objects.create(user=user, site=hq)
         assets = [
