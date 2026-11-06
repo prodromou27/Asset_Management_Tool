@@ -1,23 +1,21 @@
-# Current task: 022d | Connector DNS connection-target hardening
+# Current task: 022e | Enforced browser CSP and response proof
 
-Owner requested continuation on 2026-11-06. Baseline 678a20b; approved UI/category
-refinement remains complete (CATEGORY_UI_OUTCOME.md). Address G01 in TASK022C_REPORT.md.
-Read: AGENTS.md, docs/00, docs/05, docs/14, docs/15 and docs/17. No live calls/deployment.
+Owner requested next tasks on 2026-11-06. Baseline 0b58c3e; Task 022d is complete
+(TASK022D_REPORT.md). Address G03 from TASK022C_REPORT.md; preserve approved UI.
+Read: AGENTS.md, docs/00, docs/12, docs/14, docs/15 and docs/17. No host deployment.
 
-Bounded slice: shared direct HTTPS transport resolves/revalidates all DNS answers per
-request and connects only to validated literal IPs while retaining original Host/SNI
-and certificate verification. Use it for inventory GETs and fixed Entra token exchange;
-ignore ambient proxy/CA overrides, preserve explicit private CAs and existing fixture
-transports. Block metadata/mixed/empty answers; retain API paths, retries and live gates.
+Bounded slice: one canonical enforced CSP for frontend and HTTP/HTTPS proxy modes,
+always emitted on response errors/redirects with upstream CSP suppressed. Scripts and
+connections stay self-only; inline CSS and sandboxed email preview remain compatible.
+Add production-build browser denial/compatibility probes and real isolated Nginx
+response checks. No application behavior, dependencies, APIs or deployment approvals.
 
-Acceptance: rebinding/retry/continuation/IPv6/origin/failover/proxy regression tests;
-real loopback TLS success with private CA and original SNI, wrong-host/untrusted-cert
-refusal even with verify=False; nearest connector suite, Ruff and PostgreSQL CI green.
-Status: complete. 235 connector tests passed locally, then all 21 final transport
-regressions passed (including real loopback TLS and IPv6). Ruff lint/format passed.
-CI run 42220573699 passed for f0fab5b: 848 PostgreSQL/Redis backend tests, frontend,
-real browser/API pilot, reference load, Compose and isolated restore. G01 source gap
-is addressed; host/live commissioning remains separate. See TASK022D_REPORT.md.
-No new dependencies, schemas, UI or live-source approvals. Task 022/G6 remains open.
-Next after this slice: 022e browser CSP hardening (G03); supply-chain scans, MFA and
-commissioning remain separate open gates. AlmaLinux choice is accepted (DEC-01).
+Acceptance: zero CSP violations during normal desktop/mobile/theme flows; styled
+sandboxed email preview works; script/handler/eval/connection/base/object/framing
+probes blocked; exactly one canonical CSP on 19 real Nginx responses (including API
+401/403/404/500, generated 502 and HTTPS redirect). Config tests/Ruff/frontend/CI green.
+Status: implemented; 217 frontend tests, lint/types/build, 3 config tests and local
+production CSP browser review passed (116 screenshots). Real Nginx/CI proof pending.
+See ops/csp/README.md. Task 022/G6 remains open; AlmaLinux choice is accepted.
+Next bounded slice: 022f dependency/image vulnerability evidence (G02); MFA and
+commissioning remain separate open gates.

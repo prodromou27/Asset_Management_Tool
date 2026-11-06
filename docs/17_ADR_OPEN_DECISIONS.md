@@ -242,6 +242,19 @@ Implementation uses HTTPX's public transport API and HTTPCore's documented SNI e
 [HTTPCore extensions](https://www.encode.io/httpcore/extensions/),
 [HTTPX environment policy](https://www.python-httpx.org/environment_variables/).
 
+### ASM-67 - Task 022e enforced browser CSP (2026-11-06)
+
+Use one canonical Nginx CSP snippet for frontend and both reverse-proxy modes, emitted
+with `always`; suppress upstream CSP at the proxy. Deny by default, restrict scripts,
+connections, fonts and forms to self, and deny inline/evaluated scripts, embedding,
+objects, base overrides and workers. Permit inline CSS for current React layout and
+sandboxed email styles; retain image data URLs and same-origin/srcdoc frames. No
+external host allowlist, report collector or new runtime option is introduced.
+Production-build browser fixtures and isolated real Nginx response checks establish
+regression proof; approved-host behavior and remaining security gates stay separate.
+References: [CSP directives](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Content-Security-Policy),
+[Nginx header behavior](https://nginx.org/en/docs/http/ngx_http_headers_module.html).
+
 ## GLPI licensing note
 
 GLPI repository is GPLv3. Use product concepts and independently written code. Forking or copying GLPI source is a **separate** licensing/product strategy requiring owner approval. Do not casually mix GPL files into a differently licensed custom codebase.

@@ -1,10 +1,14 @@
-﻿import { createServer } from 'vite'
+import { createServer, preview } from 'vite'
 import { chromium } from '@playwright/test'
 import fs from 'node:fs/promises'
+import { verifyCsp } from './verify-csp.mjs'
 
 // Synthetic API responses only. No backend, vendor connector or SMTP service is contacted.
-const output = 'test-results/category-icons-review'
+const cspReview = process.argv.includes('--csp')
+const cspPolicy = (await fs.readFile('content-security-policy.conf', 'utf8')).match(/add_header Content-Security-Policy "([^"]+)" always;/)[1]
+const output = cspReview ? 'test-results/csp-review' : 'test-results/category-icons-review'
 await fs.mkdir(output, { recursive: true })
+await fs.rm(`${output}/results.json`, { force: true })
 let screenshots = 0
 const capture = async (page, name, fullPage = true) => {
   await page.screenshot({ path: `${output}/${name}.png`, fullPage })
@@ -93,12 +97,26 @@ reportFixture('lifecycle', [['name', 'Asset'], ['site', 'Site'], ['dimension', '
 reportFixture('coverage', [['name', 'Asset'], ['site', 'Site'], ['category', 'Category'], ['endpoint_central', 'Endpoint Central link'], ['defender', 'Defender link']], [{ id: 'asset-0', name: 'Synthetic report asset', site: 'HQ', category: 'Switch', endpoint_central: 'Not reported', defender: 'Not reported' }, { id: 'asset-1', name: 'Synthetic endpoint', site: 'HQ', category: 'Laptop', endpoint_central: 'Reported (active link)', defender: 'Stale or disabled link' }])
 reportFixture('groups', [['name', 'Group'], ['kind', 'Kind'], ['members', 'Visible members'], ['eos', 'Verified EOS assets'], ['owner_missing', 'Assets without owner'], ['owner', 'Group owner']], [{ id: 'group-0', name: 'Synthetic replacement group', kind: 'static', members: 2, eos: 1, owner_missing: 1, owner: 'Fixture Admin' }, { id: 'group-1', name: 'Synthetic empty group', kind: 'dynamic', members: 0, eos: 0, owner_missing: 0, owner: '' }])
 routes['/exports/families/'] = ['inventory', 'lifecycle', 'coverage', 'groups'].map((kind) => ({ code: `report_${kind}`, label: `${kind} report`, description: 'Scoped synthetic report export', allowed: true, filter_keys: ['site', 'group', 'q', 'breakdown', 'dimension', 'status', 'coverage'], columns: routes[`/reports/${kind}/`].columns.map((column) => ({ ...column, personal: false, allowed: true })), related: [], personal_data_allowed: false }))
-const server = await createServer({ server: { host: '127.0.0.1', port: 5197, strictPort: true } })
-await server.listen()
+if (cspReview) {
+  routes['/notifications/templates/'] = [{ code: 'smtp_test', name: 'SMTP test message', description: 'Synthetic CSP preview', subject: 'Test', body_text: 'Preview', body_html: '<p>Preview</p>', variables: [], version: 1, modified_by: null }]
+  routes['/notifications/templates/smtp_test/preview/'] = { subject: 'CSP preview', body_text: 'Policy preview content', body_html: '<style>p { color: rgb(40, 125, 75); }</style><p style="font-weight:600">Policy preview content</p>' }
+}
+const server = cspReview
+  ? await preview({ preview: { host: '127.0.0.1', port: 5197, strictPort: true, headers: { 'Content-Security-Policy': cspPolicy } } })
+  : await createServer({ server: { host: '127.0.0.1', port: 5197, strictPort: true } })
+if (!cspReview) await server.listen()
 const browser = await chromium.launch({ channel: process.env.ITAM_UI_BROWSER_CHANNEL === 'chromium' ? undefined : 'msedge', headless: true })
 try {
-  const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' })
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' })
+  const page = await context.newPage()
   const errors = []
+  const violations = []
+  if (cspReview) {
+    await page.exposeFunction('recordPolicyViolation', (entry) => violations.push(entry))
+    await page.addInitScript(() => document.addEventListener('securitypolicyviolation', (event) => {
+      void window.recordPolicyViolation({ directive: event.effectiveDirective, blocked: event.blockedURI })
+    }))
+  }
   const unmapped = new Set()
   const responses = new Map()
   page.on('pageerror', (error) => errors.push(error.message))
@@ -351,6 +369,16 @@ try {
   await page.goto('http://127.0.0.1:5197/assets')
   await page.getByText('This browser does not support the organization timezone. Dates are shown in UTC.', { exact: true }).waitFor()
   await capture(page, 'timezone-fallback-mobile')
+  if (cspReview) {
+    await page.goto('http://127.0.0.1:5197/admin/smtp?tab=templates')
+    await page.getByRole('button', { name: 'Preview', exact: true }).click()
+    const email = page.frameLocator('iframe[title="HTML preview"]').getByText('Policy preview content')
+    await email.waitFor()
+    if (await email.evaluate((element) => getComputedStyle(element).color) !== 'rgb(40, 125, 75)') throw new Error('CSP broke email preview styling')
+    await email.scrollIntoViewIfNeeded()
+    if (await page.locator('iframe[title="HTML preview"]').getAttribute('sandbox') !== '') throw new Error('Email preview sandbox changed')
+    await capture(page, 'smtp-sandboxed-preview-csp')
+  }
   responses.set('/auth/me/', { status: 401, body: { error: { code: 'NOT_AUTHENTICATED', message: 'Sign in.' } } })
   for (const width of [1440, 390]) {
     await page.setViewportSize({ width, height: width === 390 ? 844 : 900 })
@@ -365,12 +393,18 @@ try {
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
   await page.getByText('Enter your username.', { exact: true }).waitFor()
   await capture(page, 'sign-in-validation-mobile')
-  const result = { fixture_only: true, errors, unmapped: [...unmapped], screenshots }
+  let cspProof
+  if (cspReview) {
+    if (violations.length) throw new Error(`Unexpected UI CSP violations: ${JSON.stringify(violations)}`)
+    cspProof = await verifyCsp(page, cspPolicy, violations)
+  }
+  const result = { status: errors.length || unmapped.size ? 'failed' : 'passed', fixture_only: true, production_build: cspReview, csp: cspProof, errors, unmapped: [...unmapped], screenshots }
   await fs.writeFile(`${output}/results.json`, JSON.stringify(result, null, 2))
   console.log(JSON.stringify(result))
   if (errors.length || unmapped.size) throw new Error('Browser errors or incomplete review fixtures')
 } finally {
   await browser.close()
-  await server.close()
+  if (cspReview) await new Promise((resolve, reject) => server.httpServer.close((error) => error ? reject(error) : resolve()))
+  else await server.close()
 }
 

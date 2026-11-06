@@ -74,6 +74,11 @@ It maps existing source/tests and the green CI baseline to security requirements
 and records open hardening/commissioning gates. It is not a penetration test,
 dependency/image vulnerability scan or G6 security sign-off.
 
+Task 022e's enforced policy and production-build browser/Nginx checks are described in
+`ops/csp/README.md`. Ordinary UI flows must have zero CSP violations; intentional
+script/connection/framing probes must be blocked. Real Nginx headers are checked on
+successful, API-error, proxy-error and redirect responses in an isolated CI network.
+
 - Requirement/AC ID cited in commit/task report.
 - DB migration, typed API, backend authorization and audit present if relevant.
 - Unit/contract/E2E tests added at proportional level.

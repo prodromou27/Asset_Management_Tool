@@ -74,6 +74,7 @@ services:
       - "443:443"
     volumes:
       - ./nginx/${ITAM_PUBLIC_SCHEME:-https}.conf:/etc/nginx/conf.d/default.conf:ro
+      - ../frontend/content-security-policy.conf:/etc/nginx/snippets/content-security-policy.conf:ro
       - ${ITAM_TLS_CERT_DIR:-./nginx/no-cert}:/etc/nginx/tls:ro
     read_only: true
     tmpfs:
