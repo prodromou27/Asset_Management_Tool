@@ -69,6 +69,11 @@ It records 30k assets, 1m installations, concurrent per-shape search p95 and 10k
 cached-date lifecycle assessments. CI hardware/test HTTP results are a reference
 baseline; approved-host production stack capacity and historical growth remain open.
 
+Task 022c's focused security evidence review is in `tasks/TASK022C_REPORT.md`.
+It maps existing source/tests and the green CI baseline to security requirements,
+and records open hardening/commissioning gates. It is not a penetration test,
+dependency/image vulnerability scan or G6 security sign-off.
+
 - Requirement/AC ID cited in commit/task report.
 - DB migration, typed API, backend authorization and audit present if relevant.
 - Unit/contract/E2E tests added at proportional level.

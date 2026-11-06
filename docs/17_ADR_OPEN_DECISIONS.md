@@ -25,7 +25,7 @@
 
 | ID | Needed input | Safe default while unresolved |
 |---|---|---|
-| DEC-01 | OS version selected: 10.2 GA as of 2026-11-02. Confirm CPU architecture and current GA at deployment; test Docker compatibility on this derivative | No host installation, package repository approval or production runtime change yet |
+| DEC-01 | Owner reaffirmed AlmaLinux acceptance on 2026-11-06. Keep ADR-003; no further OS-choice approval is needed. Record architecture, installed release and Docker compatibility during host commissioning | Acceptance does not supply a host address/access method or prove runtime checks; no host installation performed |
 | DEC-02 | CPU/RAM/disks, DB/media size expectations | Reference 8 vCPU/24–32GB proposal pending load test |
 | DEC-03 | ITAM internal FQDN, DNS zone, TLS certificate method | example.invalid placeholder; localhost dev only |
 | DEC-04 | User authentication: Entra OIDC, LDAP/LDAPS, or local pilot | Local named admin in dev; integration withheld |
@@ -213,6 +213,15 @@ against an exact synthetic hardware match and cached verified date. Record raw
 timings and environment, fail thresholds and retain immutability protections.
 This is Ubuntu CI/test-server baseline evidence, not AlmaLinux production capacity;
 history growth, proxy/TLS, workers and commissioning still need separate proof.
+
+### ASM-65 - Task 022c security evidence review (2026-11-06)
+
+Owner accepted AlmaLinux and requested continuation. Complete a bounded source/evidence
+review against docs/14 and docs/15 using the existing PostgreSQL/browser/restore CI.
+Record controls, specific source gaps and remaining operator evidence separately;
+do not infer host validation, a penetration test or a clean vulnerability scan.
+Next hardening slice: shared connector DNS connection pinning with TLS hostname
+verification preserved. CSP, dependency/image scanning and DEC-11 MFA remain gates.
 
 ## GLPI licensing note
 
