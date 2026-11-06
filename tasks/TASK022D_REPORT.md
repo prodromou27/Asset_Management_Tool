@@ -48,7 +48,14 @@ PostgreSQL/Redis and the full application gates run in CI. No frontend change.
 
 Files: `adapters/base.py`, `http.py`, `entra.py`, new `transport.py`,
 `tests/test_transport.py` under `backend/apps/integrations/`; docs/05, ASM-66,
-ACTIVE_TASK and this report. CI evidence is recorded after verification.
+ACTIVE_TASK and this report. Code commit: `f0fab5b`.
+
+CI evidence: [run 42220573699](https://github.com/prodromou27/Asset_Management_Tool/actions/runs/42220573699).
+The full PostgreSQL/Redis backend suite passed: **848 tests in 144.72 s**, including
+all 21 transport regressions and the real TLS cases on Linux. All other jobs passed:
+frontend, reference load, real API/browser pilot, Compose/image build and isolated
+synthetic recovery. G01's source/regression gap is addressed; this is not a claim
+that the remaining security or live commissioning gates are complete.
 
 API references: [HTTPX transports](https://www.python-httpx.org/advanced/transports/),
 [HTTPCore SNI extension](https://www.encode.io/httpcore/extensions/),

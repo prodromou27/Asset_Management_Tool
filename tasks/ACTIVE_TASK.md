@@ -13,9 +13,11 @@ transports. Block metadata/mixed/empty answers; retain API paths, retries and li
 Acceptance: rebinding/retry/continuation/IPv6/origin/failover/proxy regression tests;
 real loopback TLS success with private CA and original SNI, wrong-host/untrusted-cert
 refusal even with verify=False; nearest connector suite, Ruff and PostgreSQL CI green.
-Status: implemented; 235 connector tests passed locally, then all 21 final transport
+Status: complete. 235 connector tests passed locally, then all 21 final transport
 regressions passed (including real loopback TLS and IPv6). Ruff lint/format passed.
-Await PostgreSQL CI evidence; see TASK022D_REPORT.md.
+CI run 42220573699 passed for f0fab5b: 848 PostgreSQL/Redis backend tests, frontend,
+real browser/API pilot, reference load, Compose and isolated restore. G01 source gap
+is addressed; host/live commissioning remains separate. See TASK022D_REPORT.md.
 No new dependencies, schemas, UI or live-source approvals. Task 022/G6 remains open.
 Next after this slice: 022e browser CSP hardening (G03); supply-chain scans, MFA and
 commissioning remain separate open gates. AlmaLinux choice is accepted (DEC-01).
