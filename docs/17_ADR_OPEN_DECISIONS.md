@@ -223,6 +223,25 @@ do not infer host validation, a penetration test or a clean vulnerability scan.
 Next hardening slice: shared connector DNS connection pinning with TLS hostname
 verification preserved. CSP, dependency/image scanning and DEC-11 MFA remain gates.
 
+### ASM-66 - Task 022d direct pinned HTTPS transport (2026-11-06)
+
+Inventory clients and fixed Entra token exchange use the same per-origin transport.
+Validate every DNS answer before every request, reject mixed/empty/metadata answers,
+then connect to validated literal IPs with original Host and TLS SNI/hostname checks.
+Only connection establishment failures may try another already-validated address;
+do not replay read/write failures. HTTP resource methods and live approval gates stay
+unchanged (inventory GET; Entra client-credentials POST only). Existing injected fixture
+transports remain supported and cannot be supplied through application API settings.
+
+Use direct approved-host egress: ignore ambient HTTP_PROXY/HTTPS_PROXY/ALL_PROXY and
+SSL_CERT_FILE/SSL_CERT_DIR. Internal CA trust comes from the existing explicit CA file
+reference. No new proxy mode, dependency or operator input is introduced; deployments
+requiring an outbound proxy need a separately reviewed design, not an implicit bypass.
+Implementation uses HTTPX's public transport API and HTTPCore's documented SNI extension:
+[HTTPX transports](https://www.python-httpx.org/advanced/transports/),
+[HTTPCore extensions](https://www.encode.io/httpcore/extensions/),
+[HTTPX environment policy](https://www.python-httpx.org/environment_variables/).
+
 ## GLPI licensing note
 
 GLPI repository is GPLv3. Use product concepts and independently written code. Forking or copying GLPI source is a **separate** licensing/product strategy requiring owner approval. Do not casually mix GPL files into a differently licensed custom codebase.

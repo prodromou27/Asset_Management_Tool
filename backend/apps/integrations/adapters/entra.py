@@ -31,6 +31,7 @@ import uuid
 import httpx
 
 from .base import AuthError, SourceError, Unavailable
+from .transport import PinnedTransport
 
 logger = logging.getLogger(__name__)
 
@@ -208,7 +209,10 @@ class TokenProvider:
             timeout=httpx.Timeout(timeout),
             verify=verify if verify is not False else True,
             follow_redirects=False,
-            transport=transport,
+            transport=transport
+            if transport is not None
+            else PinnedTransport(self.endpoint, verify=verify),
+            trust_env=False,
             headers={"Accept": "application/json", "User-Agent": user_agent},
         )
 

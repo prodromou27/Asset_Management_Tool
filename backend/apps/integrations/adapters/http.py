@@ -24,6 +24,7 @@ from .base import (
     check_base_url,
     check_host_addresses,
 )
+from .transport import PinnedTransport
 
 logger = logging.getLogger(__name__)
 MAX_RETRY_AFTER = 300
@@ -66,15 +67,16 @@ class ReadOnlyClient:
         self._last_request = 0.0
         self.requests = 0
         host = urlparse(self.base_url).hostname
-        if resolver is not None:
-            check_host_addresses(host, resolver)
-        elif transport is None:
-            check_host_addresses(host)
+        if transport is None:
+            transport = PinnedTransport(self.base_url, verify=verify, resolver=resolver)
+        elif resolver is not None:
+            check_host_addresses(host, resolver, urlparse(self.base_url).port or 443)
         self._client = httpx.Client(
             base_url=self.base_url,
             timeout=httpx.Timeout(timeout),
             verify=verify if verify is not False else True,  # verification cannot be disabled
             follow_redirects=False,
+            trust_env=False,
             transport=transport,
             headers={"Accept": "application/json", "User-Agent": self.user_agent},
         )

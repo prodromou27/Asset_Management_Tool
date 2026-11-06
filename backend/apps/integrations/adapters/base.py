@@ -42,20 +42,30 @@ def check_base_url(url: str) -> str:
     return url.rstrip("/")
 
 
-def check_host_addresses(host: str, resolver=socket.getaddrinfo) -> None:
+def check_host_addresses(host: str, resolver=socket.getaddrinfo, port: int = 443) -> list[str]:
     """Refuse loopback, link-local (incl. cloud metadata 169.254.169.254), multicast,
     unspecified and reserved targets. Private ranges are allowed: LibreNMS is internal."""
     try:
-        infos = resolver(host, 443, proto=socket.IPPROTO_TCP)
+        infos = resolver(host, port, proto=socket.IPPROTO_TCP)
     except OSError as exc:
         raise Unavailable(f"Cannot resolve {host}.") from exc
+    addresses = []
     for info in infos:
-        address = ipaddress.ip_address(info[4][0])
+        try:
+            address = ipaddress.ip_address(info[4][0])
+        except ValueError as exc:
+            raise UnsafeTarget(f"{host} returned an invalid address.") from exc
         if (
             address.is_loopback
             or address.is_link_local
             or address.is_multicast
             or address.is_unspecified
             or address.is_reserved
+            or str(address) in {"100.100.100.200", "fd00:ec2::254"}
         ):
             raise UnsafeTarget(f"{host} resolves to a disallowed address ({address}).")
+        if str(address) not in addresses:
+            addresses.append(str(address))
+    if not addresses:
+        raise Unavailable(f"No addresses found for {host}.")
+    return addresses

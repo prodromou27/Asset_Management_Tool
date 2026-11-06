@@ -2,6 +2,13 @@
 
 **V1 sources are existing systems. Do not deploy another endpoint agent or network scanner.** Every connector is read-only by default, creates timestamped observations, records source version, uses checkpoints, and never directly edits manually approved asset fields.
 
+Task 022d pins inventory HTTPS and fixed Entra authentication connections to validated
+DNS addresses per request while retaining the original Host/SNI and certificate checks.
+Mixed/empty/metadata answers are refused. Ambient proxy/CA environment overrides are
+ignored; approved hosts need direct HTTPS egress and internal trust uses the explicit
+CA file reference. Inventory remains GET-only; the existing Entra token POST is an
+authentication exchange. See ASM-66 and `tasks/TASK022D_REPORT.md` for proof and limits.
+
 ## 1. LibreNMS (primary network discovery)
 
 Connection: administrator-configured internal HTTPS base URL, a dedicated token and read-only GET requests. Validate TLS. Instance ID namespaces its device IDs.
