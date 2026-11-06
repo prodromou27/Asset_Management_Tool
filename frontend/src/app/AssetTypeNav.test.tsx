@@ -15,6 +15,21 @@ const routes = {
 }
 
 describe('asset type navigation', () => {
+  it('collapses long type lists without changing the selected category or other navigation', async () => {
+    const { calls } = mockApi(routes)
+    renderApp(`/assets?category=${CAT_WS.id}`)
+    const disclosure = await screen.findByRole('button', { name: 'Asset types' })
+    await screen.findByRole('link', { name: 'Workstations' })
+    fireEvent.click(disclosure)
+    expect(disclosure).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.queryByRole('link', { name: 'Workstations' })).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Software & Licenses' })).toBeVisible()
+    expect(screen.getByRole('heading', { name: 'Workstations', level: 1 })).toBeInTheDocument()
+    fireEvent.click(disclosure)
+    expect(screen.getByRole('link', { name: 'Workstations' })).toHaveAttribute('aria-current', 'page')
+    expect(calls.filter((call) => call.path === '/assets/').at(-1)?.search.get('category')).toBe(CAT_WS.id)
+  })
+
   it('uses active root categories and opens the existing category-filtered list', async () => {
     const { calls } = mockApi(routes)
     renderApp('/assets')

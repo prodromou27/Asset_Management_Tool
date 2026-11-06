@@ -66,6 +66,19 @@ Assets returns to the unfiltered authorized list. Inactive roots are hidden. No 
 or fallback categories are fabricated. Metadata errors offer Retry. Existing manual/
 dynamic Groups remain separate and do not grant access. No new category data is seeded.
 
+Category symbols come from the shared `CategoryIcon` component using stable category
+codes, with distinct Lucide icons for all thirteen built-in root families. Supported
+subtypes (for example laptops, virtual machines, routers and scanners) use a specific
+symbol. Custom children inherit their parent's icon; custom roots use a neutral boxes
+symbol. Renaming a category does not change its icon. Keep icons decorative with the
+category name as the accessible label. Use the same mapping in the sidebar, filtered
+asset page heading and category administration. Sidebar icons are 18px with a consistent
+1.75 stroke; selected icons use the navigation accent in both themes.
+
+Asset types can be collapsed with a keyboard-operable disclosure to shorten long
+sidebars. Collapsing does not clear a category filter or change module permissions;
+navigation still scrolls independently, including in the mobile drawer.
+
 Detail pages use compact baseline tabs, restrained status chips, a main evidence/form
 column and a muted right-side ownership/record panel. Stack at narrow widths. Forms
 use labelled white controls with clear borders; dialogs have simple divided action
@@ -87,5 +100,5 @@ Run frontend workflow tests, lint/types/build, synthetic browser checks at 1440x
 and 390x844 in both themes, and 1024/768 inventory checks. Verify desktop/mobile
 filter disclosure, section switching, saved filters, theme reload, account/dialog/drawer
 focus, overflow and loading/error/denied states. Evidence is written under
-frontend/test-results/itglue-inspired-review/. No live connector or SMTP call is used.
+frontend/test-results/category-icons-review/. No live connector or SMTP call is used.
 Functional and contrast spot checks are not a full accessibility/commissioning audit.

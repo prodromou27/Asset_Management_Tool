@@ -181,6 +181,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     if (body) body.inert = true
     if (masthead) masthead.inert = true
     const controls = () => [...(nav?.querySelectorAll<HTMLElement>('a[href], button:not([disabled])') ?? [])]
+      .filter((control) => !control.closest('[hidden]'))
     controls()[0]?.focus()
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') setNavOpen(false)

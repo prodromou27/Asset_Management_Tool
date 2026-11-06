@@ -16,6 +16,7 @@ import { Button } from '../../shared/ui/Button'
 import { Dialog } from '../../shared/ui/Dialog'
 import { CheckboxGroup, SelectField, TextAreaField, TextField } from '../../shared/ui/Field'
 import { PageHeader } from '../../shared/ui/PageHeader'
+import { CategoryIcon } from '../../shared/ui/CategoryIcon'
 import { EmptyState, LoadingState, QueryErrorState } from '../../shared/ui/States'
 import { StatusBadge } from '../../shared/ui/StatusBadge'
 import { categoryOptions } from '../assets/labels'
@@ -85,11 +86,12 @@ export function CategoriesPage() {
                     <td style={{ paddingLeft: `${12 + category.depth * 20}px` }}>
                       <button
                         type="button"
-                        className="link-button link-button--plain"
+                        className="link-button link-button--plain category-label"
                         aria-current={category.id === selectedId ? 'true' : undefined}
                         onClick={() => setParams({ category: category.id }, { replace: true })}
                       >
-                        {category.name}
+                        <CategoryIcon category={category} categories={categories.data} size={17} />
+                        <span>{category.name}</span>
                       </button>
                     </td>
                     <td className="mono cell-muted">{category.code}</td>

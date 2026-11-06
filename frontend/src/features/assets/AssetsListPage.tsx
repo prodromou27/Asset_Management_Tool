@@ -26,6 +26,7 @@ import { Button } from '../../shared/ui/Button'
 import { Dialog } from '../../shared/ui/Dialog'
 import { CheckboxGroup, SelectField, TextField } from '../../shared/ui/Field'
 import { PageHeader } from '../../shared/ui/PageHeader'
+import { CategoryIcon } from '../../shared/ui/CategoryIcon'
 import { ExportDialog } from '../exports/ExportDialog'
 import { EmptyState, LoadingState, QueryErrorState } from '../../shared/ui/States'
 import { COLUMNS, loadColumns, normalizeColumns, saveColumns } from './columns'
@@ -178,6 +179,7 @@ export function AssetsListPage() {
     <div className="page page--wide">
       <PageHeader
         title={activeCategory?.name ?? 'Assets'}
+        icon={<CategoryIcon category={activeCategory} categories={categories.data} size={22} />}
         meta={
           total === undefined
             ? 'Assets in the sites you can access'

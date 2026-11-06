@@ -3,7 +3,7 @@ import { chromium } from '@playwright/test'
 import fs from 'node:fs/promises'
 
 // Synthetic API responses only. No backend, vendor connector or SMTP service is contacted.
-const output = 'test-results/asset-types-review'
+const output = 'test-results/category-icons-review'
 await fs.mkdir(output, { recursive: true })
 let screenshots = 0
 const capture = async (page, name, fullPage = true) => {
@@ -19,9 +19,15 @@ const general = { organization_name: 'ITAM', timezone: 'Asia/Nicosia', date_form
 me.display_preferences = { ...general }
 const site = { id: 'site', code: 'HQ', name: 'Headquarters', is_active: true, parent: null }
 const rootCategory = (id, name) => ({ id, code: id, name, path: name, parent: null, depth: 0, is_active: true })
-const typeCategories = [rootCategory('workstations', 'Workstations'), rootCategory('servers', 'Servers'), rootCategory('networking', 'Networking'), rootCategory('printers', 'Printers')]
+const typeCategories = [
+  ['workstations', 'Workstations'], ['servers', 'Servers'], ['networking', 'Networking'],
+  ['printers', 'Printers'], ['security', 'Security'], ['monitors', 'Monitors'],
+  ['ip-phones', 'IP Phones'], ['tvs', 'TVs'], ['ups', 'UPS'], ['power', 'Power Distribution'],
+  ['storage', 'Storage'], ['peripherals', 'Peripherals'], ['other', 'Other'],
+  ['lab-equipment', 'Lab equipment'],
+].map(([id, name]) => rootCategory(id, name))
 const category = { id: 'switch', code: 'switch', name: 'Switch', path: 'Networking / Switch', parent: 'networking', depth: 1, is_active: true }
-const laptopCategory = { ...rootCategory('laptop', 'Laptop'), path: 'Workstations / Laptop', parent: 'workstations', depth: 1 }
+const laptopCategory = { ...rootCategory('laptop', 'Laptop'), code: 'workstations-laptop', path: 'Workstations / Laptop', parent: 'workstations', depth: 1 }
 const assets = Array.from({ length: 28 }, (_, i) => ({
   id: `asset-${i}`, name: `sw-floor-${String(i + 1).padStart(2, '0')}`, asset_tag: `IT-${1000 + i}`,
   category, manufacturer: 'Fixture Networks', model: 'Fixture 48', serial_number: `TEST-SERIAL-${i}`,
@@ -144,6 +150,14 @@ try {
   await page.getByRole('button', { name: 'Cancel', exact: true }).click()
   await page.goto('http://127.0.0.1:5197/assets')
   await page.getByRole('table', { name: 'Assets', exact: true }).waitFor()
+  const typeDisclosure = page.getByRole('button', { name: 'Asset types', exact: true })
+  await typeDisclosure.focus()
+  await page.keyboard.press('Enter')
+  await page.getByRole('link', { name: 'Workstations', exact: true }).waitFor({ state: 'hidden' })
+  await page.getByRole('link', { name: 'Groups', exact: true }).waitFor({ state: 'visible' })
+  await capture(page, 'asset-types-collapsed-desktop')
+  await page.keyboard.press('Enter')
+  await page.getByRole('link', { name: 'Workstations', exact: true }).waitFor({ state: 'visible' })
   await page.getByLabel('Select sw-floor-01', { exact: true }).check()
   await capture(page, 'assets-selection-desktop')
   await page.getByRole('button', { name: 'Filters & sort', exact: true }).click()
@@ -204,13 +218,24 @@ try {
   await page.getByRole('button', { name: 'Open navigation' }).click()
   if (await page.getByRole('link', { name: 'Workstations', exact: true }).getAttribute('aria-current') !== 'page') throw new Error('Child category does not highlight its parent')
   await capture(page, 'asset-types-navigation-mobile', false)
+  await page.keyboard.press('Escape')
+  await page.getByRole('button', { name: 'Switch to dark theme' }).click()
+  await page.getByRole('button', { name: 'Open navigation' }).click()
+  await capture(page, 'asset-types-navigation-mobile-dark', false)
+  await page.getByRole('button', { name: 'Asset types', exact: true }).click()
+  await capture(page, 'asset-types-collapsed-mobile-dark', false)
+  await page.getByRole('button', { name: 'Close navigation' }).focus()
+  await page.keyboard.press('Shift+Tab')
+  if (!await page.getByRole('link', { name: 'System health', exact: true }).evaluate((element) => element === document.activeElement)) throw new Error('Collapsed navigation loses reverse focus wrap')
+  await page.keyboard.press('Tab')
+  if (!await page.getByRole('button', { name: 'Close navigation' }).evaluate((element) => element === document.activeElement)) throw new Error('Collapsed navigation loses forward focus wrap')
+  await page.getByRole('button', { name: 'Asset types', exact: true }).click()
   await page.getByRole('link', { name: 'Servers', exact: true }).click()
   await page.getByRole('heading', { name: 'Servers', exact: true }).waitFor()
   if (await page.getByRole('button', { name: 'Open navigation' }).getAttribute('aria-expanded') !== 'false') throw new Error('Type selection did not close mobile navigation')
-  await capture(page, 'asset-type-servers-mobile')
-  await page.getByRole('button', { name: 'Switch to dark theme' }).click()
   await capture(page, 'asset-type-servers-mobile-dark')
   await page.getByRole('button', { name: 'Switch to light theme' }).click()
+  await capture(page, 'asset-type-servers-mobile')
   for (const [url, label] of [
     ['/assets/asset-0', 'asset-detail'], ['/discovery', 'discovery'],
     ['/lifecycle', 'lifecycle'], ['/admin/integrations', 'integrations'],
