@@ -9,6 +9,29 @@ permissions:
   contents: read
 
 jobs:
+  dependency-security:
+    name: Locked dependency vulnerability gate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      TRIVY_BIN: ${{ runner.temp }}/itam-security-tools/trivy
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned checksum-verified scanner
+        run: bash ops/security/install_trivy.sh "$(dirname "$TRIVY_BIN")"
+      - name: Verify fail-closed report policy
+        run: python3 -m unittest discover -s ops/security -p 'test_*.py' -v
+      - name: Scan locked production and development dependencies
+        run: python3 ops/security/scan.py locks
+      - name: Preserve dependency vulnerability evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-security-evidence
+          path: ops/security/results/locks/*.json
+          retention-days: 14
+          if-no-files-found: warn
+
   backend:
     name: Backend (PostgreSQL + Redis)
     # Match the PostgreSQL 16 client package to the database/restore image.
@@ -66,6 +89,8 @@ jobs:
         run: |
           uv run ruff check --config pyproject.toml ../ops/csp
           uv run ruff format --check --config pyproject.toml ../ops/csp
+          uv run ruff check --config pyproject.toml ../ops/security
+          uv run ruff format --check --config pyproject.toml ../ops/security
       - name: Migration drift check
         run: uv run python manage.py makemigrations --check --dry-run
       - name: Apply migrations to PostgreSQL
@@ -334,4 +359,20 @@ jobs:
           name: backup-drill-report
           path: /tmp/itam-drill-report.json
           retention-days: 7
+          if-no-files-found: warn
+      - name: Install pinned image scanner
+        env:
+          TRIVY_BIN: ${{ runner.temp }}/itam-security-tools/trivy
+        run: bash ops/security/install_trivy.sh "$(dirname "$TRIVY_BIN")"
+      - name: Scan exact production runtime images
+        env:
+          TRIVY_BIN: ${{ runner.temp }}/itam-security-tools/trivy
+        run: python3 ops/security/scan.py images
+      - name: Preserve image vulnerability evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: image-security-evidence
+          path: ops/security/results/images/*.json
+          retention-days: 14
           if-no-files-found: warn

@@ -255,6 +255,22 @@ regression proof; approved-host behavior and remaining security gates stay separ
 References: [CSP directives](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Content-Security-Policy),
 [Nginx header behavior](https://nginx.org/en/docs/http/ngx_http_headers_module.html).
 
+### ASM-68 - Task 022f advisory evidence and API-generator dependency (2026-11-07)
+
+Use checksum-pinned Trivy 0.76.2 in CI to scan staged uv/pnpm metadata (including dev)
+and saved production image archives. Record source/lock/image identities and a fresh
+advisory DB; block HIGH/CRITICAL, unsupported OS and incomplete evidence. Preserve
+unfixed/lower-severity findings; no automatic risk exceptions. Deployment must promote
+the scanned image digests rather than silently rebuilding mutable tags. This is build
+security, not the out-of-scope product network/vulnerability scanner.
+
+Keep openapi-typescript 6.7.6 for TS 7 compatibility (ASM-07). Its Undici 5 dependency
+has current advisories; a scoped pnpm override selects the patched 6.29.1 API-compatible
+fetch interface. Generated API types remain identical and tests/types/build pass.
+The local npm advisory audit dropped from 18 findings (6 HIGH) to zero. No runtime
+frontend dependency or framework major is changed. Image findings require separate
+review of actual scan evidence; do not presume those results from the lock audit.
+
 ## GLPI licensing note
 
 GLPI repository is GPLv3. Use product concepts and independently written code. Forking or copying GLPI source is a **separate** licensing/product strategy requiring owner approval. Do not casually mix GPL files into a differently licensed custom codebase.

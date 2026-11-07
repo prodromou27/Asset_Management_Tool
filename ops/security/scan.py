@@ -1,0 +1,201 @@
+"""Static lockfile/image evidence. Does not start application containers or scan hosts."""
+
+import argparse
+import hashlib
+import json
+import os
+import shutil
+import subprocess
+import tempfile
+from datetime import UTC, datetime, timedelta
+from pathlib import Path
+
+from gate import evaluate
+
+ROOT = Path(__file__).resolve().parents[2]
+VERSION = "0.76.2"
+TOOLS = os.environ.get("TRIVY_BIN", "trivy")
+
+
+def run(args, **kwargs):
+    return subprocess.run(
+        args, check=True, capture_output=True, text=True, timeout=1200, **kwargs
+    ).stdout
+
+
+def main(mode):
+    output = ROOT / "ops/security/results" / mode
+    output.mkdir(parents=True, exist_ok=True)
+    summary_path = output / "summary.json"
+    summary_path.unlink(missing_ok=True)
+    summary = {
+        "status": "running",
+        "mode": mode,
+        "started": datetime.now(UTC).isoformat(),
+        "targets": {},
+        "errors": {},
+        "identities": {},
+        "source_commit": run(["git", "rev-parse", "HEAD"], cwd=ROOT).strip(),
+    }
+    common = [
+        "--config=",
+        "--ignorefile=",
+        "--cache-dir",
+        str(output / "cache"),
+        "--skip-version-check",
+    ]
+    try:
+        if run(["git", "status", "--porcelain", "--untracked-files=no"], cwd=ROOT).strip():
+            raise ValueError(
+                "Commit tracked source changes before generating release scan evidence"
+            )
+        run([TOOLS, "image", *common, "--download-db-only"])
+        version = json.loads(
+            run([TOOLS, "--cache-dir", str(output / "cache"), "--version", "--format", "json"])
+        )
+        if version.get("Version") != VERSION:
+            raise ValueError("Scanner version differs from the reviewed pin")
+        db = version.get("VulnerabilityDB", {})
+        updated = datetime.fromisoformat(db["UpdatedAt"].replace("Z", "+00:00"))
+        if not timedelta(0) <= datetime.now(UTC) - updated <= timedelta(hours=48):
+            raise ValueError("Advisory database timestamp is missing, future or stale")
+        summary["scanner"] = version
+        targets = (
+            ("backend", "frontend")
+            if mode == "locks"
+            else ("api", "backup-worker", "frontend", "nginx-proxy", "postgres", "redis")
+        )
+        compose = None
+        if mode == "images":
+            compose = json.loads(
+                run(
+                    [
+                        "docker",
+                        "compose",
+                        "--env-file",
+                        ".env",
+                        "-f",
+                        "infra/compose.yaml",
+                        "-f",
+                        "infra/compose.prod.yaml",
+                        "config",
+                        "--format",
+                        "json",
+                    ],
+                    cwd=ROOT,
+                )
+            )
+        for target in targets:
+            try:
+                with tempfile.TemporaryDirectory(prefix=".scan-", dir=output) as scratch:
+                    scratch = Path(scratch).resolve()
+                    if not scratch.is_relative_to(output.resolve()):
+                        raise ValueError("Scratch directory escaped the evidence root")
+                    report_path = output / f"{target}.json"
+                    report_path.unlink(missing_ok=True)
+                    metadata = {}
+                    if mode == "locks":
+                        files = (
+                            ("uv.lock", "pyproject.toml")
+                            if target == "backend"
+                            else ("pnpm-lock.yaml", "package.json")
+                        )
+                        for name in files:
+                            source = ROOT / target / name
+                            shutil.copyfile(source, scratch / name)
+                            metadata[name] = hashlib.sha256(source.read_bytes()).hexdigest()
+                        scan_args = ["fs", "--offline-scan", "--include-dev-deps", str(scratch)]
+                    else:
+                        if target in {"api", "backup-worker", "frontend"}:
+                            image = f"itam-security-{target}:{summary['source_commit'][:12]}"
+                            args = ["docker", "build", "--pull=false", "-t", image]
+                            if target == "backup-worker":
+                                args += ["--target", "backup-runner"]
+                            run(
+                                args + ["frontend" if target == "frontend" else "backend"], cwd=ROOT
+                            )
+                        else:
+                            image = compose["services"][target]["image"]
+                            run(["docker", "pull", image])
+                        inspected = json.loads(run(["docker", "image", "inspect", image]))[0]
+                        metadata = {
+                            key: inspected.get(key)
+                            for key in ("Id", "RepoDigests", "Os", "Architecture")
+                        }
+                        metadata["reference"] = image
+                        archive = scratch / "image.tar"
+                        run(["docker", "image", "save", "--output", str(archive), inspected["Id"]])
+                        scan_args = ["image", "--offline-scan", "--input", str(archive)]
+                    summary["identities"][target] = metadata
+                    run(
+                        [
+                            TOOLS,
+                            *scan_args,
+                            *common,
+                            "--scanners",
+                            "vuln",
+                            "--list-all-pkgs",
+                            "--report",
+                            "all",
+                            "--pkg-types",
+                            "os,library",
+                            "--skip-db-update",
+                            "--skip-java-db-update",
+                            "--ignore-unfixed=false",
+                            "--severity",
+                            "UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL",
+                            "--format",
+                            "json",
+                            "--output",
+                            str(report_path),
+                            "--exit-code",
+                            "0",
+                        ]
+                    )
+                    report = json.loads(report_path.read_text())
+                    if mode == "locks":
+                        checked = evaluate(
+                            report,
+                            required_type="uv" if target == "backend" else "pnpm",
+                            required_packages=("django", "pytest")
+                            if target == "backend"
+                            else ("react", "vite", "undici"),
+                        )
+                    else:
+                        checked = evaluate(
+                            report,
+                            image=True,
+                            required_type="python-pkg"
+                            if target in {"api", "backup-worker"}
+                            else None,
+                            required_packages=("django",)
+                            if target in {"api", "backup-worker"}
+                            else (),
+                        )
+                    summary["targets"][target] = {**checked, "identity": metadata}
+                    print(f"{target}: {checked['status']}; {checked['counts']}", flush=True)
+            except Exception as exc:
+                summary["errors"][target] = f"{type(exc).__name__}: {exc}"
+        summary["status"] = (
+            "passed"
+            if not summary["errors"]
+            and len(summary["targets"]) == len(targets)
+            and all(item["status"] == "passed" for item in summary["targets"].values())
+            else "held"
+        )
+    except Exception as exc:
+        summary["status"] = "failed"
+        summary["errors"]["setup"] = f"{type(exc).__name__}: {exc}"
+    summary["finished"] = datetime.now(UTC).isoformat()
+    summary_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
+    print(
+        f"Security {mode}: {summary['status']}; {len(summary['errors'])} evidence errors",
+        flush=True,
+    )
+    return 0 if summary["status"] == "passed" else 1
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("mode", choices=("locks", "images"))
+    raise SystemExit(main(parser.parse_args().mode))

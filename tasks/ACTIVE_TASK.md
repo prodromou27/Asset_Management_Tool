@@ -1,23 +1,19 @@
-# Current task: 022e | Enforced browser CSP and response proof
+# Current task: 022f | Static dependency/image vulnerability evidence
 
-Owner requested next tasks on 2026-11-06. Baseline 0b58c3e; Task 022d is complete
-(TASK022D_REPORT.md). Address G03 from TASK022C_REPORT.md; preserve approved UI.
+Owner requested continuation on 2026-11-07. Baseline f88cc18; CSP is complete
+(TASK022E_REPORT.md). Address G02 from TASK022C_REPORT.md; preserve approved UI.
 Read: AGENTS.md, docs/00, docs/12, docs/14, docs/15 and docs/17. No host deployment.
 
-Bounded slice: one canonical enforced CSP for frontend and HTTP/HTTPS proxy modes,
-always emitted on response errors/redirects with upstream CSP suppressed. Scripts and
-connections stay self-only; inline CSS and sandboxed email preview remain compatible.
-Add production-build browser denial/compatibility probes and real isolated Nginx
-response checks. No application behavior, dependencies, APIs or deployment approvals.
+Bounded slice: pinned checksum-verified scanner; all-dev/runtime lockfile scans and
+exact production image archive scans; fresh DB/source/image identity, fail-closed
+coverage and HIGH/CRITICAL/EOSL gates. Fix reviewed dependencies within current stack.
+No product scanner, host/network scans, live APIs, automatic waivers or deployment.
 
-Acceptance: zero CSP violations during normal desktop/mobile/theme flows; styled
-sandboxed email preview works; script/handler/eval/connection/base/object/framing
-probes blocked; exactly one canonical CSP on 19 real Nginx responses (including API
-401/403/404/500, generated 502 and HTTPS redirect). Config tests/Ruff/frontend/CI green.
-Status: complete. CI run 42282210154 passed for 79376d9: 851 backend tests,
-217 frontend tests, real API pilot, 116 production CSP browser captures with zero
-ordinary violations/all denial probes passing, all 19 real Nginx response checks,
-reference load and isolated restore. Local checks also passed. See TASK022E_REPORT.md
-and ops/csp/README.md. G03 is addressed; Task 022/G6 and commissioning remain open.
-Next bounded slice: 022f dependency/image vulnerability evidence (G02); MFA and
-commissioning remain separate open gates.
+Acceptance: both lock parsers/dev sentinels and all six runtime images reported;
+missing/stale evidence cannot pass; all findings retained; reviewed HIGH/CRITICAL
+results remediate or explicitly hold release; API generation/tests/CI compatible.
+Status: implemented; scoped Undici override cleared 18 frontend advisories (6 HIGH).
+217 frontend tests, API type parity/types/build and 8 gate tests/Ruff passed. Actual
+Linux scans and image findings pending CI. See TASK022F_REPORT.md / ops/security/README.md.
+Next: review CI findings and finish this slice; then 022g identity/MFA gate. G6 remains
+open; digest promotion, MFA and commissioning require their own evidence/decisions.

@@ -79,6 +79,10 @@ Task 022e's enforced policy and production-build browser/Nginx checks are descri
 script/connection/framing probes must be blocked. Real Nginx headers are checked on
 successful, API-error, proxy-error and redirect responses in an isolated CI network.
 
+Task 022f adds static lockfile and exact-image advisory gates (`ops/security/README.md`).
+Reports include development dependencies, scanner/database freshness and image identity.
+HIGH/CRITICAL and end-of-support OS findings hold release; missing evidence is not clean.
+
 - Requirement/AC ID cited in commit/task report.
 - DB migration, typed API, backend authorization and audit present if relevant.
 - Unit/contract/E2E tests added at proportional level.
