@@ -271,6 +271,26 @@ The local npm advisory audit dropped from 18 findings (6 HIGH) to zero. No runti
 frontend dependency or framework major is changed. Image findings require separate
 review of actual scan evidence; do not presume those results from the lock audit.
 
+### ASM-69 - Task 022f runtime-base refresh and rollback (2026-11-07)
+
+Initial exact-image scans held all six runtime targets (including Redis's unsupported
+Alpine OS). Refresh API/backup from Debian 12 to official Python 3.12.16 slim-trixie;
+use matching PostgreSQL 16.15 trixie client tools. Refresh frontend/proxy from Nginx
+1.27/Alpine 3.21 to stable 1.30.6/Alpine 3.24. Pin these three source-image index
+digests resolved from Docker Registry on this date. Python and PostgreSQL majors,
+app schema, service roles and data volumes stay unchanged; no host is deployed.
+
+Forward proof: network-disabled production-container imports/deploy check, CLI loader
+checks in the backup build, real Nginx CSP checks, existing app/restore gates and a
+new exact-image scan. Rollback is a source/image revert in isolated staging; there is
+no data migration or destructive contraction. Old vulnerable images are not approved
+for production rollback by this decision. Host UID/permissions/digest promotion still
+need commissioning. Redis OS and PostgreSQL gosu/Go findings stay held, not waived.
+
+Sources: [official Python image tags](https://github.com/docker-library/official-images/blob/master/library/python),
+[official PostgreSQL image tags](https://github.com/docker-library/official-images/blob/master/library/postgres),
+[stable Nginx](https://nginx.org/en/download.html).
+
 ## GLPI licensing note
 
 GLPI repository is GPLv3. Use product concepts and independently written code. Forking or copying GLPI source is a **separate** licensing/product strategy requiring owner approval. Do not casually mix GPL files into a differently licensed custom codebase.

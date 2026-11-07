@@ -12,8 +12,9 @@ No product scanner, host/network scans, live APIs, automatic waivers or deployme
 Acceptance: both lock parsers/dev sentinels and all six runtime images reported;
 missing/stale evidence cannot pass; all findings retained; reviewed HIGH/CRITICAL
 results remediate or explicitly hold release; API generation/tests/CI compatible.
-Status: implemented; scoped Undici override cleared 18 frontend advisories (6 HIGH).
-217 frontend tests, API type parity/types/build and 8 gate tests/Ruff passed. Actual
-Linux scans and image findings pending CI. See TASK022F_REPORT.md / ops/security/README.md.
-Next: review CI findings and finish this slice; then 022g identity/MFA gate. G6 remains
-open; digest promotion, MFA and commissioning require their own evidence/decisions.
+Status: automation implemented; both real lock scans pass (zero advisories), and
+217 frontend tests/API parity plus 8 gate tests/Ruff pass. Initial image scans produced
+complete evidence but hold release for vulnerabilities/EOSL. Digest-pinned API/backup
+and Nginx base refresh is being verified. See TASK022F_REPORT.md / ops/security/README.md.
+Next: finish refreshed-image evidence, then bounded 022f2 remaining image remediation/
+triage before 022g MFA. G6 remains open; no risk acceptance or host deployment implied.

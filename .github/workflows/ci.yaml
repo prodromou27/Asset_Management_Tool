@@ -334,6 +334,10 @@ jobs:
         run: bash scripts/compose.sh prod build api frontend
       - name: Build restricted backup worker
         run: docker compose --env-file .env -f infra/compose.yaml -f infra/compose.prod.yaml --profile backups build backup-worker
+      - name: New runtime base imports and production checks without network
+        run: |
+          docker build --pull=false --target production -t itam-runtime-proof backend
+          docker run --rm --network none --read-only --cap-drop ALL --security-opt no-new-privileges:true --memory 256m --pids-limit 64 --env-file .env itam-runtime-proof python -c "import django; django.setup(); import psycopg; import cryptography.hazmat.bindings._rust; from django.core.management import call_command; call_command('check', deploy=True, fail_level='WARNING')"
       - name: Enforced CSP on real isolated Nginx responses
         run: bash ops/csp/check_nginx.sh
       - name: Download synthetic restore fixture
