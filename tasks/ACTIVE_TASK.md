@@ -1,25 +1,28 @@
-# Current task: 022f3 | Resolve API/backup image CI gate
+# Current task: 022g | MFA authentication policy and implementation
 
-Owner reported CI failure on 2026-11-07. Baseline c656e17; CSP is complete
+Owner requested next task on 2026-11-07. Baseline b4ef54b; CSP is complete
 (TASK022E_REPORT.md). Address G02 from TASK022C_REPORT.md; preserve approved UI.
-Read: AGENTS.md, docs/00, docs/12, docs/14, docs/15 and docs/17. No host deployment.
+Read: AGENTS.md, docs/00, docs/07, docs/09, docs/12, docs/14, docs/15 and docs/17.
+No host deployment or live identity-provider configuration.
 
-Bounded slice: pinned official Python 3.12 Alpine runtime, frozen musl wheels,
-stable PostgreSQL 16/restic/OpenSSH client packages, explicit app UID/GID 10001.
-Validate the existing suite in that runtime against new internal-only PostgreSQL,
-Redis and pinned SFTP fixtures; preserve the strict six-image vulnerability gate.
-No product scanner, host/network scans, live APIs, waivers or deployment.
+Previous slice complete: TASK022F3_REPORT.md; CI 42397841169 is green. Preserve
+the approved UI, strict security gates, RBAC and existing auth/session behavior.
 
-Status: complete. CI 42397841169 / 0bf2051: all six jobs pass. Both lock scans pass;
-all six image targets pass HIGH/CRITICAL/EOSL thresholds with zero evidence errors.
-853 tests pass in the ordinary backend job and another 853 in the candidate runtime;
-217 frontend tests, browser/CSP/load, deploy checks and isolated restore pass.
-The candidate suite verifies encrypted SFTP backup/restore and bad-password/pin
-rejection. Local scanner tests: 12; Ruff/YAML/diff checks pass. No lockfile/schema/UI
-changes or existing-volume/host deployment. Lower-severity findings remain visible.
+Decision required: DEC-04/DEC-11 leave IdP/MFA/emergency access policy unresolved.
+docs/00 explicitly requires identity-provider approval; docs/09 prefers approved
+Entra OIDC and requires two named emergency admins with reviewed recovery. Owner
+was asked to choose Entra SSO/MFA or local authenticator MFA/recovery codes. Do not
+infer that Microsoft inventory integration approval selects the login provider.
 
-Evidence: TASK022F3_REPORT.md, ops/security/README.md, infra/runtime/README.md.
-Automated CI is green; vendor coverage is not full security sign-off. G02 source/
-compiler applicability review (including SQLite and packaged restic/Go) remains open.
-Next: 022g MFA; retain manual security review and host/live-service commissioning
-as separate release gates. G6 remains open; no risk acceptance is implied.
+Bounded implementation after choice: accounts models/services/views/middleware and
+tests, login/account/security UI, OpenAPI/generated types, configuration and operator
+recovery documentation as needed. Use supported auth libraries; no homemade OAuth.
+Acceptance: no protected access before required factors; token/OTP replay rejection,
+safe recovery, session revocation, CSRF/throttling, RBAC and secret-free audit; compatible
+named-admin bootstrap. Validate API/browser flows and keep emergency recovery tested.
+
+Status: source review and baseline verification complete; 71 auth/user/security tests
+pass locally with the explicit SQLite fallback (functional proof only). No auth or
+schema change made pending the required owner choice. See TASK022G_PLAN.md.
+Next: apply the owner's DEC-04/DEC-11 choice and implement its smallest complete slice.
+G02 manual source/compiler review, commissioning and G6 remain separate open gates.
