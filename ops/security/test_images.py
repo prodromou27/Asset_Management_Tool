@@ -4,10 +4,17 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from scan import ROOT, image_for
+from scan import ROOT, image_for, production_compose
 
 
 class ImageSelectionTests(unittest.TestCase):
+    @patch("scan.run", return_value='{"services":{"backup-worker":{}}}')
+    def test_production_config_enables_optional_backup_service(self, run):
+        self.assertIn("backup-worker", production_compose()["services"])
+        args = run.call_args.args[0]
+        self.assertEqual(args[args.index("--profile") + 1], "backups")
+        self.assertIn("infra/compose.prod.yaml", args)
+
     @patch("scan.run")
     def test_runtime_build_takes_precedence_over_image_tag(self, run):
         context = str(ROOT / "infra/runtime")

@@ -7,6 +7,8 @@ mechanism. Pin the approved PostgreSQL 16 image digest at commissioning and pass
 with `--image <reference>`. The historical default remains `postgres:16-bookworm`;
 CI explicitly tests the production `itam-postgres:16.15` build. The option is an
 operator CLI argument, never a web/API input. Production backup tools also use major 16.
+The drill checks and records the target's PostgreSQL version before copying the dump;
+an incompatible image fails and its temporary container is removed.
 
 1. Select a **full 64-character snapshot ID** from a verified job. Set repository/password
    file and SSH configuration in the operator environment. Verify repository integrity:

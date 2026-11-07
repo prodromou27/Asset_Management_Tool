@@ -39,6 +39,29 @@ def image_for(service, target, commit):
     return image
 
 
+def production_compose():
+    return json.loads(
+        run(
+            [
+                "docker",
+                "compose",
+                "--env-file",
+                ".env",
+                "-f",
+                "infra/compose.yaml",
+                "-f",
+                "infra/compose.prod.yaml",
+                "--profile",
+                "backups",
+                "config",
+                "--format",
+                "json",
+            ],
+            cwd=ROOT,
+        )
+    )
+
+
 def main(mode):
     output = ROOT / "ops/security/results" / mode
     output.mkdir(parents=True, exist_ok=True)
@@ -83,24 +106,7 @@ def main(mode):
         )
         compose = None
         if mode == "images":
-            compose = json.loads(
-                run(
-                    [
-                        "docker",
-                        "compose",
-                        "--env-file",
-                        ".env",
-                        "-f",
-                        "infra/compose.yaml",
-                        "-f",
-                        "infra/compose.prod.yaml",
-                        "config",
-                        "--format",
-                        "json",
-                    ],
-                    cwd=ROOT,
-                )
-            )
+            compose = production_compose()
         for target in targets:
             try:
                 with tempfile.TemporaryDirectory(prefix=".scan-", dir=output) as scratch:
