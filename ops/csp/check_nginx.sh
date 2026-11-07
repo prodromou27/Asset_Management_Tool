@@ -43,7 +43,8 @@ docker run --rm "${limits[@]}" --cap-drop ALL --user 65534:65534 \
   "$prefix-api-image" python -B /fixture/check_headers.py
 
 for role in frontend proxy-http proxy-https; do
-  if docker logs "$prefix-$role" 2>&1 | grep -q 'synthetic-oidc-value'; then
+  callback_logs=$(docker logs "$prefix-$role" 2>&1)
+  if grep -q 'synthetic-oidc-value' <<<"$callback_logs"; then
     echo 'OIDC callback parameters leaked into Nginx logs' >&2
     exit 1
   fi

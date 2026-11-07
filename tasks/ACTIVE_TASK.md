@@ -26,5 +26,10 @@ Local proof: 881 backend tests passed with seven PostgreSQL/restore skips under 
 explicit SQLite fallback; 220 frontend tests passed. Ruff/lint/types/build/schema
 validation passed. Production-browser CSP review passed with 124 screenshots,
 including Entra/binding desktop/mobile light/dark, no errors or normal violations.
-Next: obtain PostgreSQL/runtime/security CI proof; record outcome in TASK022G_REPORT.md.
+CI 42417537503: 888 native and 888 production-derived runtime backend tests pass;
+frontend, browser, reference load and dependency gates pass. New callback Nginx probe
+exposed the synthetic upstream's numeric-status-only parser (502 on callback query).
+Fixed that fixture, added three passing loopback regressions and preserved strict
+expected statuses; rerun full CI for the correction. No production auth/proxy change.
+Next: obtain final Nginx/restore/image proof; record outcome in TASK022G_REPORT.md.
 G02 manual source/compiler review, commissioning and G6 remain separate open gates.
