@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
-      TRIVY_BIN: ${{ runner.temp }}/itam-security-tools/trivy
+      TRIVY_BIN: /tmp/itam-security-tools/trivy
     steps:
       - uses: actions/checkout@v4
       - name: Install pinned checksum-verified scanner
