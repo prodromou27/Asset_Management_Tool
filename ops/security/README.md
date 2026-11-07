@@ -27,9 +27,12 @@ findings remain in JSON. Dependency lookup is offline after a fresh public advis
 download. Scanner version and database update/download metadata are recorded; a DB
 older than 48 hours, future/missing timestamp or missing scan evidence fails closed.
 
-Image mode builds API (also used by worker/scheduler), backup-runner and frontend from
-the same cached production build inputs. It resolves the configured official proxy,
-PostgreSQL and Redis image references through Compose. No rendered Compose secrets
+Image mode reads production Compose build contexts, Dockerfiles and stages for API
+(also worker/scheduler), backup-runner, frontend, PostgreSQL and Redis, and builds
+them from the same cached inputs used by the preceding compatibility checks. External
+images such as the official proxy are pulled using their configured references.
+Production PostgreSQL/Redis runtime maintenance is described in `infra/runtime/README.md`.
+No rendered Compose secrets
 or full image environment/history are written to evidence. It saves each exact local
 image ID to a temporary archive and scans that archive without running it. Source
 reference, image ID, registry digests when available, architecture and OS are recorded.

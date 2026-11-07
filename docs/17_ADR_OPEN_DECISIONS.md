@@ -302,8 +302,8 @@ Use a production-only infrastructure Dockerfile with pinned PostgreSQL 16.15 and
 Redis 7.4.12 inputs. Rebuild upstream gosu 1.20 at its exact commit using pinned
 Go 1.27.3, CGO disabled, with module checksum verification and symbols retained.
 Replace only PostgreSQL's helper. For Redis, retain the official binaries/entrypoint,
-UID 999/GID 1000 and /data layout, using Alpine 3.24.4 libraries and the rebuilt
-helper. This small custom runtime now needs maintenance and fresh scans alongside
+UID 999/GID 1000 and /data layout, using Alpine 3.24.4 libraries and the entrypoint's
+required packaged setpriv helper. This small custom runtime needs maintenance and fresh scans alongside
 upstream updates; it avoids changing either service major or database format.
 
 Forward proof: helper UID/build checks, network-disabled Redis AOF/RDB restarts,
