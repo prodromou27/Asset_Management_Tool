@@ -17,6 +17,7 @@ RUN gosu --version && test "$(gosu postgres id -u)" = "70"
 FROM redis:7.4.12-alpine3.21@sha256:c5d34a98396a4775e223c74e929162c35c5a2182901ba26b50ade939941ce14b AS redis-source
 FROM alpine:3.24.4@sha256:93b41ef40b1677fce8fcc64ff4af09daddfacf5040afde618bc46c1e2d1cc7d4 AS redis
 RUN apk add --no-cache tzdata libgcc libstdc++ libssl3 libcrypto3 setpriv \
+    && ln -s /bin/setpriv /usr/bin/setpriv \
     && addgroup -S -g 1000 redis \
     && adduser -S -G redis -u 999 redis \
     && mkdir /data && chown redis:redis /data
