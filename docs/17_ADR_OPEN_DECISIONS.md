@@ -318,6 +318,33 @@ Sources: [Debian zlib fix](https://security-tracker.debian.org/tracker/CVE-2026-
 [gosu security policy](https://github.com/tianon/gosu/security),
 [Go releases](https://go.dev/dl/).
 
+### ASM-71 - Task 022f3 API/backup runtime transition (2026-11-07)
+
+The reported CI failure is the remaining API/backup image advisory gate, with passing
+functional jobs. Evaluate official Python 3.12.16 Alpine 3.24 at its registry digest,
+using the unchanged uv lock and musllinux wheels (`--no-build`). Use stable Alpine
+PostgreSQL 16 client, restic and OpenSSH client packages; retain the approved SFTP
+transport. Alpine's OpenSSH security backport covers CVE-2026-60002. Pin the app
+account explicitly to UID/GID 999; preserve Python/PostgreSQL majors and data formats.
+
+This changes glibc to musl. Require production imports/deploy checks and the existing
+backend suite in a CI-only target built from the actual backup runtime, against new
+internal-only PostgreSQL/Redis/SFTP containers with generated credentials/host pins.
+No host ports, Docker socket, live services, existing volumes or production data.
+Only test source files are bind-mounted read-only; test keys are extracted as the
+nonroot client user. The release targets exclude test dependencies. Retain existing
+browser, Nginx, restore and strict six-image advisory gates.
+
+Rollback is an isolated source/image revert with the same schema/data layouts;
+previous vulnerable images are not approved production fallbacks. No host deployment
+or data migration occurs. Advisory coverage differs across distributions: retain raw
+findings and the unresolved source/applicability review from TASK022F2_REPORT.md
+(including SQLite), rather than interpreting a passing vendor scan as full security
+sign-off. MFA, commissioning and G6 remain open.
+
+Sources: [official Python build](https://github.com/docker-library/python/tree/master/3.12/alpine3.24),
+[Alpine security data](https://secdb.alpinelinux.org/v3.24/main.json).
+
 ## GLPI licensing note
 
 GLPI repository is GPLv3. Use product concepts and independently written code. Forking or copying GLPI source is a **separate** licensing/product strategy requiring owner approval. Do not casually mix GPL files into a differently licensed custom codebase.

@@ -334,6 +334,11 @@ jobs:
         run: bash scripts/compose.sh prod build api frontend postgres redis
       - name: Build restricted backup worker
         run: docker compose --env-file .env -f infra/compose.yaml -f infra/compose.prod.yaml --profile backups build backup-worker
+      - name: Backend runtime PostgreSQL, Redis and pinned SFTP regression suite
+        run: |
+          docker build --pull=false --target runtime-tests -t itam-runtime-tests backend
+          docker build -t itam-sftp-fixture infra/backup-test
+          python3 ops/security/check_backend.py
       - name: New runtime base imports and production checks without network
         run: |
           docker build --pull=false --target production -t itam-runtime-proof backend

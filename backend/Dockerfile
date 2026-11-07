@@ -1,28 +1,23 @@
-FROM postgres:16.15-trixie@sha256:f9a7b9ebf6f56201f949db745e47bc423c0f0f8294bafe991cc10bf74b029657 AS pgtools
+FROM python:3.12.16-alpine3.24@sha256:e064671ca452259bab50e8e2c7bd896e39e9a343bb06ca25234adf6fe18d0fc7 AS base
 
-FROM python:3.12.16-slim-trixie@sha256:4840d514c583a4d3d8cad3940e68dee6f0f6f3635c12fcd0a3d74c21a5b93a54 AS base
-
-# Apply the Debian security fix absent from the pinned upstream filesystem.
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    'zlib1g=1:1.3.dfsg+really1.3.1-1+deb13u1' \
-    && rm -rf /var/lib/apt/lists/*
+RUN apk add --no-cache libstdc++
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy
 
-RUN groupadd --system itam && useradd --system --gid itam --create-home itam
+RUN addgroup -S -g 999 itam && adduser -S -D -u 999 -G itam -h /home/itam itam
 
 COPY --from=ghcr.io/astral-sh/uv:0.13.6 /uv /uvx /usr/local/bin/
 
 WORKDIR /app
 
 COPY pyproject.toml uv.lock ./
-RUN uv sync --frozen --no-dev --no-install-project
+RUN uv sync --frozen --no-dev --no-install-project --no-build
 
 COPY . .
-RUN uv sync --frozen --no-dev
+RUN uv sync --frozen --no-dev --no-build
 
 ENV PATH="/app/.venv/bin:$PATH" \
     DJANGO_SETTINGS_MODULE=config.settings.production
@@ -38,12 +33,14 @@ CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers
 # Only the opt-in backup worker receives database tools and repository credentials.
 FROM base AS backup-runner
 USER root
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    restic openssh-client libpq5 liblz4-1 libzstd1 \
-    && rm -rf /var/lib/apt/lists/*
-COPY --from=pgtools /usr/lib/postgresql/16/bin/pg_dump /usr/local/bin/pg_dump
-COPY --from=pgtools /usr/lib/postgresql/16/bin/pg_restore /usr/local/bin/pg_restore
+RUN apk add --no-cache restic openssh-client-default postgresql16-client
 USER itam
 RUN pg_dump --version && pg_restore --version && restic version
+
+# CI-only target: exercise the existing PostgreSQL/Redis/SFTP suite on this libc.
+FROM backup-runner AS runtime-tests
+USER root
+RUN uv sync --frozen --group dev --no-build
+USER itam
 
 FROM base AS production

@@ -1,6 +1,6 @@
-# Current task: 022f2 | Runtime image remediation and triage
+# Current task: 022f3 | Resolve API/backup image CI gate
 
-Owner requested continuation on 2026-11-07. Baseline 2b295db; CSP is complete
+Owner reported CI failure on 2026-11-07. Baseline c656e17; CSP is complete
 (TASK022E_REPORT.md). Address G02 from TASK022C_REPORT.md; preserve approved UI.
 Read: AGENTS.md, docs/00, docs/12, docs/14, docs/15 and docs/17. No host deployment.
 
@@ -18,7 +18,7 @@ Current slice: apply the Debian zlib security update; replace gosu's compiler ru
 without changing PostgreSQL 16 storage; rebase pinned Redis 7 binaries on supported
 Alpine. Verify nonroot Redis AOF/RDB recovery, production-image PostgreSQL restore,
 runtime imports and fresh exact-image scans. Preserve every gate and existing volume.
-Status: bounded slice complete. CI 42384258801 / 1ab0b78 reports all six runtime
+Prior evidence: CI 42384258801 / 1ab0b78 reports all six runtime
 targets with zero evidence errors. PostgreSQL, Redis, frontend and proxy pass;
 all OS versions are supported. API 0 CRITICAL/47 HIGH and backup 1/52 still hold
 G02/release. Zlib's two HIGH findings are cleared in each Python image.
@@ -27,6 +27,9 @@ imports, Redis AOF/RDB recovery and production PostgreSQL restore. Local gate/sc
 tests: 12; focused restore tests: 6; Ruff/Bash/YAML checks pass.
 Evidence and limits: TASK022F2_REPORT.md, ops/security/README.md,
 infra/runtime/README.md. No host deployment or existing-volume change was performed.
-Next: 022f3 API/backup runtime package remediation, before 022g MFA; retain the
-required SFTP backup path and strict gate. Do not silently start another slice here.
+Current slice: official pinned Python 3.12 Alpine runtime, frozen musl wheels and
+PostgreSQL 16/restic/OpenSSH client packages. Keep UID/GID 999 and test the existing
+suite on a disposable internal-only PostgreSQL/Redis/SFTP network; preserve every gate.
+Status: implementation/local verification in progress; candidate runtime and scan pending.
+Next: evaluate candidate scan and compatibility evidence before 022g MFA.
 G6 remains open; no risk acceptance or host deployment implied.
