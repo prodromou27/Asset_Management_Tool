@@ -54,6 +54,12 @@ the shorter existing idle/absolute limit. Local password changes are not an Entr
 password-management workflow. App logout ends the ITAM session, not the Entra one;
 sign out of Microsoft separately on shared devices.
 
+There is no back-channel logout or continuous-access notification subscription in
+this slice. An Entra-only disable/policy change is not pushed into an already
+established ITAM session; its signed-token deadline still applies. For immediate
+application revocation, disable the ITAM account (or reset/rebind it through the
+authorized account workflow). Include this limit in the incident procedure.
+
 Binding updates require `users.manage` and the current `If-Match` version, revoke
 sessions and cancel pending recovery. A signed-in Entra admin cannot change their
 own binding; another admin must do it. The last active linked admin cannot be

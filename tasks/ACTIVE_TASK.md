@@ -1,4 +1,4 @@
-# Current task: 022g | MFA authentication policy and implementation
+# Current task: 022g | MFA authentication policy and implementation (complete)
 
 Owner requested next task on 2026-11-07. Baseline b4ef54b; CSP is complete
 (TASK022E_REPORT.md). Address G02 from TASK022C_REPORT.md; preserve approved UI.
@@ -19,17 +19,18 @@ Acceptance: no protected access before required factors; token/OTP replay reject
 safe recovery, session revocation, CSRF/throttling, RBAC and secret-free audit; compatible
 named-admin bootstrap. Validate API/browser flows and keep emergency recovery tested.
 
-Status: implemented supported Authlib OIDC/PKCE, signed MFA-context validation,
+Outcome: implemented supported Authlib OIDC/PKCE, signed MFA-context validation,
 explicit tenant/object account bindings and protected-shell one-use emergency access.
 Existing roles/site grants remain authoritative. Configuration defaults stay off.
-Local proof: 881 backend tests passed with seven PostgreSQL/restore skips under the
-explicit SQLite fallback; 220 frontend tests passed. Ruff/lint/types/build/schema
-validation passed. Production-browser CSP review passed with 124 screenshots,
-including Entra/binding desktop/mobile light/dark, no errors or normal violations.
-CI 42417537503: 888 native and 888 production-derived runtime backend tests pass;
-frontend, browser, reference load and dependency gates pass. New callback Nginx probe
-exposed the synthetic upstream's numeric-status-only parser (502 on callback query).
-Fixed that fixture, added three passing loopback regressions and preserved strict
-expected statuses; rerun full CI for the correction. No production auth/proxy change.
-Next: obtain final Nginx/restore/image proof; record outcome in TASK022G_REPORT.md.
-G02 manual source/compiler review, commissioning and G6 remain separate open gates.
+Final proof (handoff 2026-11-08): implementation 4f1a934, fixture fix 2e72b5e;
+CI 42418403056 all six jobs green. 888 native and 888 production-derived backend
+tests (no skips), three fixture regressions, 220 frontend tests, migration reverse,
+schema/types/lint/build/deploy checks, 14 real browser scenarios, 124 CSP screenshots,
+22 Nginx responses with callback-log privacy, reference load and isolated restore
+checks pass. Six exact images have zero HIGH/CRITICAL; lower findings remain visible.
+Evidence and limits: TASK022G_REPORT.md; operator runbook: ops/auth/README.md.
+
+Next bounded task: 022h, remaining G02 source/compiler applicability review
+(including SQLite/Go coverage). Do not silently start another epic or deploy.
+Live Entra/Conditional Access and protected-host recovery review/drill, host capacity,
+integration/SMTP/backup commissioning and G6 remain open; no live services changed.
