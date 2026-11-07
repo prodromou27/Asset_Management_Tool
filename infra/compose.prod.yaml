@@ -87,6 +87,10 @@ services:
       - frontend
 
   postgres:
+    image: itam-postgres:16.15
+    build:
+      context: ./runtime
+      target: postgres
     restart: unless-stopped
     deploy:
       resources:
@@ -95,4 +99,8 @@ services:
           memory: 4g
 
   redis:
+    image: itam-redis:7.4.12
+    build:
+      context: ./runtime
+      target: redis
     restart: unless-stopped

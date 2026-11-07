@@ -331,7 +331,7 @@ jobs:
           jq -e '.services["nginx-proxy"].volumes[] | select(.target == "/etc/nginx/conf.d/default.conf") | .source | endswith("infra/nginx/http.conf")' /tmp/http.json
           jq -e '.services.api.environment.ITAM_PUBLIC_SCHEME == "http"' /tmp/http.json
       - name: Build production images
-        run: bash scripts/compose.sh prod build api frontend
+        run: bash scripts/compose.sh prod build api frontend postgres redis
       - name: Build restricted backup worker
         run: docker compose --env-file .env -f infra/compose.yaml -f infra/compose.prod.yaml --profile backups build backup-worker
       - name: New runtime base imports and production checks without network
@@ -340,6 +340,8 @@ jobs:
           docker run --rm --network none --read-only --cap-drop ALL --security-opt no-new-privileges:true --memory 256m --pids-limit 64 --env-file .env itam-runtime-proof python -c "import django; django.setup(); import psycopg; import cryptography.hazmat.bindings._rust; from django.core.management import call_command; call_command('check', deploy=True, fail_level='WARNING')"
       - name: Enforced CSP on real isolated Nginx responses
         run: bash ops/csp/check_nginx.sh
+      - name: Redis runtime identity and persisted RDB/AOF recovery without network
+        run: bash ops/security/check_redis.sh
       - name: Download synthetic restore fixture
         uses: actions/download-artifact@v4
         with:
@@ -355,7 +357,7 @@ jobs:
         run: |
           sudo apt-get update && sudo apt-get install -y restic
           python3 ops/restore/recover_fixture.py /tmp/itam-drill-fixture /tmp/itam-drill-key/restic_password /tmp/itam-drill-input
-          python3 ops/restore/drill.py /tmp/itam-drill-input --report /tmp/itam-drill-report.json
+          python3 ops/restore/drill.py /tmp/itam-drill-input --report /tmp/itam-drill-report.json --image itam-postgres:16.15
       - name: Preserve measured isolated restore report
         if: always()
         uses: actions/upload-artifact@v4

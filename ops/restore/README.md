@@ -3,8 +3,10 @@
 This is an operator workflow. No production restore/cutover is authorized by Task 019.
 Use an approved staging machine with sufficient RAM for a temporary PostgreSQL database,
 Docker, Python 3.12 and restic. Recover repository credentials through the separate approved
-mechanism. Pin the PostgreSQL image digest at commissioning; the script uses the same
-PostgreSQL 16 Bookworm family as the backup client.
+mechanism. Pin the approved PostgreSQL 16 image digest at commissioning and pass it
+with `--image <reference>`. The historical default remains `postgres:16-bookworm`;
+CI explicitly tests the production `itam-postgres:16.15` build. The option is an
+operator CLI argument, never a web/API input. Production backup tools also use major 16.
 
 1. Select a **full 64-character snapshot ID** from a verified job. Set repository/password
    file and SSH configuration in the operator environment. Verify repository integrity:

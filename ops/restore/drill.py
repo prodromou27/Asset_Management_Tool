@@ -27,7 +27,7 @@ def command(args):
         ) from exc
 
 
-def drill(directory, report):
+def drill(directory, report, *, image="postgres:16-bookworm"):
     started = datetime.now(UTC)
     manifest_path = directory / "manifest.json"
     if manifest_path.is_symlink():
@@ -57,6 +57,7 @@ def drill(directory, report):
         "recovery_point": manifest.get("recovery_point"),
         "app_revision": manifest.get("app_revision"),
         "image_reference": manifest.get("image_reference"),
+        "restore_image": image,
     }
     if result["recovery_point"]:
         point = datetime.fromisoformat(result["recovery_point"])
@@ -84,7 +85,7 @@ def drill(directory, report):
                 "POSTGRES_USER=drill",
                 "--env",
                 "POSTGRES_DB=itam_drill",
-                "postgres:16-bookworm",
+                image,
             ]
         )
         created = True
@@ -239,7 +240,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("directory", type=Path)
     parser.add_argument("--report", required=True, type=Path)
+    parser.add_argument(
+        "--image", default="postgres:16-bookworm", help="Approved PostgreSQL 16 image"
+    )
     args = parser.parse_args()
     if args.report.exists():
         parser.error("Report path already exists; choose a new path.")
-    drill(args.directory.resolve(strict=True), args.report)
+    drill(args.directory.resolve(strict=True), args.report, image=args.image)

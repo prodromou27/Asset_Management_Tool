@@ -291,6 +291,33 @@ Sources: [official Python image tags](https://github.com/docker-library/official
 [official PostgreSQL image tags](https://github.com/docker-library/official-images/blob/master/library/postgres),
 [stable Nginx](https://nginx.org/en/download.html).
 
+### ASM-70 - Task 022f2 supported runtime rebuilds (2026-11-07)
+
+Apply Debian's zlib security update explicitly in the pinned Python runtime. Preserve
+the SFTP backup transport: openssh-client is required by the fixed-command runner,
+so removing it would break the approved backup feature. Debian's remaining findings
+stay held pending fixes/triage; no testing/unstable distribution packages or waivers.
+
+Use a production-only infrastructure Dockerfile with pinned PostgreSQL 16.15 and
+Redis 7.4.12 inputs. Rebuild upstream gosu 1.20 at its exact commit using pinned
+Go 1.27.3, CGO disabled, with module checksum verification and symbols retained.
+Replace only PostgreSQL's helper. For Redis, retain the official binaries/entrypoint,
+UID 999/GID 1000 and /data layout, using Alpine 3.24.4 libraries and the rebuilt
+helper. This small custom runtime now needs maintenance and fresh scans alongside
+upstream updates; it avoids changing either service major or database format.
+
+Forward proof: helper UID/build checks, network-disabled Redis AOF/RDB restarts,
+the existing synthetic PostgreSQL restore against the production image, app checks
+and exact-image scans. Compose dev images are unchanged. Rollback is an image/source
+revert in isolated staging with the same major/data layout; no host or existing
+volume is modified here. Previous vulnerable images are not approved release fallbacks.
+
+Sources: [Debian zlib fix](https://security-tracker.debian.org/tracker/CVE-2026-76844),
+[Debian OpenSSH status](https://security-tracker.debian.org/tracker/CVE-2026-60002),
+[gosu source](https://github.com/tianon/gosu/tree/29b939aa5bd4dc588af765b8248f6e39150d2565),
+[gosu security policy](https://github.com/tianon/gosu/security),
+[Go releases](https://go.dev/dl/).
+
 ## GLPI licensing note
 
 GLPI repository is GPLv3. Use product concepts and independently written code. Forking or copying GLPI source is a **separate** licensing/product strategy requiring owner approval. Do not casually mix GPL files into a differently licensed custom codebase.

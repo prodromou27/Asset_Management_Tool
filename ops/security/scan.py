@@ -23,6 +23,22 @@ def run(args, **kwargs):
     ).stdout
 
 
+def image_for(service, target, commit):
+    if "build" not in service:
+        image = service["image"]
+        run(["docker", "pull", image])
+        return image
+    build = service["build"]
+    image = f"itam-security-{target}:{commit[:12]}"
+    args = ["docker", "build", "--pull=false", "-t", image]
+    if build.get("target"):
+        args += ["--target", build["target"]]
+    if build.get("dockerfile"):
+        args += ["-f", str(Path(build["context"]) / build["dockerfile"])]
+    run(args + [build["context"]], cwd=ROOT)
+    return image
+
+
 def main(mode):
     output = ROOT / "ops/security/results" / mode
     output.mkdir(parents=True, exist_ok=True)
@@ -106,17 +122,9 @@ def main(mode):
                             metadata[name] = hashlib.sha256(source.read_bytes()).hexdigest()
                         scan_args = ["fs", "--offline-scan", "--include-dev-deps", str(scratch)]
                     else:
-                        if target in {"api", "backup-worker", "frontend"}:
-                            image = f"itam-security-{target}:{summary['source_commit'][:12]}"
-                            args = ["docker", "build", "--pull=false", "-t", image]
-                            if target == "backup-worker":
-                                args += ["--target", "backup-runner"]
-                            run(
-                                args + ["frontend" if target == "frontend" else "backend"], cwd=ROOT
-                            )
-                        else:
-                            image = compose["services"][target]["image"]
-                            run(["docker", "pull", image])
+                        image = image_for(
+                            compose["services"][target], target, summary["source_commit"]
+                        )
                         inspected = json.loads(run(["docker", "image", "inspect", image]))[0]
                         metadata = {
                             key: inspected.get(key)

@@ -27,7 +27,8 @@ def files(directory):
     (directory / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
 
 
-def test_drill_uses_only_new_network_isolated_container(drill_module, tmp_path, monkeypatch):
+@pytest.mark.parametrize("image", ["postgres:16-bookworm", "itam-postgres:16.15"])
+def test_drill_uses_only_new_network_isolated_container(drill_module, tmp_path, monkeypatch, image):
     files(tmp_path)
     commands = []
 
@@ -42,9 +43,10 @@ def test_drill_uses_only_new_network_isolated_container(drill_module, tmp_path, 
 
     monkeypatch.setattr(drill_module, "command", command)
     report = tmp_path / "report.json"
-    result = drill_module.drill(tmp_path, report)
+    result = drill_module.drill(tmp_path, report, image=image)
     assert result["passed"] and result["isolated"] and result["outbound_disabled"]
     launch = commands[0]
+    assert launch[-1] == image and result["restore_image"] == image
     assert launch[launch.index("--network") + 1] == "none"
     assert "--publish" not in launch and "--volume" not in launch
     assert launch[launch.index("--name") + 1].startswith("itam-drill-")
