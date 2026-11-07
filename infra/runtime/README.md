@@ -2,7 +2,7 @@
 
 Task 022f2 keeps PostgreSQL 16.15 and Redis 7.4.12 and their data layouts, using
 digest-pinned upstream images. Compose dev images are unchanged. Build from the
-production Compose configuration; the normal installer builds all configured services.
+production Compose configuration; the normal installer builds enabled services.
 
 The PostgreSQL stage replaces only gosu. The Go 1.27.3 stage builds upstream gosu
 1.20 commit `29b939aa5bd4dc588af765b8248f6e39150d2565`, with CGO disabled and
@@ -29,6 +29,8 @@ storage through `ops/restore/drill.py --image itam-postgres:16.15`.
 The image scanner then inspects saved exact-image archives and retains findings
 and identities even when the gate is held. Linux CI supplies these runtime checks;
 local Windows lint/unit checks alone cannot establish compatibility.
+Application jobs retain their separate CI service images; these derived images
+receive the isolated proofs above. Approved-host full-stack commissioning remains open.
 
 No host or existing data volume is changed by this task. Forward deployment requires
 staging/host commissioning and promotion of tested image digests. An isolated source/

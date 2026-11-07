@@ -53,6 +53,13 @@ The above are **preflight checks**; do not assume Docker is already installed. D
 
 No Docker socket mount into web/API/worker. Pin image versions, nonroot user, minimal capabilities, read-only root filesystems where feasible, no privileged containers, resource/memory limits and stop grace periods. Compose production overrides must set restart and health checks. Use separate internal frontend/backend networks as necessary; do not publish database or Redis ports.
 
+Task 022f2's production PostgreSQL/Redis images are locally built derived images
+described in `infra/runtime/README.md`. Build enabled production services with
+`bash scripts/compose.sh prod build` before starting the stack; the installer already
+does this. Commissioning must promote tested/scanned images through the approved
+registry and pin their deployment digests. The optional backup worker still needs
+its `backups` profile enabled when building or starting that service.
+
 ## 3. Filesystem and SELinux
 
 Prefer named Docker volumes for PostgreSQL. For necessary bind mounts, confirm labeling and ownership according to current Docker Compose + SELinux behavior; do not blindly assume a :Z suffix works in every Compose service mount configuration. Keep SELinux Enforcing. Separate logs/data/backups, use file permissions and least-privilege service UIDs, avoid chmod 777.

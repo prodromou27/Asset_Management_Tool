@@ -31,6 +31,8 @@ Image mode reads production Compose build contexts, Dockerfiles and stages for A
 (also worker/scheduler), backup-runner, frontend, PostgreSQL and Redis, and builds
 them from the same cached inputs used by the preceding compatibility checks. External
 images such as the official proxy are pulled using their configured references.
+The rendered configuration enables the `backups` profile so the optional backup
+worker is always included in release evidence.
 Production PostgreSQL/Redis runtime maintenance is described in `infra/runtime/README.md`.
 No rendered Compose secrets
 or full image environment/history are written to evidence. It saves each exact local
