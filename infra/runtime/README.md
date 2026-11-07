@@ -1,4 +1,14 @@
-# Production PostgreSQL and Redis runtimes
+# Production runtime images
+
+Task 022f3's API/backup Python runtime is defined in `backend/Dockerfile`: pinned
+Python 3.12.16 on supported Alpine 3.24, unchanged lockfile, musllinux wheels and
+explicit application UID/GID 10001. Only the backup target includes PostgreSQL 16
+client tools, restic and the SSH client. The CI-only `runtime-tests` target adds
+test dependencies to the same runtime; `ops/security/check_backend.py` runs the
+existing PostgreSQL/Redis suite and encrypted SFTP roundtrip on a new internal-only
+network. It uses generated host pins/credentials and removes only its own resources.
+Neither release target includes the test dependencies. Commission host secret-file
+permissions for the explicit app account; this task changes no existing host mount.
 
 Task 022f2 keeps PostgreSQL 16.15 and Redis 7.4.12 and their data layouts, using
 digest-pinned upstream images. Compose dev images are unchanged. Build from the
