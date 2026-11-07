@@ -101,6 +101,12 @@ def main():
                 "frontend/Dockerfile",
                 "frontend/nginx.conf",
                 "frontend/content-security-policy.conf",
+                "fixtures/librenms/api/responses.json",
+                "fixtures/endpoint_central/api/responses.json",
+                "fixtures/intune/graph/responses.json",
+                "fixtures/defender/api/responses.json",
+                "fixtures/m365/graph/responses.json",
+                "fixtures/discovery/network_devices.json",
             ):
                 sources += [
                     "--mount",
