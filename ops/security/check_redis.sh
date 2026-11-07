@@ -21,7 +21,7 @@ created=true
 docker run --detach --name "$name" --network none --read-only \
     --security-opt no-new-privileges:true --memory 128m --pids-limit 64 \
     --mount "type=volume,source=$volume,target=/data" \
-    itam-redis:7.4.12 redis-server --appendonly yes --appendfsync always >/dev/null
+    itam-redis:7.4.12 redis-server --save "" --appendonly yes --appendfsync always >/dev/null
 ready() {
     for _ in {1..30}; do
         if test "$(docker exec "$name" redis-cli ping 2>/dev/null || true)" = PONG; then return; fi
@@ -33,15 +33,19 @@ ready
 test "$(docker exec "$name" sh -c 'awk "/^Uid:/ {print \$2}" /proc/1/status')" = 999
 test "$(docker exec "$name" redis-cli SET itam-proof synthetic)" = OK
 test "$(docker exec "$name" redis-cli SAVE)" = OK
+# Written after SAVE: recovery of this key must come from AOF, not the RDB.
+test "$(docker exec "$name" redis-cli SET itam-aof-proof aof-only)" = OK
 docker restart "$name" >/dev/null
 ready
 test "$(docker exec "$name" redis-cli GET itam-proof)" = synthetic
+test "$(docker exec "$name" redis-cli GET itam-aof-proof)" = aof-only
 # Also exercise the RDB path independently of AOF replay.
 docker rm --force "$name" >/dev/null
 docker run --detach --name "$name" --network none --read-only \
     --security-opt no-new-privileges:true --memory 128m --pids-limit 64 \
     --mount "type=volume,source=$volume,target=/data" \
-    itam-redis:7.4.12 redis-server --appendonly no >/dev/null
+    itam-redis:7.4.12 redis-server --save "" --appendonly no >/dev/null
 ready
 test "$(docker exec "$name" redis-cli GET itam-proof)" = synthetic
+test -z "$(docker exec "$name" redis-cli GET itam-aof-proof)"
 echo 'Redis nonroot startup, AOF restart and RDB recovery passed (network disabled).'

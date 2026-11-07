@@ -112,6 +112,10 @@ def drill(directory, report, *, image="postgres:16-bookworm"):
                 time.sleep(1)
         if not ready:
             raise RuntimeError("Isolated database did not become ready.")
+        version = command(["docker", "exec", name, "postgres", "--version"]).strip()
+        if not re.fullmatch(r"postgres \(PostgreSQL\) 16\.\d+[^\n]*", version):
+            raise ValueError("The selected restore image must run PostgreSQL 16.")
+        result["restore_database_version"] = version
         command(["docker", "cp", str(dump), f"{name}:/tmp/database.dump"])
         command(
             [
