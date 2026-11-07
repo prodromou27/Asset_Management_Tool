@@ -325,7 +325,9 @@ functional jobs. Evaluate official Python 3.12.16 Alpine 3.24 at its registry di
 using the unchanged uv lock and musllinux wheels (`--no-build`). Use stable Alpine
 PostgreSQL 16 client, restic and OpenSSH client packages; retain the approved SFTP
 transport. Alpine's OpenSSH security backport covers CVE-2026-60002. Pin the app
-account explicitly to UID/GID 999; preserve Python/PostgreSQL majors and data formats.
+account explicitly to unreserved UID/GID 10001 (Alpine reserves GID 999); preserve
+Python/PostgreSQL majors and data formats. No host is deployed; commission secret
+mount permissions for this explicit account before deployment.
 
 This changes glibc to musl. Require production imports/deploy checks and the existing
 backend suite in a CI-only target built from the actual backup runtime, against new

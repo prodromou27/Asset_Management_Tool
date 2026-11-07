@@ -7,7 +7,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy
 
-RUN addgroup -S -g 999 itam && adduser -S -D -u 999 -G itam -h /home/itam itam
+RUN addgroup -S -g 10001 itam && adduser -S -D -u 10001 -G itam -h /home/itam itam
 
 COPY --from=ghcr.io/astral-sh/uv:0.13.6 /uv /uvx /usr/local/bin/
 

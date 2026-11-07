@@ -28,7 +28,7 @@ tests: 12; focused restore tests: 6; Ruff/Bash/YAML checks pass.
 Evidence and limits: TASK022F2_REPORT.md, ops/security/README.md,
 infra/runtime/README.md. No host deployment or existing-volume change was performed.
 Current slice: official pinned Python 3.12 Alpine runtime, frozen musl wheels and
-PostgreSQL 16/restic/OpenSSH client packages. Keep UID/GID 999 and test the existing
+PostgreSQL 16/restic/OpenSSH client packages. Use unreserved UID/GID 10001 and test the existing
 suite on a disposable internal-only PostgreSQL/Redis/SFTP network; preserve every gate.
 Status: implementation/local verification in progress; candidate runtime and scan pending.
 Next: evaluate candidate scan and compatibility evidence before 022g MFA.
