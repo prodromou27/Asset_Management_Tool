@@ -43,6 +43,9 @@ for base in ("http://frontend", "http://proxy-http", "https://proxy-https"):
                 raise
             time.sleep(0.2)
     paths = [("/", 200), ("/assets/example", 200)]
+    paths += [
+        ("/api/v1/auth/entra/callback/?code=synthetic-oidc-value&state=synthetic-oidc-value", 404)
+    ]
     if base != "http://frontend":
         paths += [(f"/api/v1/status/{code}", code) for code in (200, 401, 403, 404, 500)]
         paths += [("/api/v1/broken", 502)]

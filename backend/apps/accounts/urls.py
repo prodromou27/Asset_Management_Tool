@@ -1,8 +1,11 @@
 from django.urls import path
 
 from . import views
+from .entra_views import EntraBindingView, EntraCallbackView, EntraStartView
 
 auth_urlpatterns = [
+    path("entra/start/", EntraStartView.as_view(), name="entra-start"),
+    path("entra/callback/", EntraCallbackView.as_view(), name="entra-callback"),
     path("csrf/", views.CsrfView.as_view(), name="auth-csrf"),
     path("providers/", views.ProvidersView.as_view(), name="auth-providers"),
     path("local/login/", views.LocalLoginView.as_view(), name="auth-login"),
@@ -12,6 +15,7 @@ auth_urlpatterns = [
 ]
 
 user_urlpatterns = [
+    path("<uuid:pk>/entra/", EntraBindingView.as_view(), name="entra-binding"),
     path("", views.UserListCreateView.as_view(), name="user-list"),
     path("lookup/", views.UserLookupView.as_view(), name="user-lookup"),
     path("<uuid:pk>/", views.UserDetailView.as_view(), name="user-detail"),

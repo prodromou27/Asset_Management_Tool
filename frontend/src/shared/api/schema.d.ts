@@ -98,6 +98,12 @@ export interface paths {
     /** @description Sets the CSRF cookie so the SPA can send X-CSRFToken on unsafe requests. */
     get: operations["auth_csrf_retrieve"];
   };
+  "/api/v1/auth/entra/callback/": {
+    get: operations["auth_entra_callback_retrieve"];
+  };
+  "/api/v1/auth/entra/start/": {
+    post: operations["auth_entra_start_create"];
+  };
   "/api/v1/auth/local/login/": {
     post: operations["auth_local_login_create"];
   };
@@ -630,6 +636,9 @@ export interface paths {
   "/api/v1/users/{id}/enable/": {
     post: operations["users_enable_create"];
   };
+  "/api/v1/users/{id}/entra/": {
+    patch: operations["users_entra_partial_update"];
+  };
   "/api/v1/users/{id}/reset-password/": {
     post: operations["users_reset_password_create"];
   };
@@ -964,6 +973,10 @@ export interface components {
      * @enum {string}
      */
     AuthSchemeEnum: "bearer" | "x_auth_token" | "authorization" | "client_secret" | "client_certificate";
+    Authorization: {
+      /** Format: uri */
+      authorization_url: string;
+    };
     /**
      * @description * `planned` - Planned
      * * `beta` - Beta (fixture-tested)
@@ -3309,6 +3322,12 @@ export interface components {
       keep_monthly?: number;
       retention_enabled?: boolean;
     };
+    PatchedBindingRequest: {
+      /** Format: uuid */
+      tenant_id?: string | null;
+      /** Format: uuid */
+      object_id?: string | null;
+    };
     /** @description Key and type are immutable so stored values stay valid. */
     PatchedCustomFieldUpdateRequest: {
       label?: string;
@@ -4088,6 +4107,10 @@ export interface components {
       link_status: string;
       differs: boolean;
     };
+    StartRequest: {
+      /** @default / */
+      next_path?: string;
+    };
     /**
      * @description * `strong` - strong
      * * `corroborating` - corroborating
@@ -4357,6 +4380,10 @@ export interface components {
       display_name: string;
       /** Format: email */
       email: string;
+      /** Format: uuid */
+      entra_tenant_id: string | null;
+      /** Format: uuid */
+      entra_object_id: string | null;
       roles: readonly components["schemas"]["RoleSummary"][];
       all_sites: boolean;
       sites: readonly components["schemas"]["SiteGrant"][];
@@ -5067,6 +5094,30 @@ export interface operations {
       /** @description No response body */
       204: {
         content: never;
+      };
+    };
+  };
+  auth_entra_callback_retrieve: {
+    responses: {
+      /** @description No response body */
+      302: {
+        content: never;
+      };
+    };
+  };
+  auth_entra_start_create: {
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["StartRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["StartRequest"];
+        "multipart/form-data": components["schemas"]["StartRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["Authorization"];
+        };
       };
     };
   };
@@ -8537,6 +8588,30 @@ export interface operations {
     parameters: {
       path: {
         id: string;
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["User"];
+        };
+      };
+    };
+  };
+  users_entra_partial_update: {
+    parameters: {
+      header: {
+        "If-Match": string;
+      };
+      path: {
+        id: string;
+      };
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["PatchedBindingRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["PatchedBindingRequest"];
+        "multipart/form-data": components["schemas"]["PatchedBindingRequest"];
       };
     };
     responses: {

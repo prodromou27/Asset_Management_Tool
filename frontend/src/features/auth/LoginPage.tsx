@@ -1,12 +1,12 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { useSession } from '../../app/useSession'
-import { login, queryKeys } from '../../shared/api/accounts'
+import { fetchAuthProviders, login, queryKeys, startEntra } from '../../shared/api/accounts'
 import { isApiError } from '../../shared/api/client'
 import { Button } from '../../shared/ui/Button'
 import { TextField } from '../../shared/ui/Field'
-import { ErrorSummary, LoadingState } from '../../shared/ui/States'
+import { ErrorSummary, LoadingState, QueryErrorState } from '../../shared/ui/States'
 import { safeNext } from './safeNext'
 import { ThemeToggle } from '../../app/theme'
 
@@ -19,6 +19,11 @@ export function LoginPage() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [missing, setMissing] = useState<Record<string, string[]>>({})
+  const providers = useQuery({ queryKey: ['auth', 'providers'], queryFn: fetchAuthProviders, enabled: !me && !isPending })
+  const entra = useMutation({
+    mutationFn: () => startEntra(next),
+    onSuccess: ({ authorization_url }) => globalThis.location.assign(authorization_url),
+  })
 
   const mutation = useMutation({
     mutationFn: () => login(username, password),
@@ -31,6 +36,10 @@ export function LoginPage() {
 
   if (isPending) return <LoadingState label="Checking your session…" />
   if (me) return <Navigate to={next} replace />
+  if (providers.isPending) return <LoadingState label="Loading sign-in options…" />
+  if (providers.isError) return <main className="auth-panel"><QueryErrorState error={providers.error} what="sign-in options" /></main>
+  const sso = providers.data.find((provider) => provider.id === 'entra' && provider.status === 'available')
+  const local = providers.data.find((provider) => provider.id === 'local')
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault()
@@ -41,7 +50,7 @@ export function LoginPage() {
     if (Object.keys(errors).length === 0) mutation.mutate()
   }
 
-  const error = mutation.error
+  const error = mutation.error ?? entra.error
   const errorMessage = isApiError(error, 429)
     ? 'Too many sign-in attempts. Wait a minute and try again.'
     : error instanceof Error
@@ -54,7 +63,15 @@ export function LoginPage() {
       <main className="auth-panel" id="main">
         <p className="auth-panel__product">ITAM</p>
         <h1 className="auth-panel__title">Sign in</h1>
+        {params.has('sso_error') && <ErrorSummary message="Microsoft Entra sign-in could not be verified. Try again or contact your administrator." fieldErrors={{}} fieldLabels={{}} />}
         {errorMessage && <ErrorSummary message={errorMessage} fieldErrors={{}} fieldLabels={{}} />}
+        {sso && <div className="form-stack">
+          <Button variant="primary" onClick={() => entra.mutate()} busy={entra.isPending}>
+            Continue with Microsoft Entra
+          </Button>
+          <p className="auth-panel__note">Use your organization account and complete its sign-in verification.</p>
+          <h2 className="section-title">{local?.label ?? 'Local account'}</h2>
+        </div>}
         <form onSubmit={handleSubmit} noValidate className="form-stack">
           <TextField
             label="Username"
@@ -79,7 +96,9 @@ export function LoginPage() {
           </Button>
         </form>
         <p className="auth-panel__note">
-          Local accounts are issued by a System Admin. Single sign-on is not yet configured.
+          {local?.label === 'Local emergency access'
+            ? 'Emergency access requires a named administrator account and a one-use recovery window opened by your authorized operator.'
+            : 'Local accounts are issued by a System Admin.'}
         </p>
       </main>
     </div>

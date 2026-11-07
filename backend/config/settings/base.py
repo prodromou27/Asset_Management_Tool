@@ -42,6 +42,14 @@ env = environ.Env(
     ITAM_NOTIFICATION_BODY_RETENTION_DAYS=(int, 14),
     ITAM_BACKUP_ALLOW_RUN=(bool, False),
     ITAM_BACKUP_TARGET_LABEL=(str, "Not configured"),
+    ITAM_ENTRA_ENABLED=(bool, False),
+    ITAM_ENTRA_ENFORCE=(bool, True),
+    ITAM_ENTRA_TENANT_ID=(str, ""),
+    ITAM_ENTRA_CLIENT_ID=(str, ""),
+    ITAM_ENTRA_CLIENT_SECRET_REF=(str, ""),
+    ITAM_ENTRA_REDIRECT_URI=(str, ""),
+    ITAM_ENTRA_AUTH_CONTEXT=(str, ""),
+    ITAM_ENTRA_MFA_POLICY_VERIFIED=(bool, False),
 )
 
 env_file = BASE_DIR / ".env"
@@ -49,6 +57,14 @@ if env_file.exists():
     environ.Env.read_env(str(env_file))
 
 ITAM_ENV = env("ITAM_ENV")
+ITAM_ENTRA_ENABLED = env("ITAM_ENTRA_ENABLED")
+ITAM_ENTRA_ENFORCE = env("ITAM_ENTRA_ENFORCE")
+ITAM_ENTRA_TENANT_ID = env("ITAM_ENTRA_TENANT_ID")
+ITAM_ENTRA_CLIENT_ID = env("ITAM_ENTRA_CLIENT_ID")
+ITAM_ENTRA_CLIENT_SECRET_REF = env("ITAM_ENTRA_CLIENT_SECRET_REF")
+ITAM_ENTRA_REDIRECT_URI = env("ITAM_ENTRA_REDIRECT_URI")
+ITAM_ENTRA_AUTH_CONTEXT = env("ITAM_ENTRA_AUTH_CONTEXT")
+ITAM_ENTRA_MFA_POLICY_VERIFIED = env("ITAM_ENTRA_MFA_POLICY_VERIFIED")
 DEBUG = env("ITAM_DEBUG")
 SECRET_KEY = env("DJANGO_SECRET_KEY")
 ALLOWED_HOSTS = env("ITAM_ALLOWED_HOSTS")
@@ -295,8 +311,15 @@ LOGGING = {
     "handlers": {"console": {"class": "logging.StreamHandler"}},
     "root": {"handlers": ["console"], "level": env("ITAM_LOG_LEVEL")},
     # httpx logs every request URL at INFO; connector summaries are logged by the app.
-    "loggers": {"httpx": {"level": "WARNING"}, "httpcore": {"level": "WARNING"}},
+    "loggers": {
+        "httpx": {"level": "WARNING"},
+        "httpcore": {"level": "WARNING"},
+        # OAuth libraries may log tokens/verifiers at DEBUG. Never propagate them.
+        "authlib": {"handlers": ["null"], "propagate": False, "level": "CRITICAL"},
+        "urllib3": {"level": "WARNING"},
+    },
 }
+LOGGING["handlers"]["null"] = {"class": "logging.NullHandler"}
 
 DISPLAY_TIMEZONE = env("ITAM_TIMEZONE")
 

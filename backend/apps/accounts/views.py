@@ -57,7 +57,7 @@ class LocalLoginView(APIView):
         user = services.login_local(
             request, data.validated_data["username"], data.validated_data["password"]
         )
-        return Response(MeSerializer(user).data)
+        return Response(MeSerializer(user, context={"request": request}).data)
 
 
 class LogoutView(APIView):
@@ -74,7 +74,7 @@ class MeView(APIView):
 
     @extend_schema(responses=MeSerializer)
     def get(self, request):
-        return Response(MeSerializer(request.user).data)
+        return Response(MeSerializer(request.user, context={"request": request}).data)
 
 
 class ChangePasswordView(APIView):
@@ -98,9 +98,25 @@ class ProvidersView(APIView):
 
     @extend_schema(responses=AuthProviderSerializer(many=True))
     def get(self, request):
+        from django.conf import settings
+
+        from .oidc import ready
+
         providers = [
-            {"id": "local", "kind": "local", "label": "Local account", "status": "available"},
-            {"id": "entra", "kind": "oidc", "label": "Microsoft Entra ID", "status": "planned"},
+            {
+                "id": "local",
+                "kind": "local",
+                "label": "Local emergency access"
+                if settings.ITAM_ENTRA_ENABLED and settings.ITAM_ENTRA_ENFORCE
+                else "Local account",
+                "status": "available",
+            },
+            {
+                "id": "entra",
+                "kind": "oidc",
+                "label": "Microsoft Entra ID",
+                "status": "available" if ready() else "planned",
+            },
         ]
         return Response(AuthProviderSerializer(providers, many=True).data)
 

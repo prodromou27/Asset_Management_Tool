@@ -1,11 +1,15 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { apiError, makeMe, mockApi, renderApp } from '../../test/api'
+import { AUTH_PROVIDERS, apiError, makeMe, mockApi as rawMockApi, renderApp } from '../../test/api'
 import { safeNext } from './safeNext'
 
 afterEach(() => vi.unstubAllGlobals())
 
 const signedOut = apiError(401, 'NOT_AUTHENTICATED', 'Not signed in.')
+const providers = AUTH_PROVIDERS
+const mockApi = (routes: Parameters<typeof rawMockApi>[0]) => rawMockApi({
+  'GET /auth/providers/': { body: providers }, ...routes,
+})
 
 function fill(username: string, password: string) {
   fireEvent.change(screen.getByLabelText('Username'), { target: { value: username } })
@@ -13,6 +17,30 @@ function fill(username: string, password: string) {
 }
 
 describe('LoginPage', () => {
+  it('starts configured Entra with CSRF and a local destination', async () => {
+    const assign = vi.fn()
+    vi.stubGlobal('location', { assign })
+    const url = 'https://login.microsoftonline.com/tenant/oauth2/v2.0/authorize?state=fixture'
+    const { calls } = mockApi({
+      'GET /auth/me/': signedOut,
+      'GET /auth/providers/': { body: providers.map((provider) => ({ ...provider, status: 'available' })) },
+      'GET /auth/csrf/': { status: 204 },
+      'POST /auth/entra/start/': { body: { authorization_url: url } },
+    })
+    renderApp('/login?next=%2Fadmin%2Fusers')
+    fireEvent.click(await screen.findByRole('button', { name: 'Continue with Microsoft Entra' }))
+    await waitFor(() => expect(assign).toHaveBeenCalledWith(url))
+    expect(calls.find((call) => call.path === '/auth/entra/start/')?.body).toEqual({ next_path: '/admin/users' })
+    expect(calls.findIndex((call) => call.path === '/auth/csrf/')).toBeLessThan(calls.findIndex((call) => call.path === '/auth/entra/start/'))
+  })
+
+  it('shows a generic callback failure without reflecting provider query details', async () => {
+    mockApi({ 'GET /auth/me/': signedOut })
+    renderApp('/login?sso_error=1&error_description=untrusted-value')
+    expect(await screen.findByRole('alert')).toHaveTextContent('could not be verified')
+    expect(screen.queryByText('untrusted-value')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Continue with Microsoft Entra' })).not.toBeInTheDocument()
+  })
   it('validates required fields without calling the API', async () => {
     const { calls } = mockApi({ 'GET /auth/me/': signedOut })
     renderApp('/login')

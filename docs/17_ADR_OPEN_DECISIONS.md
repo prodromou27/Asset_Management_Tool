@@ -28,14 +28,14 @@
 | DEC-01 | Owner reaffirmed AlmaLinux acceptance on 2026-11-06. Keep ADR-003; no further OS-choice approval is needed. Record architecture, installed release and Docker compatibility during host commissioning | Acceptance does not supply a host address/access method or prove runtime checks; no host installation performed |
 | DEC-02 | CPU/RAM/disks, DB/media size expectations | Reference 8 vCPU/24–32GB proposal pending load test |
 | DEC-03 | ITAM internal FQDN, DNS zone, TLS certificate method | example.invalid placeholder; localhost dev only |
-| DEC-04 | User authentication: Entra OIDC, LDAP/LDAPS, or local pilot | Local named admin in dev; integration withheld |
+| DEC-04 | Owner selected Microsoft Entra OIDC with MFA on 2026-11-07 (Task 022g) | Provider choice resolved; live tenant/app/FQDN/secret and Conditional Access configuration require commissioning; see ASM-72 |
 | DEC-05 | LibreNMS version, HTTPS URL, read-only REST token (role/scopes), auth header accepted by the installed version, server time zone, sanitized sample payload, and written approval for live access | Adapter built and fixture-tested (Task 006, Beta). Live access off: `ITAM_ALLOW_LIVE_INTEGRATIONS=false` and no per-instance approval |
 | DEC-06 | Endpoint Central on-prem build, verified HTTPS URL/port, read-only API key (inventory read only), which API generation (dcapi or api/1.4) the build serves, header format, server time zone, sanitized sample responses, written approval for live access | Adapter built and fixture-tested (Task 007, Beta). Live access off, as for LibreNMS |
 | DEC-07 | Microsoft tenant ID; a dedicated single-tenant app registration with only the **application** permission `DeviceManagementManagedDevices.Read.All` and admin consent; certificate (preferred, PEM with key and certificate as a mounted secret file) or client secret; outbound HTTPS from the Docker host to `login.microsoftonline.com` and `graph.microsoft.com`; a sanitized sample `managedDevices` response; written approval for live access | Adapter built and fixture-tested (Task 008, Beta). Live access off, as for LibreNMS and Endpoint Central |
 | DEC-08 | SMTP provider/relay hostname, port, sender, TLS/auth, recipient groups | Mail capture in dev; prod email disabled |
 | DEC-09 | Backup off-host destination, encryption key custody, retention, RPO/RTO approval | Local test backups only, not production ready |
 | DEC-10 | Domain/TLS approved list, registrar and owners | Manual sample fixtures only |
-| DEC-11 | SSO/MFA and local emergency access policy | Secure local pilot accounts and no public access |
+| DEC-11 | Owner selected Entra MFA plus reviewed local emergency access on 2026-11-07 | Approach resolved; protected-host recovery custody, two named admins and live MFA/recovery tests remain release gates; see ASM-72 |
 | DEC-12 | EOL vendor support portal/API entitlements | Official public source/import workflow; Unknown otherwise |
 | DEC-13 | Site/location hierarchy, asset tag policy and sample inventory files | Configurable schema; no real import |
 | DEC-14 | ITAM report recipients and escalation thresholds | Notifications disabled until SMTP/owners approved |
@@ -50,7 +50,7 @@
 | ASM-01 (Task 001) | Backend pinned to Django 5.2 LTS (5.2.18 at bootstrap); 5.1 is end-of-life. Revisit the LTS line before 5.2 support ends (April 2028). | `pyproject.toml` bounds `django>=5.2.18,<5.3`; uv.lock committed. |
 | ASM-02 (Task 001) | SQLite is allowed **only** as an opt-in shortcut for running the backend test suite on a workstation without Docker (`ITAM_TEST_DB_SQLITE=1`, `config.settings.test`). PostgreSQL is mandatory for Docker development, CI, staging and production. | Fallback exists only in test settings; raises if `CI` is set; CI fails on any skipped PostgreSQL/Redis integration test; a test asserts the engine is PostgreSQL unless the opt-in is set. |
 
-| ASM-03 (Task 002) | Local accounts only. **No local TOTP/MFA yet** and no OIDC; Entra is listed as `planned` by `/auth/providers`. Per docs/09, privileged local access must stay restricted (internal network, named admins, no public exposure) until DEC-11 is decided. | Production readiness gate: DEC-11 must be resolved (IdP MFA or reviewed local TOTP) before go-live. |
+| ASM-03 (Task 002, superseded by ASM-72) | Historical local-only pilot; Task 022g implements the owner's approved Entra MFA approach. No local TOTP is implemented. | Production readiness still requires actual tenant MFA and reviewed emergency recovery proof. |
 | ASM-04 (Task 002) — **closed in Task 003** | Site scoping implemented: users have `all_sites` or explicit `UserSiteGrant`s; a grant on a site includes its child sites. All asset reads go through `assets.selectors.visible_assets(user)`; out-of-scope IDs return 404 and out-of-scope site/location IDs in payloads return the same 422 as unknown IDs. Department scoping is **not** implemented (departments are org-wide reference data). | Cross-site denial tests cover list, filters, detail, history, PATCH, archive, restore, classification (and preview) and create/reassign. Future export/report jobs must start from `visible_assets()`. |
 | ASM-05 (Task 002) | Role definitions are seeded and read-only in V1 UI; editing role→permission grants is not exposed yet. System Admin must always keep users.manage/users.view/roles.view/audit.view (`MANDATORY_ADMIN_PERMISSIONS`). | Enforce the mandatory set when role editing is added. |
 | ASM-06 (Task 002) | Audit events are append-only: model guard + PostgreSQL trigger blocks UPDATE/DELETE/TRUNCATE. Retention purge (future) must run under a separate, audited maintenance role. | Trigger is created by migration `audit.0002`; tested in CI on PostgreSQL. |
@@ -346,6 +346,47 @@ sign-off. MFA, commissioning and G6 remain open.
 
 Sources: [official Python build](https://github.com/docker-library/python/tree/master/3.12/alpine3.24),
 [Alpine security data](https://secdb.alpinelinux.org/v3.24/main.json).
+
+### ASM-72 - Task 022g approved Entra MFA and emergency access (2026-11-07)
+
+Owner explicitly selected Microsoft Entra SSO with MFA and reviewed local emergency
+access. Use single-tenant global-cloud Authlib authorization-code/PKCE with RS256
+ID-token validation, nonce, browser-bound one-use state, fixed tenant endpoints and
+explicit tenant/object-ID bindings. No email linking, automatic provisioning, Graph
+permissions, IdP role grants or persisted tokens. Existing RBAC/site scope applies.
+
+Require a configured authentication context (`c1` through `c99`) in the signed
+ID token's `acrs` array. An authentication context can be emitted without an MFA
+policy, so `ITAM_ENTRA_MFA_POLICY_VERIFIED` is an operator acknowledgement after
+reviewing the actual Conditional Access policy, user coverage and exclusions.
+It is not evidence of live MFA. Verify licensing, policy and sign-in logs before G04.
+
+Entra defaults disabled until configured. Explicit `ENFORCE=false` is restricted
+staging test mode to validate a second account before disabling ordinary local login;
+deployment checks reject it. Enforced mode revokes legacy local sessions and never
+automatically falls back on provider failure. SSO sessions expire at ID-token expiry
+or existing idle/absolute limits; config/binding/password/disable changes revoke access.
+
+Recovery implementation assumption: an independently protected host operator opens
+a named active System Admin's one-use 15-minute window with an incident reference
+and freshly rotated strong password entered via TTY/stdin. The grant is atomically
+consumed; its session retains the original deadline. No public API opens or extends
+it. Entra login, binding changes, reset and account disable cancel pending grants.
+Keep at least two named admins; protect the last linked SSO-admin path. This uses
+protected-shell authorization, not local TOTP. Review host MFA/console access,
+custody, audit export and recovery drill before commissioning this method.
+
+Migration 0017 adds nullable unique identity pairs, an emergency deadline and
+short-lived hashed attempt receipts, without rewriting existing accounts or roles.
+Forward proof uses migrated fixture databases; rollback is an isolated source/schema
+revert after clearing sessions/attempts/grants, restoring the backup if bindings are
+needed. Removing the fields loses bindings; reverting to password-only pilot is not
+an approved production fallback. Nginx omits queries/referrers and suppresses callback
+logs. See [operator runbook](../ops/auth/README.md). Tenant/host changes remain off.
+
+Sources: [Microsoft authentication-context guidance](https://learn.microsoft.com/en-us/entra/identity-platform/developer-guide-conditional-access-authentication-context),
+[Authlib Django implementation](https://github.com/authlib/authlib/blob/v1.9.5/authlib/integrations/django_client/apps.py),
+[Authlib signed-token validation](https://github.com/authlib/authlib/blob/v1.9.5/authlib/integrations/base_client/sync_openid.py).
 
 ## GLPI licensing note
 

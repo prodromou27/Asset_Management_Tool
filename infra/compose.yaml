@@ -24,6 +24,14 @@ x-backend-env: &backend-env
   # recorded approval on the integration (Task 006). Keep false until the Docker-host
   # verification has passed and a read-only source account is approved.
   ITAM_ALLOW_LIVE_INTEGRATIONS: ${ITAM_ALLOW_LIVE_INTEGRATIONS:-false}
+  ITAM_ENTRA_ENABLED: ${ITAM_ENTRA_ENABLED:-false}
+  ITAM_ENTRA_ENFORCE: ${ITAM_ENTRA_ENFORCE:-true}
+  ITAM_ENTRA_TENANT_ID: ${ITAM_ENTRA_TENANT_ID:-}
+  ITAM_ENTRA_CLIENT_ID: ${ITAM_ENTRA_CLIENT_ID:-}
+  ITAM_ENTRA_CLIENT_SECRET_REF: ${ITAM_ENTRA_CLIENT_SECRET_REF:-}
+  ITAM_ENTRA_REDIRECT_URI: ${ITAM_ENTRA_REDIRECT_URI:-}
+  ITAM_ENTRA_AUTH_CONTEXT: ${ITAM_ENTRA_AUTH_CONTEXT:-}
+  ITAM_ENTRA_MFA_POLICY_VERIFIED: ${ITAM_ENTRA_MFA_POLICY_VERIFIED:-false}
   # Referenced from the UI as env:ITAM_INTEGRATION_LIBRENMS_TOKEN; never stored in the DB.
   ITAM_INTEGRATION_LIBRENMS_TOKEN: ${ITAM_INTEGRATION_LIBRENMS_TOKEN:-}
   # Referenced as env:ITAM_INTEGRATION_ENDPOINT_CENTRAL_KEY (read-only API key).
@@ -91,7 +99,9 @@ services:
       - backend
 
   api:
-    environment: *backend-env
+    environment:
+      <<: *backend-env
+      ITAM_ENTRA_CLIENT_SECRET: ${ITAM_ENTRA_CLIENT_SECRET:-}
     depends_on: *backend-depends
     healthcheck:
       test:

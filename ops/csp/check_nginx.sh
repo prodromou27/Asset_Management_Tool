@@ -41,3 +41,11 @@ docker run --rm "${limits[@]}" --cap-drop ALL --user 65534:65534 \
   -v "$root_dir/frontend/content-security-policy.conf:/fixture/policy.conf:ro" \
   -v "$fixture_dir/fullchain.pem:/fixture/ca.pem:ro" \
   "$prefix-api-image" python -B /fixture/check_headers.py
+
+for role in frontend proxy-http proxy-https; do
+  if docker logs "$prefix-$role" 2>&1 | grep -q 'synthetic-oidc-value'; then
+    echo 'OIDC callback parameters leaked into Nginx logs' >&2
+    exit 1
+  fi
+done
+echo 'OIDC callback parameters absent from Nginx logs.'

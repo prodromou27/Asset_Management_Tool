@@ -4,6 +4,11 @@
 
 Preferred enterprise sign-in: OpenID Connect against Microsoft Entra ID, if app registration and consent are approved. Alternative: on-prem LDAP/LDAPS/AD if demanded by environment. Local secure accounts required for initial bootstrap and at least two documented emergency admins; no public self-registration. Do not implement a weak homemade OAuth protocol. Use supported server-side OIDC library and standards-based code/PKCE flow as applicable.
 
+Owner selected Entra MFA plus reviewed local emergency access on 7 November 2026.
+Task 022g implements this approach with Authlib, explicit tenant/object bindings
+and protected-shell one-use recovery. See ASM-72 and [operator instructions](../ops/auth/README.md).
+Live Conditional Access and emergency custody/recovery evidence are required before release.
+
 ## Authentication requirements
 
 - TLS on every login and session; secure HttpOnly SameSite cookies, CSRF protection for session-authenticated unsafe methods, session rotation after login.

@@ -172,6 +172,26 @@ describe('Add user', () => {
 })
 
 describe('User detail', () => {
+  it('saves an explicit Entra binding with the current account version', async () => {
+    const tenant = '22222222-2222-4222-8222-222222222222'
+    const objectId = '33333333-3333-4333-8333-333333333333'
+    const { calls } = mockApi({
+      ...admin,
+      [`GET /users/${USER_ID}/`]: { body: makeUser({ version: 4 }) },
+      [`PATCH /users/${USER_ID}/entra/`]: {
+        body: makeUser({ version: 5, entra_tenant_id: tenant, entra_object_id: objectId }),
+      },
+    })
+    renderApp(`/admin/users/${USER_ID}`)
+    fireEvent.change(await screen.findByLabelText('Entra tenant ID'), { target: { value: tenant } })
+    fireEvent.change(screen.getByLabelText('Entra user object ID'), { target: { value: objectId } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save sign-in binding' }))
+    expect(await screen.findByText('Entra sign-in binding saved.')).toBeInTheDocument()
+    const patch = calls.find((call) => call.path.endsWith('/entra/'))!
+    expect(patch.headers['If-Match']).toBe('"4"')
+    expect(patch.body).toEqual({ tenant_id: tenant, object_id: objectId })
+  })
+
   it('sends If-Match with the record version and reports a conflict', async () => {
     const { calls } = mockApi({
       ...admin,
@@ -244,5 +264,6 @@ describe('User detail', () => {
     expect(await screen.findByRole('heading', { name: 'Profile' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Save changes' })).not.toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Account actions' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Save sign-in binding' })).not.toBeInTheDocument()
   })
 })

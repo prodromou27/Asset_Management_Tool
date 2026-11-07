@@ -11,6 +11,7 @@ import {
   resetUserPassword,
   unlockUser,
   updateUser,
+  bindEntra,
 } from '../../shared/api/accounts'
 import { assetKeys, fetchSites } from '../../shared/api/assets'
 import { isApiError } from '../../shared/api/client'
@@ -87,10 +88,49 @@ export function UserDetailPage() {
         <aside className="detail-layout__side">
           <AccountFacts user={user.data} />
           <SiteAccessPanel key={`sites-${user.data.version}`} user={user.data} canManage={canManage} onSaved={setNotice} />
+          {canManage && <EntraBinding key={`entra-${user.data.version}`} user={user.data} onSaved={setNotice} />}
           {canManage && <AccountActions user={user.data} isSelf={isSelf} onDone={setNotice} />}
         </aside>
       </div>
     </div>
+  )
+}
+
+function EntraBinding({ user, onSaved }: { user: User; onSaved: (notice: string) => void }) {
+  const queryClient = useQueryClient()
+  const [tenant, setTenant] = useState(user.entra_tenant_id ?? '')
+  const [objectId, setObjectId] = useState(user.entra_object_id ?? '')
+  const mutation = useMutation({
+    mutationFn: () => bindEntra(user.id, user.version, tenant.trim() || null, objectId.trim() || null),
+    onSuccess: (saved) => {
+      queryClient.setQueryData(queryKeys.user(user.id), saved)
+      onSaved('Entra sign-in binding saved.')
+    },
+  })
+  const errors = isApiError(mutation.error) ? mutation.error.fieldErrors : {}
+  return (
+    <section className="panel" aria-labelledby="entra-heading">
+      <h2 className="section-title" id="entra-heading">Microsoft Entra sign-in</h2>
+      <p className="section-help">
+        Link the exact tenant and user object IDs. Email addresses and token roles do not
+        grant access. Changes sign this account out.
+      </p>
+      <form className="form-stack" onSubmit={(event) => {
+        event.preventDefault()
+        mutation.mutate()
+      }}>
+        <TextField label="Entra tenant ID" name="tenant_id" value={tenant}
+          onChange={(event) => setTenant(event.target.value)} error={errors.tenant_id} />
+        <TextField label="Entra user object ID" name="object_id" value={objectId}
+          onChange={(event) => setObjectId(event.target.value)} error={errors.object_id} />
+        {mutation.error && (
+          <ErrorSummary message={mutation.error.message}
+            fieldErrors={errors}
+            fieldLabels={{ tenant_id: 'Entra tenant ID', object_id: 'Entra user object ID' }} />
+        )}
+        <Button type="submit" busy={mutation.isPending}>Save sign-in binding</Button>
+      </form>
+    </section>
   )
 }
 

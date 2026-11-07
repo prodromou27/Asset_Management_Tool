@@ -1,6 +1,6 @@
 import { screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { apiError, makeMe, mockApi, operatorMe, renderApp } from '../test/api'
+import { AUTH_PROVIDERS, apiError, makeMe, mockApi, operatorMe, renderApp } from '../test/api'
 
 const readyOk = { body: { status: 'ok', dependencies: {} } }
 
@@ -8,7 +8,7 @@ afterEach(() => vi.unstubAllGlobals())
 
 describe('session guards and navigation', () => {
   it('redirects unauthenticated users to sign in', async () => {
-    mockApi({ 'GET /auth/me/': apiError(401, 'NOT_AUTHENTICATED', 'Not signed in.') })
+    mockApi({ 'GET /auth/me/': apiError(401, 'NOT_AUTHENTICATED', 'Not signed in.'), 'GET /auth/providers/': { body: AUTH_PROVIDERS } })
 
     renderApp('/admin/users')
 
@@ -51,6 +51,7 @@ describe('session guards and navigation', () => {
     mockApi({
       'GET /auth/me/': { body: makeMe() },
       'GET /users/': apiError(401, 'NOT_AUTHENTICATED', 'Session expired.'),
+      'GET /auth/providers/': { body: AUTH_PROVIDERS },
     })
 
     renderApp('/admin/users')

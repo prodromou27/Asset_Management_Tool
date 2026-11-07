@@ -1,6 +1,8 @@
 import { apiGet, apiRequest } from './client'
 import { configureDisplay } from '../format'
 import type {
+  AuthProvider,
+  Authorization,
   AuditEvent,
   Me,
   Paginated,
@@ -24,6 +26,13 @@ export const queryKeys = {
 // --- Auth ---------------------------------------------------------------------
 
 export const fetchCsrf = () => apiRequest<void>('GET', '/auth/csrf/')
+export const fetchAuthProviders = () => apiGet<AuthProvider[]>('/auth/providers/')
+export async function startEntra(next_path: string) {
+  await fetchCsrf()
+  return apiRequest<Authorization>('POST', '/auth/entra/start/', { body: { next_path } })
+}
+export const bindEntra = (id: string, version: number, tenant_id: string | null, object_id: string | null) =>
+  apiRequest<User>('PATCH', `/users/${id}/entra/`, { body: { tenant_id, object_id }, ifMatch: version })
 export async function fetchMe() {
   const me = await apiGet<Me>('/auth/me/')
   configureDisplay(me.display_preferences)

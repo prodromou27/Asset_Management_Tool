@@ -13,7 +13,7 @@ def _authenticated_with_current_password(request) -> bool:
     user = request.user
     if not (user and user.is_authenticated):
         return False
-    if user.must_change_password:
+    if user.must_change_password and request.session.get("itam_auth_method") != "entra":
         raise ApiError(
             "PASSWORD_CHANGE_REQUIRED",
             "You must change your temporary password before continuing.",

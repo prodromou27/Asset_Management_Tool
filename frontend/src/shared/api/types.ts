@@ -3,6 +3,8 @@ import type { components } from './schema'
 type Schemas = components['schemas']
 
 export type Me = Schemas['Me']
+export type AuthProvider = Schemas['AuthProvider']
+export type Authorization = Schemas['Authorization']
 export type User = Schemas['User']
 export type UserCreate = Schemas['UserCreateRequest']
 export type UserUpdate = Schemas['PatchedUserUpdateRequest']

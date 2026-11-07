@@ -1,5 +1,9 @@
 # Task 022g - MFA implementation readiness
 
+**Update 2026-11-07:** Owner chose Microsoft Entra MFA plus reviewed local emergency
+access. The preparation notes below are historical. Implementation follows ASM-72
+and `ops/auth/README.md`; see `ACTIVE_TASK.md` for current validation status.
+
 Owner requested the next task on 7 November 2026. Baseline `b4ef54b`; the previous
 CI-remediation slice is complete with green CI 42397841169. This is preparation for
 G04, not implemented MFA or production sign-off.

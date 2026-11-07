@@ -65,6 +65,9 @@ class User(AbstractBaseUser):
     last_failed_login_at = models.DateTimeField(null=True, blank=True)
     locked_until = models.DateTimeField(null=True, blank=True)
     session_epoch = models.PositiveIntegerField(default=0)
+    entra_tenant_id = models.UUIDField(null=True, blank=True)
+    entra_object_id = models.UUIDField(null=True, blank=True)
+    emergency_access_until = models.DateTimeField(null=True, blank=True)
 
     disabled_at = models.DateTimeField(null=True, blank=True)
     disabled_reason = models.CharField(max_length=500, blank=True)
@@ -87,6 +90,16 @@ class User(AbstractBaseUser):
     class Meta:
         ordering = ["username"]
         constraints = [
+            models.UniqueConstraint(
+                fields=["entra_tenant_id", "entra_object_id"], name="accounts_entra_identity_unique"
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(entra_tenant_id__isnull=True, entra_object_id__isnull=True)
+                    | models.Q(entra_tenant_id__isnull=False, entra_object_id__isnull=False)
+                ),
+                name="accounts_entra_identity_pair",
+            ),
             models.UniqueConstraint(
                 Lower("email"),
                 condition=~models.Q(email=""),
@@ -160,6 +173,15 @@ class GeneralSettings(models.Model):
     @classmethod
     def load(cls):
         return cls.objects.get_or_create(pk=1)[0]
+
+
+class OidcAttempt(models.Model):
+    """One-use browser-bound receipt. PKCE/nonce are held by Authlib's short-lived cache."""
+
+    state_digest = models.CharField(max_length=64, primary_key=True)
+    browser_digest = models.CharField(max_length=64)
+    policy_digest = models.CharField(max_length=64)
+    expires_at = models.DateTimeField(db_index=True)
 
 
 class SecuritySettings(models.Model):

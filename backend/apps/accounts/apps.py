@@ -8,3 +8,5 @@ class AccountsConfig(AppConfig):
 
     def ready(self):
         import config.schema  # noqa: F401 - registers the OpenAPI auth extension
+
+        from . import checks  # noqa: F401 - registers deploy-only MFA policy checks

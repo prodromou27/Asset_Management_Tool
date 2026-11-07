@@ -1079,6 +1079,43 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/v1/auth/entra/callback/:
+    get:
+      operationId: auth_entra_callback_retrieve
+      tags:
+      - auth
+      security:
+      - sessionAuth: []
+      - {}
+      responses:
+        '302':
+          description: No response body
+  /api/v1/auth/entra/start/:
+    post:
+      operationId: auth_entra_start_create
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/StartRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/StartRequest'
+      security:
+      - sessionAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Authorization'
+          description: ''
   /api/v1/auth/local/login/:
     post:
       operationId: auth_local_login_create
@@ -6758,6 +6795,43 @@ paths:
               schema:
                 $ref: '#/components/schemas/User'
           description: ''
+  /api/v1/users/{id}/entra/:
+    patch:
+      operationId: users_entra_partial_update
+      parameters:
+      - in: header
+        name: If-Match
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedBindingRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedBindingRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedBindingRequest'
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
   /api/v1/users/{id}/reset-password/:
     post:
       operationId: users_reset_password_create
@@ -7762,6 +7836,15 @@ components:
         * `authorization` - Authorization: <token>
         * `client_secret` - OAuth client secret
         * `client_certificate` - OAuth client certificate
+    Authorization:
+      type: object
+      properties:
+        authorization_url:
+          type: string
+          format: uri
+          readOnly: true
+      required:
+      - authorization_url
     AvailabilityEnum:
       enum:
       - planned
@@ -14342,6 +14425,17 @@ components:
           minimum: 1
         retention_enabled:
           type: boolean
+    PatchedBindingRequest:
+      type: object
+      properties:
+        tenant_id:
+          type: string
+          format: uuid
+          nullable: true
+        object_id:
+          type: string
+          format: uuid
+          nullable: true
     PatchedCustomFieldUpdateRequest:
       type: object
       description: Key and type are immutable so stored values stay valid.
@@ -16436,6 +16530,14 @@ components:
       - link_status
       - observed_at
       - value
+    StartRequest:
+      type: object
+      properties:
+        next_path:
+          type: string
+          minLength: 1
+          default: /
+          maxLength: 2048
     StrengthEnum:
       enum:
       - strong
@@ -17154,6 +17256,16 @@ components:
           type: string
           format: email
           readOnly: true
+        entra_tenant_id:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        entra_object_id:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
         roles:
           type: array
           items:
@@ -17227,6 +17339,8 @@ components:
       - disabled_reason
       - display_name
       - email
+      - entra_object_id
+      - entra_tenant_id
       - id
       - is_active
       - is_locked

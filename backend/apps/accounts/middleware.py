@@ -2,6 +2,7 @@
 
 import time
 
+from django.conf import settings
 from django.contrib.auth import logout
 
 from apps.audit import services as audit
@@ -27,8 +28,29 @@ class SessionTimeoutMiddleware:
             last_seen = request.session.get(SESSION_LAST_SEEN, 0)
             idle_limit = policy.session_idle_timeout_minutes * 60
             absolute_limit = policy.session_absolute_timeout_hours * 3600
-            if now - last_seen > idle_limit or now - auth_at > absolute_limit:
-                reason = "idle" if now - last_seen > idle_limit else "absolute"
+            valid_factor = True
+            from .oidc import EXPIRES, METHOD, POLICY, policy_digest
+
+            method = request.session.get(METHOD)
+            if (
+                settings.ITAM_ENTRA_ENABLED
+                and settings.ITAM_ENTRA_ENFORCE
+                or method in {"entra", "emergency"}
+            ):
+                valid_factor = (
+                    settings.ITAM_ENTRA_ENABLED
+                    and method in {"entra", "emergency"}
+                    and request.session.get(POLICY) == policy_digest()
+                    and request.session.get(EXPIRES, 0) > now
+                )
+                if method == "emergency":
+                    valid_factor = valid_factor and user.roles.filter(code="system_admin").exists()
+            if not valid_factor or now - last_seen > idle_limit or now - auth_at > absolute_limit:
+                reason = (
+                    "authentication policy"
+                    if not valid_factor
+                    else ("idle" if now - last_seen > idle_limit else "absolute")
+                )
                 audit.record(
                     action="auth.session_expired",
                     actor=user,

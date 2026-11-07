@@ -52,6 +52,8 @@ class UserSerializer(serializers.ModelSerializer):
             "username",
             "display_name",
             "email",
+            "entra_tenant_id",
+            "entra_object_id",
             "roles",
             "all_sites",
             "sites",
@@ -117,6 +119,7 @@ class ChangePasswordSerializer(serializers.Serializer):
 
 
 class MeSerializer(serializers.ModelSerializer):
+    must_change_password = serializers.SerializerMethodField()
     roles = RoleSummarySerializer(many=True, read_only=True)
     permissions = serializers.SerializerMethodField()
     display_preferences = serializers.SerializerMethodField()
@@ -138,6 +141,12 @@ class MeSerializer(serializers.ModelSerializer):
 
     def get_permissions(self, obj) -> list[str]:
         return sorted(obj.permission_codes())
+
+    def get_must_change_password(self, obj) -> bool:
+        request = self.context.get("request")
+        return obj.must_change_password and not (
+            request and request.session.get("itam_auth_method") == "entra"
+        )
 
     @extend_schema_field(DisplayPreferencesSerializer)
     def get_display_preferences(self, obj):

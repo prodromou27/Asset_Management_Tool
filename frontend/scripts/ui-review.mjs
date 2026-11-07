@@ -55,6 +55,21 @@ const fixtureIntegration = {
   active_links: 0, stale_links: 0, open_candidates: 0,
 }
 const routes = {
+  '/auth/providers/': [
+    { id: 'local', kind: 'local', label: 'Local account', status: 'available' },
+    { id: 'entra', kind: 'oidc', label: 'Microsoft Entra ID', status: 'planned' },
+  ],
+  '/roles/': [{ code: 'system_admin', name: 'System Admin', description: '', is_system: true, permissions: [] }],
+  '/users/fixture-user/': {
+    id: 'fixture-user', username: 'fixture.user', display_name: 'Fixture User', email: '',
+    roles: [{ code: 'system_admin', name: 'System Admin' }], all_sites: true, sites: [],
+    is_active: true, is_locked: false, locked_until: null, must_change_password: false,
+    entra_tenant_id: '11111111-1111-4111-8111-111111111111',
+    entra_object_id: '22222222-2222-4222-8222-222222222222',
+    last_login: null, password_changed_at: null, disabled_at: null, disabled_by: null,
+    disabled_reason: '', created_at: '2026-11-05T00:00:00Z', created_by: null,
+    modified_at: '2026-11-05T00:00:00Z', version: 1,
+  },
   '/groups/': [],
   '/reports/schedules/': [],
   '/settings/general/': general,
@@ -259,6 +274,7 @@ try {
     ['/lifecycle', 'lifecycle'], ['/admin/integrations', 'integrations'],
     ['/software', 'software'], ['/domains', 'domains'], ['/admin/sites', 'sites'],
     ['/admin/categories', 'categories'], ['/admin/security', 'security-settings'],
+    ['/admin/users/fixture-user', 'user-entra-binding'],
     ['/admin/smtp', 'smtp-settings'],
     ['/admin/general', 'general-settings'], ['/', 'operational-health'], ['/admin/integrations?tab=catalogue', 'provider-catalogue'],
     ...['inventory', 'lifecycle', 'coverage', 'groups'].map((kind) => [`/reports?report=${kind}`, `report-${kind}`]),
@@ -379,6 +395,10 @@ try {
     if (await page.locator('iframe[title="HTML preview"]').getAttribute('sandbox') !== '') throw new Error('Email preview sandbox changed')
     await capture(page, 'smtp-sandboxed-preview-csp')
   }
+  responses.set('/auth/providers/', { body: [
+    { id: 'local', kind: 'local', label: 'Local account', status: 'available' },
+    { id: 'entra', kind: 'oidc', label: 'Microsoft Entra ID', status: 'planned' },
+  ] })
   responses.set('/auth/me/', { status: 401, body: { error: { code: 'NOT_AUTHENTICATED', message: 'Sign in.' } } })
   for (const width of [1440, 390]) {
     await page.setViewportSize({ width, height: width === 390 ? 844 : 900 })
@@ -393,6 +413,21 @@ try {
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
   await page.getByText('Enter your username.', { exact: true }).waitFor()
   await capture(page, 'sign-in-validation-mobile')
+  responses.set('/auth/providers/', { body: [
+    { id: 'local', kind: 'local', label: 'Local emergency access', status: 'available' },
+    { id: 'entra', kind: 'oidc', label: 'Microsoft Entra ID', status: 'available' },
+  ] })
+  for (const width of [1440, 390]) {
+    await page.setViewportSize({ width, height: width === 390 ? 844 : 900 })
+    await page.goto('http://127.0.0.1:5197/login')
+    await page.getByRole('button', { name: 'Continue with Microsoft Entra' }).waitFor()
+    for (const theme of ['light', 'dark']) {
+      if (theme === 'dark') await page.getByRole('button', { name: 'Switch to dark theme' }).click()
+      if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)) throw new Error('Entra sign-in page overflows')
+      await capture(page, `sign-in-entra-${width}-${theme}`)
+    }
+    await page.getByRole('button', { name: 'Switch to light theme' }).click()
+  }
   let cspProof
   if (cspReview) {
     if (violations.length) throw new Error(`Unexpected UI CSP violations: ${JSON.stringify(violations)}`)

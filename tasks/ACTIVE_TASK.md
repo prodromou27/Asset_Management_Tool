@@ -8,11 +8,9 @@ No host deployment or live identity-provider configuration.
 Previous slice complete: TASK022F3_REPORT.md; CI 42397841169 is green. Preserve
 the approved UI, strict security gates, RBAC and existing auth/session behavior.
 
-Decision required: DEC-04/DEC-11 leave IdP/MFA/emergency access policy unresolved.
-docs/00 explicitly requires identity-provider approval; docs/09 prefers approved
-Entra OIDC and requires two named emergency admins with reviewed recovery. Owner
-was asked to choose Entra SSO/MFA or local authenticator MFA/recovery codes. Do not
-infer that Microsoft inventory integration approval selects the login provider.
+Owner decision accepted (2026-11-07): Microsoft Entra SSO with MFA, plus reviewed
+local emergency access. DEC-04/DEC-11 now select this approach. Live app registration,
+Conditional Access enforcement and protected-host recovery still need commissioning.
 
 Bounded implementation after choice: accounts models/services/views/middleware and
 tests, login/account/security UI, OpenAPI/generated types, configuration and operator
@@ -21,8 +19,12 @@ Acceptance: no protected access before required factors; token/OTP replay reject
 safe recovery, session revocation, CSRF/throttling, RBAC and secret-free audit; compatible
 named-admin bootstrap. Validate API/browser flows and keep emergency recovery tested.
 
-Status: source review and baseline verification complete; 71 auth/user/security tests
-pass locally with the explicit SQLite fallback (functional proof only). No auth or
-schema change made pending the required owner choice. See TASK022G_PLAN.md.
-Next: apply the owner's DEC-04/DEC-11 choice and implement its smallest complete slice.
+Status: implemented supported Authlib OIDC/PKCE, signed MFA-context validation,
+explicit tenant/object account bindings and protected-shell one-use emergency access.
+Existing roles/site grants remain authoritative. Configuration defaults stay off.
+Local proof: 881 backend tests passed with seven PostgreSQL/restore skips under the
+explicit SQLite fallback; 220 frontend tests passed. Ruff/lint/types/build/schema
+validation passed. Production-browser CSP review passed with 124 screenshots,
+including Entra/binding desktop/mobile light/dark, no errors or normal violations.
+Next: obtain PostgreSQL/runtime/security CI proof; record outcome in TASK022G_REPORT.md.
 G02 manual source/compiler review, commissioning and G6 remain separate open gates.

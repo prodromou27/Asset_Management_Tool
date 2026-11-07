@@ -3,6 +3,7 @@
 import time
 from datetime import timedelta
 
+from django.conf import settings
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
@@ -51,11 +52,43 @@ def _active_admin_ids(exclude: User | None = None) -> list:
 
 
 def _guard_last_admin(target: User) -> None:
-    if target.roles.filter(code=SYSTEM_ADMIN).exists() and not _active_admin_ids(exclude=target):
+    required = 2 if settings.ITAM_ENTRA_ENABLED else 1
+    if (
+        target.roles.filter(code=SYSTEM_ADMIN).exists()
+        and len(_active_admin_ids(exclude=target)) < required
+    ):
         raise ApiError(
             "LAST_ADMIN",
-            "At least one active System Admin must remain.",
+            f"At least {required} active System Admin account(s) must remain.",
             status.HTTP_409_CONFLICT,
+        )
+    guard_last_entra_admin(target)
+
+
+def guard_last_entra_admin(target):
+    if not (
+        settings.ITAM_ENTRA_ENABLED
+        and target.is_active
+        and target.entra_object_id
+        and str(target.entra_tenant_id).lower() == settings.ITAM_ENTRA_TENANT_ID.lower()
+        and target.roles.filter(code=SYSTEM_ADMIN).exists()
+    ):
+        return
+    others = (
+        User.objects.select_for_update()
+        .filter(
+            is_active=True,
+            roles__code=SYSTEM_ADMIN,
+            entra_tenant_id=target.entra_tenant_id,
+            entra_object_id__isnull=False,
+        )
+        .exclude(pk=target.pk)
+    )
+    if not others.exists():
+        raise ApiError(
+            "LAST_SSO_ADMIN",
+            "Link another active Entra System Admin before removing this sign-in path.",
+            409,
         )
 
 
@@ -75,6 +108,15 @@ def login_local(request, username: str, password: str) -> User:
     policy = SecuritySettings.load()
     candidate = User.objects.filter(username=username).first()
 
+    if (
+        settings.ITAM_ENTRA_ENABLED
+        and settings.ITAM_ENTRA_ENFORCE
+        and not _emergency_eligible(candidate)
+    ):
+        authenticate(request, username=username, password=password)
+        _record_login_failure(request, username, candidate, "local access restricted")
+        raise ApiError("LOGIN_FAILED", LOGIN_FAILED_MESSAGE, status.HTTP_401_UNAUTHORIZED)
+
     if candidate is not None and candidate.is_locked:
         # Still run the hasher so locked and unlocked accounts respond alike.
         authenticate(request, username=username, password=password)
@@ -91,20 +133,56 @@ def login_local(request, username: str, password: str) -> User:
         _record_login_failure(request, username, candidate, detail)
         raise ApiError("LOGIN_FAILED", LOGIN_FAILED_MESSAGE, status.HTTP_401_UNAUTHORIZED)
 
-    User.objects.filter(pk=user.pk).update(
-        failed_login_count=0, locked_until=None, last_failed_login_at=None
+    if settings.ITAM_ENTRA_ENABLED and settings.ITAM_ENTRA_ENFORCE:
+        with transaction.atomic():
+            user = User.objects.select_for_update().get(pk=user.pk)
+            if _emergency_eligible(user) and not user.is_locked and user.check_password(password):
+                expires = user.emergency_access_until.timestamp()
+                user.emergency_access_until = None
+                user.save(update_fields=["emergency_access_until"])
+                complete_session(request, user, method="emergency", expires=expires)
+                return user
+        _record_login_failure(request, username, user, "emergency access unavailable")
+        raise ApiError("LOGIN_FAILED", LOGIN_FAILED_MESSAGE, status.HTTP_401_UNAUTHORIZED)
+    complete_session(request, user)
+    return user
+
+
+def _emergency_eligible(user):
+    return bool(
+        user
+        and user.is_active
+        and user.emergency_access_until
+        and user.emergency_access_until > timezone.now()
+        and user.roles.filter(code=SYSTEM_ADMIN).exists()
     )
-    login(request, user)  # rotates the session key and CSRF token
+
+
+def complete_session(request, user, *, method="local", expires=None):
+    from .oidc import EXPIRES, METHOD, POLICY, policy_digest
+
+    User.objects.filter(pk=user.pk).update(
+        failed_login_count=0,
+        locked_until=None,
+        last_failed_login_at=None,
+        emergency_access_until=None,
+    )
+    login(request, user, backend="django.contrib.auth.backends.ModelBackend")
     now = time.time()
     request.session[SESSION_AUTH_AT] = now
     request.session[SESSION_LAST_SEEN] = now
+    request.session[METHOD] = method
+    if method in {"entra", "emergency"}:
+        request.session[POLICY] = policy_digest()
+        request.session[EXPIRES] = expires or now
     audit.record(
-        action="auth.login",
+        action="auth.emergency_login" if method == "emergency" else "auth.login",
         actor=user,
         request=request,
         object_type="user",
         object_id=user.pk,
         object_label=user.username,
+        detail=f"Sign-in method: {method}",
     )
     return user
 
@@ -159,6 +237,12 @@ def logout_session(request) -> None:
 
 
 def change_own_password(request, current_password: str, new_password: str) -> None:
+    from .oidc import METHOD
+
+    if request.session.get(METHOD) == "entra":
+        raise ApiError(
+            "SSO_PASSWORD_MANAGED", "Your sign-in password is managed by Microsoft Entra.", 409
+        )
     user: User = request.user
     if not user.check_password(current_password):
         raise serializers.ValidationError({"current_password": ["Current password is incorrect."]})
@@ -287,6 +371,7 @@ def disable_user(request, user: User, reason: str) -> User:
         user.disabled_at = timezone.now()
         user.disabled_by = request.user
         user.disabled_reason = reason
+        user.emergency_access_until = None
         user.session_epoch = F("session_epoch") + 1  # revokes all sessions
         user.version = F("version") + 1
         user.save()
@@ -315,6 +400,7 @@ def enable_user(request, user: User) -> User:
         user.disabled_at = None
         user.disabled_by = None
         user.disabled_reason = ""
+        user.emergency_access_until = None
         user.failed_login_count = 0
         user.locked_until = None
         user.version = F("version") + 1
@@ -356,9 +442,22 @@ def reset_password(request, user: User, new_password: str) -> User:
     user.password_changed_at = timezone.now()
     user.failed_login_count = 0
     user.locked_until = None
+    user.emergency_access_until = None
     user.session_epoch = F("session_epoch") + 1
     user.version = F("version") + 1
-    user.save()
+    user.save(
+        update_fields=[
+            "password",
+            "must_change_password",
+            "password_changed_at",
+            "failed_login_count",
+            "locked_until",
+            "emergency_access_until",
+            "session_epoch",
+            "version",
+            "modified_at",
+        ]
+    )
     user.refresh_from_db()
     audit.record(
         action="users.password_reset",

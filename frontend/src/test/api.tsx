@@ -6,6 +6,7 @@ import { AppRoutes } from '../app/App'
 import { createQueryClient } from '../app/queryClient'
 import type {
   AssetCategory,
+  AuthProvider,
   AssetDetail,
   AuditEvent,
   CustomFieldDefinition,
@@ -33,6 +34,11 @@ export interface Recorded {
   headers: Record<string, string>
   body: unknown
 }
+
+export const AUTH_PROVIDERS: AuthProvider[] = [
+  { id: 'local', kind: 'local', label: 'Local account', status: 'available' },
+  { id: 'entra', kind: 'oidc', label: 'Microsoft Entra ID', status: 'planned' },
+]
 
 /** Routes fetch by "METHOD /path/" (relative to /api/v1). Unmatched calls fail loudly. */
 export function mockApi(routes: Record<string, Handler>) {
@@ -157,6 +163,8 @@ export const operatorMe = () =>
 
 export function makeUser(overrides: Partial<User> = {}): User {
   return {
+    entra_tenant_id: null,
+    entra_object_id: null,
     id: '11111111-1111-4111-8111-111111111111',
     username: 'jane.doe',
     display_name: 'Jane Doe',
