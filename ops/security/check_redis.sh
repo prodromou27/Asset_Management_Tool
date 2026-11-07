@@ -5,8 +5,15 @@ name="itam-redis-proof-$(python3 -c 'import uuid; print(uuid.uuid4().hex)')"
 volume="$name-data"
 created=false
 cleanup() {
+    status=$?
+    if test "$status" -ne 0; then
+        # Synthetic fixture only: no application configuration or credentials.
+        docker inspect --format '{{json .State}}' "$name" >&2 || true
+        docker logs --tail 80 "$name" >&2 || true
+    fi
     docker rm --force "$name" >/dev/null 2>&1 || true
     if "$created"; then docker volume rm "$volume" >/dev/null; fi
+    return "$status"
 }
 trap cleanup EXIT
 docker volume create --label itam.runtime-proof=true "$volume" >/dev/null
