@@ -1,7 +1,9 @@
 # Locked dependencies and production-image vulnerability gate
 
-Task 022f scans static artifacts only. It does not scan networks, start application
-containers, send application source to a hosted scanner or add an application feature.
+The scanner reads static artifacts only. It does not scan networks, execute image
+contents, send application source to a hosted scanner or add an application feature.
+Runtime-base changes have a separate bounded, network-disabled Django import/deploy
+check using synthetic CI configuration; it does not start an application service.
 CI downloads the pinned Trivy 0.76.2 Linux/x86-64 release and verifies its hard-coded
 SHA-256 before extracting only the binary. The pin/digest were checked against the
 official immutable release assets on 7 November 2026. This is checksum verification,
