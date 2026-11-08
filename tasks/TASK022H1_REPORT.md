@@ -53,6 +53,8 @@ Candidate 648fbbe then produced all subpackages but index creation rejected its
 temporary signing key. Install that public key in the disposable builder only;
 no signing key/trust store is copied into release targets. Rebuilt version smoke
 checks are also network-disabled (e658530). These corrections retain validation.
+The keygen install shortcut in 3bd8073 required absent `doas`; the root-only builder
+now copies its newly generated public key directly, without adding a privilege helper.
 
 Paths: `backend/Dockerfile`, `backend/runtime/`, `ops/security/{scan,gate,test_*}.py`,
 CI timeout and operator docs. No app migration/RBAC/API/UI changes are needed.
