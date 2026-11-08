@@ -63,7 +63,7 @@ COPY --from=restic-build /go/bin/restic /usr/local/bin/restic
 COPY --from=restic-build /go/bin/restic.LICENSE /usr/local/share/licenses/restic/LICENSE
 COPY --from=restic-build /go/bin/restic-buildinfo.txt /usr/local/share/itam/restic-buildinfo.txt
 USER itam
-RUN pg_dump --version && pg_restore --version && restic version
+RUN --network=none pg_dump --version && pg_restore --version && restic version
 
 # CI-only target: exercise the existing PostgreSQL/Redis/SFTP suite on this libc.
 FROM backup-runner AS runtime-tests
