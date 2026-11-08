@@ -1,0 +1,28 @@
+# Reviewed upstream maintenance package for the pinned Alpine runtime; no edge packages.
+pkgname=sqlite
+pkgver=3.54.1
+pkgrel=0
+pkgdesc="SQLite runtime built from verified upstream source"
+url="https://sqlite.org/"
+arch="all"
+license="blessing"
+makedepends="build-base"
+subpackages="$pkgname-libs"
+options="!check"
+source="sqlite-autoconf-3540100.tar.gz"
+builddir="$srcdir/sqlite-autoconf-3540100"
+
+build() {
+    export CFLAGS="$CFLAGS -DSQLITE_ENABLE_FTS3_PARENTHESIS -DSQLITE_ENABLE_COLUMN_METADATA -DSQLITE_SECURE_DELETE -DSQLITE_ENABLE_UNLOCK_NOTIFY -DSQLITE_ENABLE_RTREE -DSQLITE_ENABLE_GEOPOLY -DSQLITE_USE_URI -DSQLITE_ENABLE_DBSTAT_VTAB -DSQLITE_SOUNDEX -DSQLITE_MAX_VARIABLE_NUMBER=250000"
+    ./configure --prefix=/usr --enable-threadsafe --disable-readline \
+        --enable-session --enable-fts3 --enable-fts4 --enable-fts5 --soname=legacy
+    make -j2
+}
+
+package() {
+    make DESTDIR="$pkgdir" install
+}
+
+sha512sums="
+3df4348f54f5cd0554eec6d91e1d08a70535b7b78f497b2c6f24910b5087f6ef70483c9e35fa388bd8f38483cb8d1cb84e98ccdd58b9f525a10e0cf48c8c6742  sqlite-autoconf-3540100.tar.gz
+"

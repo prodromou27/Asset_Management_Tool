@@ -1,4 +1,4 @@
-"""Static lockfile/image evidence. Does not start application containers or scan hosts."""
+"""Static scans plus a bounded, network-disabled SQLite library proof; never scans hosts."""
 
 import argparse
 import hashlib
@@ -7,6 +7,7 @@ import os
 import shutil
 import subprocess
 import tempfile
+import uuid
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -19,8 +20,70 @@ TOOLS = os.environ.get("TRIVY_BIN", "trivy")
 
 def run(args, **kwargs):
     return subprocess.run(
-        args, check=True, capture_output=True, text=True, timeout=1200, **kwargs
+        args,
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=kwargs.pop("timeout", 1200),
+        **kwargs,
     ).stdout
+
+
+GO_BINARIES = {
+    "backup-worker": {"usr/local/bin/restic": ("github.com/restic/restic", "stdlib")},
+    "postgres": {"usr/local/bin/gosu": ("github.com/tianon/gosu", "stdlib")},
+}
+
+
+def sqlite_proof(image_id):
+    name = "itam-sqlite-proof-" + uuid.uuid4().hex
+    try:
+        return json.loads(
+            run(
+                [
+                    "docker",
+                    "run",
+                    "--rm",
+                    "--name",
+                    name,
+                    "--network",
+                    "none",
+                    "--read-only",
+                    "--cap-drop",
+                    "ALL",
+                    "--security-opt",
+                    "no-new-privileges:true",
+                    "--memory",
+                    "256m",
+                    "--cpus",
+                    "1",
+                    "--pids-limit",
+                    "32",
+                    "--ulimit",
+                    "fsize=1048576",
+                    "--log-driver",
+                    "none",
+                    "--tmpfs",
+                    "/scratch:rw,noexec,nosuid,size=16m,mode=1777",
+                    "--entrypoint",
+                    "/usr/bin/env",
+                    image_id,
+                    "-i",
+                    "PATH=/usr/local/bin:/usr/bin:/bin",
+                    "HOME=/scratch",
+                    "TMPDIR=/scratch",
+                    "PYTHONDONTWRITEBYTECODE=1",
+                    "python",
+                    "-I",
+                    "-B",
+                    "/app/runtime/check_sqlite.py",
+                ],
+                timeout=30,
+            )
+        )
+    finally:
+        # Only this generated proof container is eligible for cleanup, including timeout paths.
+        subprocess.run(["docker", "rm", "--force", name], capture_output=True, timeout=30)
 
 
 def image_for(service, target, commit):
@@ -115,6 +178,9 @@ def main(mode):
                         raise ValueError("Scratch directory escaped the evidence root")
                     report_path = output / f"{target}.json"
                     report_path.unlink(missing_ok=True)
+                    if mode == "images":
+                        for suffix in ("sqlite", "upstream"):
+                            (output / f"{target}-{suffix}.json").unlink(missing_ok=True)
                     metadata = {}
                     if mode == "locks":
                         files = (
@@ -185,7 +251,78 @@ def main(mode):
                             required_packages=("django",)
                             if target in {"api", "backup-worker"}
                             else (),
+                            required_os_versions={"sqlite-libs": "3.54.1-r0"}
+                            if target in {"api", "backup-worker"}
+                            else None,
                         )
+                        if target in {"api", "backup-worker"}:
+                            proof = sqlite_proof(metadata["Id"])
+                            expected_source = json.loads(
+                                (ROOT / "backend/runtime/sqlite/source.json").read_text()
+                            )
+                            expected_recipe = hashlib.sha256(
+                                (ROOT / "backend/runtime/sqlite/APKBUILD").read_bytes()
+                            ).hexdigest()
+                            if (
+                                proof.get("passed") is not True
+                                or proof.get("source") != expected_source
+                                or proof.get("recipe_sha256") != expected_recipe
+                            ):
+                                raise ValueError(
+                                    "SQLite runtime proof does not match reviewed provenance"
+                                )
+                            proof.update(
+                                image_id=metadata["Id"], source_commit=summary["source_commit"]
+                            )
+                            (output / f"{target}-sqlite.json").write_text(
+                                json.dumps(proof, indent=2)
+                            )
+                            checked["sqlite_proof"] = proof
+                        if target in GO_BINARIES:
+                            upstream_path = output / f"{target}-upstream.json"
+                            upstream_path.unlink(missing_ok=True)
+                            run(
+                                [
+                                    TOOLS,
+                                    "image",
+                                    "--offline-scan",
+                                    "--input",
+                                    str(archive),
+                                    *common,
+                                    "--scanners",
+                                    "vuln",
+                                    "--list-all-pkgs",
+                                    "--report",
+                                    "all",
+                                    "--pkg-types",
+                                    "library",
+                                    "--detection-priority",
+                                    "comprehensive",
+                                    "--skip-db-update",
+                                    "--skip-java-db-update",
+                                    "--ignore-unfixed=false",
+                                    "--severity",
+                                    "UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL",
+                                    "--format",
+                                    "json",
+                                    "--output",
+                                    str(upstream_path),
+                                    "--exit-code",
+                                    "0",
+                                ]
+                            )
+                            upstream = evaluate(
+                                json.loads(upstream_path.read_text()),
+                                required_type="gobinary",
+                                required_binaries=GO_BINARIES[target],
+                            )
+                            checked["upstream"] = upstream
+                            print(
+                                f"{target} upstream: {upstream['status']}; {upstream['counts']}",
+                                flush=True,
+                            )
+                            if upstream["status"] != "passed":
+                                checked["status"] = "held"
                     summary["targets"][target] = {**checked, "identity": metadata}
                     print(f"{target}: {checked['status']}; {checked['counts']}", flush=True)
             except Exception as exc:

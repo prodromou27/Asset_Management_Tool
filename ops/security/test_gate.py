@@ -14,6 +14,75 @@ BASE = {
 
 
 class SecurityGateTests(unittest.TestCase):
+    def go_report(self):
+        report = copy.deepcopy(BASE)
+        report["Results"].append(
+            {
+                "Type": "gobinary",
+                "Target": "usr/local/bin/restic",
+                "Packages": [
+                    {"Name": "github.com/restic/restic", "Version": "v0.18.1"},
+                    {"Name": "stdlib", "Version": "v1.27.3"},
+                ],
+            }
+        )
+        return report
+
+    def test_requires_compiler_and_module_in_the_exact_binary(self):
+        required = {"usr/local/bin/restic": ("github.com/restic/restic", "stdlib")}
+        result = evaluate(self.go_report(), required_binaries=required)
+        self.assertEqual(result["binaries"]["usr/local/bin/restic"]["stdlib"], "v1.27.3")
+        with self.assertRaises(ValueError):
+            evaluate(BASE, required_binaries=required)
+        report = self.go_report()
+        report["Results"][-1]["Target"] = "another/binary"
+        with self.assertRaises(ValueError):
+            evaluate(report, required_binaries=required)
+
+    def test_partial_unversioned_or_ambiguous_binary_coverage_fails(self):
+        required = {"usr/local/bin/restic": ("github.com/restic/restic", "stdlib")}
+        for version in (None, "", "(devel)"):
+            report = self.go_report()
+            report["Results"][-1]["Packages"][1]["Version"] = version
+            with self.subTest(version=version), self.assertRaises(ValueError):
+                evaluate(report, required_binaries=required)
+        report = self.go_report()
+        report["Results"].append(copy.deepcopy(report["Results"][-1]))
+        with self.assertRaises(ValueError):
+            evaluate(report, required_binaries=required)
+
+    def test_binary_findings_still_hold_even_when_coverage_is_complete(self):
+        report = self.go_report()
+        report["Results"][-1]["Vulnerabilities"] = [
+            {
+                "VulnerabilityID": "GO-fixture",
+                "PkgName": "stdlib",
+                "Severity": "HIGH",
+            }
+        ]
+        self.assertEqual(
+            evaluate(
+                report,
+                required_binaries={
+                    "usr/local/bin/restic": ("github.com/restic/restic", "stdlib"),
+                },
+            )["status"],
+            "held",
+        )
+
+    def test_reviewed_sqlite_os_version_is_required(self):
+        required = {"sqlite-libs": "3.54.1-r0"}
+        report = copy.deepcopy(BASE)
+        for version in (None, "3.53.4-r0", "3.54.1-r0"):
+            report["Results"][1]["Packages"] = [{"Name": "sqlite-libs", "Version": version}]
+            if version == "3.54.1-r0":
+                self.assertEqual(
+                    evaluate(report, required_os_versions=required)["status"], "passed"
+                )
+            else:
+                with self.assertRaises(ValueError):
+                    evaluate(report, required_os_versions=required)
+
     def test_valid_coverage_without_findings(self):
         self.assertEqual(
             evaluate(BASE, required_type="uv", required_packages=("django", "pytest"))["status"],

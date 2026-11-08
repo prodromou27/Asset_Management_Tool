@@ -8,8 +8,9 @@ Until patched-library provenance and exact-binary compiler/module coverage are
 validated, do not promote these images as security-signed-off builds. This is a
 manual release hold, not an added automated gate or a suppression of findings.
 
-The scanner reads static artifacts only. It does not scan networks, execute image
-contents, send application source to a hosted scanner or add an application feature.
+The scanner reads static artifacts and runs a bounded SQLite identity/compatibility
+probe on API/backup images. It does not scan networks, send application source to
+a hosted scanner or add an application feature.
 Runtime-base changes have a separate bounded, network-disabled Django import/deploy
 check using synthetic CI configuration; it does not start an application service.
 CI downloads the pinned Trivy 0.76.2 Linux/x86-64 release and verifies its hard-coded
@@ -60,6 +61,24 @@ JSON reports/summary for 14 days, not scanner caches or image archives. Always i
 summary status, errors, counts, source/lock hashes and image identities together. A
 nonzero command result holds release even when the ordinary test jobs are green.
 Advisories require source/runtime triage; scanner severity is not proof of an exploit.
+
+Task 022h1 keeps vendor reports and adds `backup-worker-upstream.json` and
+`postgres-upstream.json` with comprehensive library detection against the exact same
+saved image archive. The gate requires the expected restic/gosu path, its main module
+and a versioned Go stdlib in that binary. Missing/development/ambiguous compiler or
+module evidence fails closed. HIGH/CRITICAL in either report holds the target; the
+vendor and upstream counts remain separate to avoid pretending duplicates are unique.
+No upstream report replaces vendor backport evidence.
+
+API/backup must report reviewed `sqlite-libs=3.54.1-r0`. Each exact image also runs
+`runtime/check_sqlite.py` as its nonroot user in a read-only, network-disabled
+container with an empty allowlisted environment, scratch tmpfs only, no capabilities,
+one CPU, 256 MB, 32 processes, file-size and 30-second time limits. It checks the
+actual Python-linked version, source ID, required compile options, loaded-library
+hash and a small in-memory FTS5 negative-rowid/prefix fixture. Parent code binds the
+JSON proof to the inspected image ID/source commit and reviewed manifest/recipe hash.
+Only the generated proof container can be cleaned up. No database volume is mounted.
+Raw proof files are retained as `{api,backup-worker}-sqlite.json`.
 
 Image version tags remain build inputs; the report binds the scan to resolved IDs.
 Release promotion must retain/publish those tested builds, pin deployment digests and

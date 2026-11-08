@@ -1,0 +1,9 @@
+{
+  "component": "sqlite",
+  "version": "3.54.1",
+  "source_url": "https://www.sqlite.org/2026/sqlite-autoconf-3540100.tar.gz",
+  "sha256": "926ef8d3eab93fbf6e06011901273eec076b25594a4e1cdadd50c987f4f6d64e",
+  "sha3_256": "b6ced585c750916b1052667239a12c25a7ff34e7f06e1e6e01ecb0427657d9c4",
+  "sha512": "3df4348f54f5cd0554eec6d91e1d08a70535b7b78f497b2c6f24910b5087f6ef70483c9e35fa388bd8f38483cb8d1cb84e98ccdd58b9f525a10e0cf48c8c6742",
+  "purpose": "Replace sqlite-libs using normal APK upgrade metadata and the existing legacy SONAME. No application database change."
+}

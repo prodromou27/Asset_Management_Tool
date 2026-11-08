@@ -1,5 +1,31 @@
 # Production runtime images
 
+Task 022h1 candidate: `backend/Dockerfile` builds upstream SQLite 3.54.1 into a normal
+Alpine `sqlite-libs` APK (origin `sqlite`) using `backend/runtime/sqlite/APKBUILD`.
+The official source archive is pinned with Docker SHA-256 and recipe SHA-512, derived
+only after verifying SQLite's published SHA3-256. Compilation/package assembly is
+network-disabled. The isolated builder generates its own temporary signing key;
+only its library APK enters the runtime. Installation accepts that local APK without
+network access; it does not add a new repository or trusted signing key. APK metadata
+and old library files are upgraded normally, rather than shadowing an old package.
+Legacy SONAME and FTS3/4/5, RTree/session options are retained. Compilers, keys and
+headers do not enter the release image. Provenance JSON/recipe are retained in
+`/usr/local/share/itam/`; the exact-image probe records actual linkage/options/hash.
+
+The backup candidate builds unchanged restic 0.18.1 using the same pinned Go 1.27.3
+toolchain as gosu, with CGO disabled, module checksum verification, symbols/build info
+retained and compilation network-disabled after dependency download. Only the binary,
+license and build metadata enter the backup image; the APK-owned old restic is no
+longer installed. Public module checksums authenticate versioned source/dependencies.
+SFTP/CLI/format behavior must pass the existing runtime and encrypted restore proofs.
+
+Forward/rollback: no application schema or PostgreSQL major/layout changes. Prove
+both API/backup Python imports and the full PostgreSQL/Redis/SFTP suite on Linux,
+plus exact vendor/upstream image scans and isolated restores. Reverting source/images
+in isolated staging preserves app/database formats, but previously vulnerable builds
+are not approved production fallbacks. No host or existing volume is changed here.
+This is a maintained source-built library/tool, not a claim of upstream binary provenance.
+
 Task 022f3's API/backup Python runtime is defined in `backend/Dockerfile`: pinned
 Python 3.12.16 on supported Alpine 3.24, unchanged lockfile, musllinux wheels and
 explicit application UID/GID 10001. Only the backup target includes PostgreSQL 16

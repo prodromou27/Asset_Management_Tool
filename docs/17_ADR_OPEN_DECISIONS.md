@@ -451,6 +451,33 @@ See [Task 022h report](../tasks/TASK022H_REPORT.md) for sources/dispositions and
 bounded Task 022h1 acceptance.
 Review is source/evidence-only: no runtime, host, image, schema or threshold change.
 
+### ASM-75 - Task 022h1 SQLite/compiler remediation candidate (2026-11-08)
+
+Preserve Python 3.12/Alpine 3.24 and PostgreSQL data formats. Build reviewed SQLite
+3.54.1 from the official archive as an APK upgrade with origin sqlite and legacy
+SONAME, retaining required compile options. Source SHA-256/SHA-512 were derived
+after verifying the publisher's SHA3-256; Docker and abuild independently check
+their pins. Build the existing restic 0.18.1 module with pinned Go 1.27.3, retaining
+symbols, checksum-verified dependencies and metadata. No edge repository or old
+library shadowing. Source package/key/compiler stages never enter release targets.
+
+Keep vendor scans and separate comprehensive upstream library scans of the same
+exact archives. Require restic/gosu main-module and stdlib versions at their exact
+paths. Missing coverage or HIGH/CRITICAL in either result holds release. Require
+the reviewed SQLite APK version and an exact-image, empty-environment, nonroot,
+read-only/network-disabled/resource-bounded linked-library/FTS proof with source,
+recipe and library hashes. No waiver, host deployment or schema migration.
+
+Forward proof retains full candidate PostgreSQL/Redis/SFTP, wrong-pin/password,
+deploy/import, Nginx and restore gates. Isolated image/source reversal preserves
+data layout; old vulnerable builds remain unapproved release fallbacks. Source-built
+components require future pinned-source updates, compatibility proof and fresh scans.
+G02 stays held until candidate evidence is reviewed in TASK022H1_REPORT.md.
+
+Sources: [SQLite publisher hashes](https://sqlite.org/download.html),
+[restic source](https://github.com/restic/restic/tree/v0.18.1),
+[Trivy detection policy](https://trivy.dev/docs/latest/scanner/vulnerability/#detection-priority).
+
 ## GLPI licensing note
 
 GLPI repository is GPLv3. Use product concepts and independently written code. Forking or copying GLPI source is a **separate** licensing/product strategy requiring owner approval. Do not casually mix GPL files into a differently licensed custom codebase.

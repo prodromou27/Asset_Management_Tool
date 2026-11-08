@@ -4,10 +4,29 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from scan import ROOT, image_for, production_compose
+from scan import ROOT, image_for, production_compose, sqlite_proof
 
 
 class ImageSelectionTests(unittest.TestCase):
+    @patch("scan.subprocess.run")
+    @patch("scan.run", return_value='{"passed":true}')
+    def test_sqlite_probe_has_empty_environment_readonly_networkless_limits(self, run, cleanup):
+        self.assertEqual(sqlite_proof("sha256:fixture"), {"passed": True})
+        args = run.call_args.args[0]
+        for option, value in (("--network", "none"), ("--memory", "256m"), ("--pids-limit", "32")):
+            self.assertEqual(args[args.index(option) + 1], value)
+        self.assertIn("--read-only", args)
+        self.assertEqual(args[args.index("sha256:fixture") + 1], "-i")
+        self.assertEqual(run.call_args.kwargs["timeout"], 30)
+        self.assertEqual(cleanup.call_args.args[0][-1], args[args.index("--name") + 1])
+
+    @patch("scan.subprocess.run")
+    @patch("scan.run", side_effect=TimeoutError("fixture timeout"))
+    def test_timed_out_probe_still_cleans_up_only_its_generated_container(self, run, cleanup):
+        with self.assertRaises(TimeoutError):
+            sqlite_proof("sha256:fixture")
+        self.assertTrue(cleanup.call_args.args[0][-1].startswith("itam-sqlite-proof-"))
+
     @patch("scan.run", return_value='{"services":{"backup-worker":{}}}')
     def test_production_config_enables_optional_backup_service(self, run):
         self.assertIn("backup-worker", production_compose()["services"])
