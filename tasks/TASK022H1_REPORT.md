@@ -63,6 +63,10 @@ Candidate 4fe8c30 passed production image builds but offline restic compilation
 needed an indirect module checksum absent from the lazy download. Prefetch and
 verify the complete module graph with `go mod download all`; preserve SumDB and
 the file-only proxy during compilation.
+Candidate e000e61 confirmed that module-context download trusts upstream `go.sum`
+without warming the separate SumDB lookup cache used by `go install @version`.
+Download the selected dependency graph once outside that module as well, requiring
+public checksum verification before offline installation. No verification is disabled.
 
 Paths: `backend/Dockerfile`, `backend/runtime/`, `ops/security/{scan,gate,test_*}.py`,
 CI timeout and operator docs. No app migration/RBAC/API/UI changes are needed.

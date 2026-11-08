@@ -13,7 +13,11 @@ RUN --network=none abuild -F -d \
 FROM golang:1.27.3-alpine3.24@sha256:fa3d596898d9f126af7c01d14ee7597bab3f39cccf392ef36b69fe77cd681f18 AS restic-build
 ENV CGO_ENABLED=0 GOTOOLCHAIN=local GOMAXPROCS=2 GOSUMDB=sum.golang.org GOPROXY=https://proxy.golang.org
 RUN go mod download -json github.com/restic/restic@v0.18.1
-RUN cd /go/pkg/mod/github.com/restic/restic@v0.18.1 && go mod download all && go mod verify
+RUN cd /go/pkg/mod/github.com/restic/restic@v0.18.1 \
+    && go mod download all && go mod verify \
+    && go list -m -f '{{if not .Main}}{{.Path}}@{{.Version}}{{end}}' all > /tmp/restic-modules \
+    && cd /tmp && xargs go mod download < /tmp/restic-modules \
+    && rm /tmp/restic-modules
 RUN --network=none GOPROXY=file:///go/pkg/mod/cache/download go install -p 2 -trimpath -ldflags '-X main.version=0.18.1' github.com/restic/restic/cmd/restic@v0.18.1 \
     && cp /go/pkg/mod/github.com/restic/restic@v0.18.1/LICENSE /go/bin/restic.LICENSE \
     && go version -m /go/bin/restic > /go/bin/restic-buildinfo.txt
