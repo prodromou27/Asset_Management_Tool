@@ -99,7 +99,8 @@ def collect_operations():
             "identity",
             "SSO/MFA and emergency access",
             "unknown",
-            "Local sign-in is implemented; external SSO/MFA is planned. Verify emergency access.",
+            "Local accounts support optional MFA; configured Entra uses IdP MFA. "
+            "Verify the chosen sign-in methods and emergency recovery on the target host.",
             "/admin/users",
         ),
         row(
