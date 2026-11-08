@@ -1,5 +1,7 @@
 """Fail closed on missing coverage and HIGH/CRITICAL findings; no suppression list."""
 
+import re
+
 SEVERITIES = {"UNKNOWN", "LOW", "MEDIUM", "HIGH", "CRITICAL"}
 
 
@@ -39,7 +41,11 @@ def evaluate(
         if len(rows) != 1:
             raise ValueError(f"Missing or ambiguous Go binary coverage: {path}")
         versions = {p.get("Name"): p.get("Version") for p in rows[0].get("Packages", [])}
-        if any(not versions.get(name) or versions[name] == "(devel)" for name in names):
+        if any(
+            not isinstance(versions.get(name), str)
+            or not re.fullmatch(r"v\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.+-]+)?", versions[name])
+            for name in names
+        ):
             raise ValueError(f"Missing versioned Go compiler/module coverage: {path}")
         binaries[path] = {name: versions[name] for name in names}
     for name, expected in (required_os_versions or {}).items():

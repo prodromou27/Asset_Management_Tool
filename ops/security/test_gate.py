@@ -41,7 +41,7 @@ class SecurityGateTests(unittest.TestCase):
 
     def test_partial_unversioned_or_ambiguous_binary_coverage_fails(self):
         required = {"usr/local/bin/restic": ("github.com/restic/restic", "stdlib")}
-        for version in (None, "", "(devel)"):
+        for version in (None, "", "(devel)", "unknown", "   ", 1):
             report = self.go_report()
             report["Results"][-1]["Packages"][1]["Version"] = version
             with self.subTest(version=version), self.assertRaises(ValueError):

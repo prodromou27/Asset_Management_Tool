@@ -2,11 +2,14 @@
 
 import hashlib
 import json
+import os
 import sqlite3
 from pathlib import Path
 
 
 def main():
+    if os.geteuid() == 0:
+        raise RuntimeError("The SQLite proof must run as the release application's nonroot UID")
     provenance = Path("/usr/local/share/itam")
     source = json.loads((provenance / "sqlite-source.json").read_text())
     if sqlite3.sqlite_version != source["version"]:
@@ -36,6 +39,7 @@ def main():
         json.dumps(
             {
                 "passed": True,
+                "uid": os.geteuid(),
                 "sqlite_version": sqlite3.sqlite_version,
                 "source_id": source_id,
                 "compile_options": options,

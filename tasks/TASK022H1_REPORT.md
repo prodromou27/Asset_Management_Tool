@@ -44,6 +44,12 @@ The 30-minute Compose CI limit bounds the new source-build/runtime job.
 G02 remains held while candidate validation is pending. Final source/CI/artifact
 evidence, findings and dispositions will be recorded after the complete gates run.
 
+Initial candidate `2437d38`, CI 42515643237: all five non-image jobs passed; SQLite
+compiled but abuild rejected uncompressed main-package man pages. The correction
+uses normal Alpine static/doc/dev/libs splits (only libs enters the release),
+without disabling postchecks. Coverage validation also rejects malformed version
+labels; the probe explicitly selects UID/GID 10001 and the application interpreter.
+
 Paths: `backend/Dockerfile`, `backend/runtime/`, `ops/security/{scan,gate,test_*}.py`,
 CI timeout and operator docs. No app migration/RBAC/API/UI changes are needed.
 Rollback is isolated source/image reversal with unchanged PostgreSQL layout;

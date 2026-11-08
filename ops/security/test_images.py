@@ -16,6 +16,7 @@ class ImageSelectionTests(unittest.TestCase):
         for option, value in (("--network", "none"), ("--memory", "256m"), ("--pids-limit", "32")):
             self.assertEqual(args[args.index(option) + 1], value)
         self.assertIn("--read-only", args)
+        self.assertEqual(args[args.index("--user") + 1], "10001:10001")
         self.assertEqual(args[args.index("sha256:fixture") + 1], "-i")
         self.assertEqual(run.call_args.kwargs["timeout"], 30)
         self.assertEqual(cleanup.call_args.args[0][-1], args[args.index("--name") + 1])
