@@ -28,14 +28,14 @@
 | DEC-01 | Owner reaffirmed AlmaLinux acceptance on 2026-11-06. Keep ADR-003; no further OS-choice approval is needed. Record architecture, installed release and Docker compatibility during host commissioning | Acceptance does not supply a host address/access method or prove runtime checks; no host installation performed |
 | DEC-02 | CPU/RAM/disks, DB/media size expectations | Reference 8 vCPU/24–32GB proposal pending load test |
 | DEC-03 | ITAM internal FQDN, DNS zone, TLS certificate method | example.invalid placeholder; localhost dev only |
-| DEC-04 | Owner selected Microsoft Entra OIDC with MFA on 2026-11-07 (Task 022g) | Provider choice resolved; live tenant/app/FQDN/secret and Conditional Access configuration require commissioning; see ASM-72 |
+| DEC-04 | Owner permits local users with optional MFA alongside Entra (2026-11-08, 022g1) | Local-only or combined deployment permitted; enabling Entra requires tenant/app/FQDN/secret and Conditional Access commissioning; see ASM-73 |
 | DEC-05 | LibreNMS version, HTTPS URL, read-only REST token (role/scopes), auth header accepted by the installed version, server time zone, sanitized sample payload, and written approval for live access | Adapter built and fixture-tested (Task 006, Beta). Live access off: `ITAM_ALLOW_LIVE_INTEGRATIONS=false` and no per-instance approval |
 | DEC-06 | Endpoint Central on-prem build, verified HTTPS URL/port, read-only API key (inventory read only), which API generation (dcapi or api/1.4) the build serves, header format, server time zone, sanitized sample responses, written approval for live access | Adapter built and fixture-tested (Task 007, Beta). Live access off, as for LibreNMS |
 | DEC-07 | Microsoft tenant ID; a dedicated single-tenant app registration with only the **application** permission `DeviceManagementManagedDevices.Read.All` and admin consent; certificate (preferred, PEM with key and certificate as a mounted secret file) or client secret; outbound HTTPS from the Docker host to `login.microsoftonline.com` and `graph.microsoft.com`; a sanitized sample `managedDevices` response; written approval for live access | Adapter built and fixture-tested (Task 008, Beta). Live access off, as for LibreNMS and Endpoint Central |
 | DEC-08 | SMTP provider/relay hostname, port, sender, TLS/auth, recipient groups | Mail capture in dev; prod email disabled |
 | DEC-09 | Backup off-host destination, encryption key custody, retention, RPO/RTO approval | Local test backups only, not production ready |
 | DEC-10 | Domain/TLS approved list, registrar and owners | Manual sample fixtures only |
-| DEC-11 | Owner selected Entra MFA plus reviewed local emergency access on 2026-11-07 | Approach resolved; protected-host recovery custody, two named admins and live MFA/recovery tests remain release gates; see ASM-72 |
+| DEC-11 | Optional local authenticator MFA, required after enrollment; Entra keeps approved IdP MFA (2026-11-08) | No mandatory local enrollment, including named admins. Verify chosen flows and protected-host recovery custody/drill; see ASM-73 |
 | DEC-12 | EOL vendor support portal/API entitlements | Official public source/import workflow; Unknown otherwise |
 | DEC-13 | Site/location hierarchy, asset tag policy and sample inventory files | Configurable schema; no real import |
 | DEC-14 | ITAM report recipients and escalation thresholds | Notifications disabled until SMTP/owners approved |
@@ -349,6 +349,9 @@ Sources: [official Python build](https://github.com/docker-library/python/tree/m
 
 ### ASM-72 - Task 022g approved Entra MFA and emergency access (2026-11-07)
 
+Policy superseded by ASM-73 on 2026-11-08. This section records the original 022g
+decision and evidence; its Entra-only restriction is no longer the current policy.
+
 Owner explicitly selected Microsoft Entra SSO with MFA and reviewed local emergency
 access. Use single-tenant global-cloud Authlib authorization-code/PKCE with RS256
 ID-token validation, nonce, browser-bound one-use state, fixed tenant endpoints and
@@ -387,6 +390,45 @@ logs. See [operator runbook](../ops/auth/README.md). Tenant/host changes remain 
 Sources: [Microsoft authentication-context guidance](https://learn.microsoft.com/en-us/entra/identity-platform/developer-guide-conditional-access-authentication-context),
 [Authlib Django implementation](https://github.com/authlib/authlib/blob/v1.9.5/authlib/integrations/django_client/apps.py),
 [Authlib signed-token validation](https://github.com/authlib/authlib/blob/v1.9.5/authlib/integrations/base_client/sync_openid.py).
+
+### ASM-73 - Task 022g1 local accounts with optional MFA (2026-11-08)
+
+Owner explicitly allows local users with optional MFA alongside Entra. Interpret
+this as optional enrollment for every local role, including named admins; enrolled
+factors are mandatory until verified removal. Local-only production is permitted.
+Entra retains signed-token/PKCE/context verification and explicit identity mapping.
+Retire `ITAM_ENTRA_ENFORCE`; it no longer represents the chosen policy. A per-account
+`local_login_enabled` flag controls local sign-in. Existing unbound local accounts
+remain enabled; migration 0018 preserves existing linked accounts as local-disabled.
+New/replaced Entra links disable local login; an authorized, versioned/audited user
+update explicitly enables both methods. No outage-triggered password fallback.
+
+Use supported PyOTP TOTP (6 digits, 30 seconds, +/- one step) and existing Fernet
+encryption with a local-factor purpose. Fresh local password is required for setup;
+pending enrollment expires in ten minutes and cannot authenticate. A verified code
+activates enrollment, revokes other sessions and yields ten 128-bit random recovery
+codes once. Store only SHA-256 code hashes. Row locks serialize last-used TOTP step
+and recovery-code consumption; failures use existing throttling and account lockout.
+No protected session precedes required local factors. Fresh password and a current
+unused code/recovery code are required for self-removal. MFA changes audit metadata
+only and revoke other sessions. Admin password reset does not silently remove MFA.
+
+Re-use the protected shell for lost-factor recovery (`reset_local_mfa` with verified
+identity and an incident reference), revoking sessions without changing sign-in
+permissions. Emergency admin windows stay one-use/15 minutes and now explicitly
+disable ordinary local login so the emergency password cannot outlive the grant.
+Re-enable ordinary local login only by deliberate admin action after recovery.
+
+Migration 0018 is additive, but **mixed old/new authentication servers are unsafe
+once local MFA is enrolled**. Stop old API/workers before migration, deploy the new
+code exclusively, then enroll users. Preserve encryption-key custody (configured
+import Fernet key or derived Django secret); rotate/migrate keys only with a tested
+re-encryption/recovery procedure. An isolated structural reversal drops MFA material
+and the local-access flag. Do not expose a rolled-back password-only server with
+formerly enrolled accounts; restore the compatible backup/code and revoke sessions
+before recovery. No live migration/host/tenant change is performed by this task.
+
+Source: [PyOTP security guidance](https://pyauth.github.io/pyotp/).
 
 ## GLPI licensing note
 

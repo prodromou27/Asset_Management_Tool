@@ -134,6 +134,9 @@ function UserMenu() {
           <Link className="user-menu__item" to="/account/password" onClick={() => setOpen(false)}>
             Change password
           </Link>
+            <Link className="user-menu__item" to="/account/security" onClick={() => setOpen(false)}>
+              Local account MFA
+            </Link>
           <button
             type="button"
             className="user-menu__item"

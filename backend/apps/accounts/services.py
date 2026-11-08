@@ -34,6 +34,7 @@ def snapshot(user: User) -> dict:
         "all_sites": user.all_sites,
         "sites": site_codes_for(user),
         "is_active": user.is_active,
+        "local_login_enabled": user.local_login_enabled,
     }
 
 
@@ -103,14 +104,14 @@ def _resolve_roles(codes: list[str]) -> list[Role]:
 # --- Authentication ---------------------------------------------------------
 
 
-def login_local(request, username: str, password: str) -> User:
+def login_local(request, username: str, password: str, otp_code: str = "") -> User:
     username = username.strip().lower()
     policy = SecuritySettings.load()
     candidate = User.objects.filter(username=username).first()
 
     if (
-        settings.ITAM_ENTRA_ENABLED
-        and settings.ITAM_ENTRA_ENFORCE
+        candidate is not None
+        and not candidate.local_login_enabled
         and not _emergency_eligible(candidate)
     ):
         authenticate(request, username=username, password=password)
@@ -133,19 +134,25 @@ def login_local(request, username: str, password: str) -> User:
         _record_login_failure(request, username, candidate, detail)
         raise ApiError("LOGIN_FAILED", LOGIN_FAILED_MESSAGE, status.HTTP_401_UNAUTHORIZED)
 
-    if settings.ITAM_ENTRA_ENABLED and settings.ITAM_ENTRA_ENFORCE:
-        with transaction.atomic():
-            user = User.objects.select_for_update().get(pk=user.pk)
-            if _emergency_eligible(user) and not user.is_locked and user.check_password(password):
+    with transaction.atomic():
+        user = User.objects.select_for_update().get(pk=user.pk)
+        if user.is_active and not user.is_locked and user.check_password(password):
+            if _emergency_eligible(user):
                 expires = user.emergency_access_until.timestamp()
                 user.emergency_access_until = None
                 user.save(update_fields=["emergency_access_until"])
                 complete_session(request, user, method="emergency", expires=expires)
                 return user
-        _record_login_failure(request, username, user, "emergency access unavailable")
-        raise ApiError("LOGIN_FAILED", LOGIN_FAILED_MESSAGE, status.HTTP_401_UNAUTHORIZED)
-    complete_session(request, user)
-    return user
+            if user.local_login_enabled:
+                from .local_mfa import accept_factor
+
+                if not user.mfa_enabled or accept_factor(user, otp_code):
+                    return complete_session(
+                        request, user, method="local_mfa" if user.mfa_enabled else "local"
+                    )
+                _register_failed_attempt(request, user, policy)
+    _record_login_failure(request, username, user, "local verification failed")
+    raise ApiError("LOGIN_FAILED", LOGIN_FAILED_MESSAGE, status.HTTP_401_UNAUTHORIZED)
 
 
 def _emergency_eligible(user):
@@ -314,6 +321,37 @@ def update_user(request, user: User, changes: dict) -> User:
             user.email = email
         if "display_name" in changes:
             user.display_name = changes["display_name"]
+        if (
+            "local_login_enabled" in changes
+            and changes["local_login_enabled"] != user.local_login_enabled
+        ):
+            enabled = changes["local_login_enabled"]
+            if not enabled:
+                from .oidc import ready
+
+                if (
+                    not user.entra_object_id
+                    or str(user.entra_tenant_id).lower() != settings.ITAM_ENTRA_TENANT_ID.lower()
+                    or not ready()
+                ):
+                    raise serializers.ValidationError(
+                        {
+                            "local_login_enabled": [
+                                "Configure and link Entra before disabling local sign-in."
+                            ]
+                        }
+                    )
+                if (
+                    user.pk == request.user.pk
+                    and request.session.get("itam_auth_method") != "entra"
+                ):
+                    raise ApiError(
+                        "SELF_LOGIN_CHANGE", "Another admin must change your sign-in access.", 409
+                    )
+            if enabled != user.local_login_enabled:
+                user.local_login_enabled = enabled
+                user.session_epoch = F("session_epoch") + 1
+                user.emergency_access_until = None
         if "roles" in changes:
             role_objs = _resolve_roles(changes["roles"])
             if SYSTEM_ADMIN not in {role.code for role in role_objs}:
@@ -443,6 +481,8 @@ def reset_password(request, user: User, new_password: str) -> User:
     user.failed_login_count = 0
     user.locked_until = None
     user.emergency_access_until = None
+    user.mfa_pending_secret = b""
+    user.mfa_pending_until = None
     user.session_epoch = F("session_epoch") + 1
     user.version = F("version") + 1
     user.save(
@@ -453,6 +493,8 @@ def reset_password(request, user: User, new_password: str) -> User:
             "failed_login_count",
             "locked_until",
             "emergency_access_until",
+            "mfa_pending_secret",
+            "mfa_pending_until",
             "session_epoch",
             "version",
             "modified_at",

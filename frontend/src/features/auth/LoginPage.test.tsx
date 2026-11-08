@@ -17,6 +17,21 @@ function fill(username: string, password: string) {
 }
 
 describe('LoginPage', () => {
+  it('submits an optional local factor with the password', async () => {
+    const { calls } = mockApi({
+      'GET /auth/me/': signedOut,
+      'GET /auth/csrf/': { status: 204 },
+      'POST /auth/local/login/': apiError(401, 'LOGIN_FAILED', 'Verification failed.'),
+    })
+    renderApp('/login')
+    await screen.findByLabelText('Authenticator or recovery code')
+    fill('local.user', 'fixture-password')
+    fireEvent.change(screen.getByLabelText('Authenticator or recovery code'), { target: { value: '123456' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }))
+    await waitFor(() => expect(calls.find((call) => call.path === '/auth/local/login/')?.body).toEqual({
+      username: 'local.user', password: 'fixture-password', otp_code: '123456',
+    }))
+  })
   it('starts configured Entra with CSRF and a local destination', async () => {
     const assign = vi.fn()
     vi.stubGlobal('location', { assign })

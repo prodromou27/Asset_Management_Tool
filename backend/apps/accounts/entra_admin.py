@@ -45,10 +45,13 @@ def bind_identity(request, target, *, tenant_id, object_id):
             before = {
                 "tenant_id": str(user.entra_tenant_id or ""),
                 "object_id": str(user.entra_object_id or ""),
+                "local_login_enabled": user.local_login_enabled,
             }
             if object_id is None:
                 guard_last_entra_admin(user)
             user.entra_tenant_id, user.entra_object_id = tenant_id, object_id
+            if object_id is not None:
+                user.local_login_enabled = False
             user.emergency_access_until = None
             user.session_epoch = F("session_epoch") + 1
             user.version = F("version") + 1
@@ -59,6 +62,7 @@ def bind_identity(request, target, *, tenant_id, object_id):
                     "session_epoch",
                     "version",
                     "emergency_access_until",
+                    "local_login_enabled",
                     "modified_at",
                 ]
             )
@@ -71,7 +75,11 @@ def bind_identity(request, target, *, tenant_id, object_id):
                 object_id=user.pk,
                 object_label=user.username,
                 before=before,
-                after={"tenant_id": str(tenant_id or ""), "object_id": str(object_id or "")},
+                after={
+                    "tenant_id": str(tenant_id or ""),
+                    "object_id": str(object_id or ""),
+                    "local_login_enabled": user.local_login_enabled,
+                },
             )
     except IntegrityError:
         raise ApiError(
@@ -82,8 +90,6 @@ def bind_identity(request, target, *, tenant_id, object_id):
 
 def open_emergency_access(username, password, reason, operator):
     """Called only by the protected-shell command; no HTTP route can open this window."""
-    if not (settings.ITAM_ENTRA_ENABLED and settings.ITAM_ENTRA_ENFORCE):
-        raise ValueError("Emergency windows require enforced Entra sign-in.")
     with transaction.atomic():
         user = User.objects.select_for_update().filter(username=username, is_active=True).first()
         if user is None or not user.roles.filter(code=SYSTEM_ADMIN).exists():
@@ -93,6 +99,8 @@ def open_emergency_access(username, password, reason, operator):
         )
         _check_password_policy(password, user)
         user.set_password(password)
+        # The rotated emergency password must not become an unrestricted local fallback.
+        user.local_login_enabled = False
         user.password_changed_at = timezone.now()
         user.must_change_password = False
         user.failed_login_count = 0

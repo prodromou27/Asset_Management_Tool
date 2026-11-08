@@ -4,16 +4,17 @@
 
 Preferred enterprise sign-in: OpenID Connect against Microsoft Entra ID, if app registration and consent are approved. Alternative: on-prem LDAP/LDAPS/AD if demanded by environment. Local secure accounts required for initial bootstrap and at least two documented emergency admins; no public self-registration. Do not implement a weak homemade OAuth protocol. Use supported server-side OIDC library and standards-based code/PKCE flow as applicable.
 
-Owner selected Entra MFA plus reviewed local emergency access on 7 November 2026.
-Task 022g implements this approach with Authlib, explicit tenant/object bindings
-and protected-shell one-use recovery. See ASM-72 and [operator instructions](../ops/auth/README.md).
-Live Conditional Access and emergency custody/recovery evidence are required before release.
+Owner clarified on 8 November 2026: local users remain available with optional MFA,
+alongside Entra. Task 022g1 supersedes the Entra-only restriction in ASM-72; see
+ASM-73 and [operator instructions](../ops/auth/README.md). Existing linked accounts
+remain local-disabled; an admin explicitly enables local access when both methods
+are intended. Conditional Access evidence is required when Entra is enabled.
 
 ## Authentication requirements
 
 - TLS on every login and session; secure HttpOnly SameSite cookies, CSRF protection for session-authenticated unsafe methods, session rotation after login.
 - SSO subject issuer+sub (or Entra tenant+object ID), never display name/email alone for identity.
-- MFA required for privileged access via IdP; local emergency admins use MFA/TOTP if implemented, otherwise access restricted until a reviewed secure method exists. No shared default administrator.
+- Entra sign-in requires the approved IdP MFA policy. Local authenticator MFA is optional per owner policy, including named local administrators; once enrolled it is required for every local login until verified removal or protected-shell recovery. No shared default administrator.
 - Passwords (for local accounts) are hashed with an approved adaptive password hash; no reversible storage or plaintext logging.
 - Login throttling and lockout/alerting, inactivity timeout, absolute session timeout, revoked token/session handling.
 - SCIM or automated provisioning is a future option; V1 supports invited/provisioned users and explicit disable.

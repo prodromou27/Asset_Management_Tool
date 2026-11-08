@@ -2,8 +2,12 @@ from django.urls import path
 
 from . import views
 from .entra_views import EntraBindingView, EntraCallbackView, EntraStartView
+from .mfa_views import MfaConfirmView, MfaDisableView, MfaSetupView
 
 auth_urlpatterns = [
+    path("mfa/setup/", MfaSetupView.as_view(), name="mfa-setup"),
+    path("mfa/confirm/", MfaConfirmView.as_view(), name="mfa-confirm"),
+    path("mfa/disable/", MfaDisableView.as_view(), name="mfa-disable"),
     path("entra/start/", EntraStartView.as_view(), name="entra-start"),
     path("entra/callback/", EntraCallbackView.as_view(), name="entra-callback"),
     path("csrf/", views.CsrfView.as_view(), name="auth-csrf"),

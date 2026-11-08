@@ -41,6 +41,10 @@ Document status: v1 implementation baseline, 2 November 2026. This document is *
 
 ## Canonical behavior rules
 
+- Owner clarification (2026-11-08): local users are supported alongside Entra,
+  with optional authenticator MFA for local sign-in. Entra MFA remains enforced
+  by its approved tenant policy. Local-only deployments are permitted.
+
 - One canonical asset can have many source observations, source IDs, interfaces, IPs, MACs, software installations and related assets.
 - IP address, hostname, MAC OUI and model name alone are not safe merge keys.
 - Source refresh never removes an asset or overrides a manually locked field; it can flag conflict/staleness.

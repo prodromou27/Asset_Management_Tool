@@ -18,6 +18,7 @@ export function LoginPage() {
   const queryClient = useQueryClient()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  const [otpCode, setOtpCode] = useState('')
   const [missing, setMissing] = useState<Record<string, string[]>>({})
   const providers = useQuery({ queryKey: ['auth', 'providers'], queryFn: fetchAuthProviders, enabled: !me && !isPending })
   const entra = useMutation({
@@ -26,12 +27,12 @@ export function LoginPage() {
   })
 
   const mutation = useMutation({
-    mutationFn: () => login(username, password),
+    mutationFn: () => login(username, password, otpCode.trim()),
     onSuccess: (user) => {
       queryClient.setQueryData(queryKeys.me, user)
       navigate(user.must_change_password ? '/account/password' : next, { replace: true })
     },
-    onError: () => setPassword(''),
+    onError: () => { setPassword(''); setOtpCode('') },
   })
 
   if (isPending) return <LoadingState label="Checking your session…" />
@@ -91,6 +92,10 @@ export function LoginPage() {
             onChange={(event) => setPassword(event.target.value)}
             error={missing.password}
           />
+          <TextField label="Authenticator or recovery code" name="otp_code" value={otpCode}
+            autoComplete="one-time-code" spellCheck={false}
+            onChange={(event) => setOtpCode(event.target.value)}
+            help="Only required if you enabled MFA for your local account." />
           <Button type="submit" variant="primary" busy={mutation.isPending}>
             {mutation.isPending ? 'Signing in…' : 'Sign in'}
           </Button>

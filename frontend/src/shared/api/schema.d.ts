@@ -113,6 +113,16 @@ export interface paths {
   "/api/v1/auth/me/": {
     get: operations["auth_me_retrieve"];
   };
+  "/api/v1/auth/mfa/confirm/": {
+    post: operations["auth_mfa_confirm_create"];
+  };
+  "/api/v1/auth/mfa/disable/": {
+    post: operations["auth_mfa_disable_create"];
+  };
+  "/api/v1/auth/mfa/setup/": {
+    /** @description Initialize attributes shared by all view methods. */
+    post: operations["auth_mfa_setup_create"];
+  };
   "/api/v1/auth/password/change/": {
     post: operations["auth_password_change_create"];
   };
@@ -2762,6 +2772,8 @@ export interface components {
       reason: string;
     };
     LoginRequest: {
+      /** @default */
+      otp_code?: string;
       username: string;
       password: string;
     };
@@ -2801,6 +2813,9 @@ export interface components {
       permissions: readonly string[];
       all_sites: boolean;
       must_change_password: boolean;
+      local_login_enabled: boolean;
+      mfa_enabled: boolean;
+      auth_method: string;
       display_preferences: components["schemas"]["DisplayPreferences"];
     };
     MemberAsset: {
@@ -2858,6 +2873,18 @@ export interface components {
      * @enum {string}
      */
     MetricEnum: "user" | "device" | "core" | "concurrent" | "subscription" | "other";
+    MfaRecovery: {
+      recovery_codes: readonly string[];
+    };
+    MfaRequestRequest: {
+      password: string;
+      /** @default */
+      otp_code?: string;
+    };
+    MfaSetup: {
+      secret: string;
+      provisioning_uri: string;
+    };
     /**
      * @description * `announcement` - End-of-life announcement
      * * `end_of_sale` - End of sale
@@ -3551,6 +3578,7 @@ export interface components {
       reason?: string;
     };
     PatchedUserUpdateRequest: {
+      local_login_enabled?: boolean;
       display_name?: string;
       email?: string;
       roles?: string[];
@@ -4384,6 +4412,8 @@ export interface components {
       entra_tenant_id: string | null;
       /** Format: uuid */
       entra_object_id: string | null;
+      local_login_enabled: boolean;
+      mfa_enabled: boolean;
       roles: readonly components["schemas"]["RoleSummary"][];
       all_sites: boolean;
       sites: readonly components["schemas"]["SiteGrant"][];
@@ -5150,6 +5180,54 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["Me"];
+        };
+      };
+    };
+  };
+  auth_mfa_confirm_create: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["MfaRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["MfaRequestRequest"];
+        "multipart/form-data": components["schemas"]["MfaRequestRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["MfaRecovery"];
+        };
+      };
+    };
+  };
+  auth_mfa_disable_create: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["MfaRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["MfaRequestRequest"];
+        "multipart/form-data": components["schemas"]["MfaRequestRequest"];
+      };
+    };
+    responses: {
+      /** @description No response body */
+      200: {
+        content: never;
+      };
+    };
+  };
+  /** @description Initialize attributes shared by all view methods. */
+  auth_mfa_setup_create: {
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["MfaRequestRequest"];
+        "application/x-www-form-urlencoded": components["schemas"]["MfaRequestRequest"];
+        "multipart/form-data": components["schemas"]["MfaRequestRequest"];
+      };
+    };
+    responses: {
+      200: {
+        content: {
+          "application/json": components["schemas"]["MfaSetup"];
         };
       };
     };

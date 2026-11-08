@@ -27,6 +27,12 @@ TLS 1.2+ minimum subject to approved security policy, valid CA chain, strict TLS
 
 ## Secrets and privacy
 
+Task 022g1 exception: after authenticated fresh-password verification, local MFA
+setup reveals its authenticator seed to that account over TLS with no-store/no-referrer;
+confirmation returns random recovery codes once. Seeds are encrypted at rest,
+recovery codes are hashed, and neither may enter audit/logs, URLs, jobs or browser
+persistent storage. Ordinary account APIs expose only MFA status.
+
 No plaintext secrets in repo, .env committed, attachments, logs, Docker images, job payloads or HTTP responses. Secret refs and reveal-once service tokens. Separate export permission for personal data (assigned users, device names) from technical inventory access. Retention must be admin-configurable and reviewed under applicable organizational privacy policy. Avoid retaining full Defender raw responses longer than operationally necessary.
 
 ## Audit and logging

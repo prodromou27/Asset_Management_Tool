@@ -39,7 +39,6 @@ def signing_key():
 @pytest.fixture
 def entra(settings, monkeypatch, admin_user, make_user, signing_key):
     settings.ITAM_ENTRA_ENABLED = True
-    settings.ITAM_ENTRA_ENFORCE = True
     settings.ITAM_ENTRA_TENANT_ID = TENANT
     settings.ITAM_ENTRA_CLIENT_ID = CLIENT
     settings.ITAM_ENTRA_REDIRECT_URI = "https://itam.example.test" + CALLBACK
@@ -241,18 +240,46 @@ def test_disable_and_factor_expiry_revoke_session(api_client, entra):
     assert api_client.get(ME).status_code == 401
 
 
-def test_local_passwords_and_preexisting_sessions_blocked(client_for, entra, settings):
+def test_local_access_is_independent_of_entra_and_can_be_disabled(client_for, entra, settings):
     settings.ITAM_ENTRA_ENABLED = False
     previous = client_for(entra["admin"])
     settings.ITAM_ENTRA_ENABLED = True
+    assert previous.get(ME).status_code == 200
+    assert login(APIClient(), entra["admin"].username).status_code == 200
+    User.objects.filter(pk=entra["admin"].pk).update(local_login_enabled=False)
     assert previous.get(ME).status_code == 401
     assert login(APIClient(), entra["admin"].username).status_code == 401
 
 
-def test_explicit_staging_mode_preserves_local_pilot_and_fails_deploy_check(entra, settings):
-    settings.ITAM_ENTRA_ENFORCE = False
+def test_local_coexistence_is_an_approved_production_policy(entra, settings):
+    settings.ITAM_ENV = "production"
     assert login(APIClient(), entra["admin"].username).status_code == 200
-    assert "accounts.E001" in {error.id for error in entra_deployment_policy(None)}
+    assert not entra_deployment_policy(None)
+
+
+def test_admin_can_explicitly_enable_both_signin_methods(api_client, entra, make_user):
+    complete(api_client, entra)
+    target = make_user(
+        "dual.signin",
+        roles=["read_only"],
+        local_login_enabled=False,
+        entra_tenant_id=TENANT,
+        entra_object_id=CLIENT,
+    )
+    assert login(APIClient(), target.username).status_code == 401
+    response = api_client.patch(
+        f"/api/v1/users/{target.pk}/",
+        {
+            "local_login_enabled": True,
+        },
+        format="json",
+        HTTP_IF_MATCH='"1"',
+    )
+    assert response.status_code == 200
+    local = APIClient()
+    assert login(local, target.username).status_code == 200
+    assert local.get(ME).json()["auth_method"] == "local"
+    assert local.get("/api/v1/users/").status_code == 403
 
 
 @pytest.mark.parametrize(
@@ -342,7 +369,7 @@ def test_binding_authorized_versioned_unique_and_revokes_sessions(
         ).status_code
         == 409
     )
-    ordinary = client_for(target)
+    ordinary = client_for(make_user("unprivileged.user", roles=["read_only"]))
     assert (
         ordinary.patch(
             url, {"tenant_id": None, "object_id": None}, format="json", HTTP_IF_MATCH='"2"'

@@ -32,19 +32,18 @@ class SessionTimeoutMiddleware:
             from .oidc import EXPIRES, METHOD, POLICY, policy_digest
 
             method = request.session.get(METHOD)
-            if (
-                settings.ITAM_ENTRA_ENABLED
-                and settings.ITAM_ENTRA_ENFORCE
-                or method in {"entra", "emergency"}
-            ):
+            if method in {"entra", "emergency"}:
                 valid_factor = (
-                    settings.ITAM_ENTRA_ENABLED
-                    and method in {"entra", "emergency"}
+                    (settings.ITAM_ENTRA_ENABLED or method == "emergency")
                     and request.session.get(POLICY) == policy_digest()
                     and request.session.get(EXPIRES, 0) > now
                 )
                 if method == "emergency":
                     valid_factor = valid_factor and user.roles.filter(code="system_admin").exists()
+            else:
+                valid_factor = user.local_login_enabled and (
+                    not user.mfa_enabled or method == "local_mfa"
+                )
             if not valid_factor or now - last_seen > idle_limit or now - auth_at > absolute_limit:
                 reason = (
                     "authentication policy"

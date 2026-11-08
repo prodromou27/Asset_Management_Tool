@@ -1167,6 +1167,81 @@ paths:
               schema:
                 $ref: '#/components/schemas/Me'
           description: ''
+  /api/v1/auth/mfa/confirm/:
+    post:
+      operationId: auth_mfa_confirm_create
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MfaRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MfaRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MfaRequestRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MfaRecovery'
+          description: ''
+  /api/v1/auth/mfa/disable/:
+    post:
+      operationId: auth_mfa_disable_create
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MfaRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MfaRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MfaRequestRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/v1/auth/mfa/setup/:
+    post:
+      operationId: auth_mfa_setup_create
+      description: Initialize attributes shared by all view methods.
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MfaRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/MfaRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MfaRequestRequest'
+        required: true
+      security:
+      - sessionAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MfaSetup'
+          description: ''
   /api/v1/auth/password/change/:
     post:
       operationId: auth_password_change_create
@@ -12817,6 +12892,10 @@ components:
     LoginRequest:
       type: object
       properties:
+        otp_code:
+          type: string
+          default: ''
+          maxLength: 64
         username:
           type: string
           minLength: 1
@@ -12925,16 +13004,28 @@ components:
         must_change_password:
           type: boolean
           readOnly: true
+        local_login_enabled:
+          type: boolean
+          readOnly: true
+        mfa_enabled:
+          type: boolean
+          readOnly: true
+        auth_method:
+          type: string
+          readOnly: true
         display_preferences:
           allOf:
           - $ref: '#/components/schemas/DisplayPreferences'
           readOnly: true
       required:
       - all_sites
+      - auth_method
       - display_name
       - display_preferences
       - email
       - id
+      - local_login_enabled
+      - mfa_enabled
       - must_change_password
       - permissions
       - roles
@@ -13079,6 +13170,43 @@ components:
         * `concurrent` - Concurrent users
         * `subscription` - Subscription
         * `other` - Other
+    MfaRecovery:
+      type: object
+      properties:
+        recovery_codes:
+          type: array
+          items:
+            type: string
+          readOnly: true
+      required:
+      - recovery_codes
+    MfaRequestRequest:
+      type: object
+      properties:
+        password:
+          type: string
+          writeOnly: true
+          minLength: 1
+          maxLength: 128
+        otp_code:
+          type: string
+          writeOnly: true
+          default: ''
+          maxLength: 64
+      required:
+      - password
+    MfaSetup:
+      type: object
+      properties:
+        secret:
+          type: string
+          readOnly: true
+        provisioning_uri:
+          type: string
+          readOnly: true
+      required:
+      - provisioning_uri
+      - secret
     MilestoneTypeEnum:
       enum:
       - announcement
@@ -15019,6 +15147,8 @@ components:
     PatchedUserUpdateRequest:
       type: object
       properties:
+        local_login_enabled:
+          type: boolean
         display_name:
           type: string
           minLength: 1
@@ -17266,6 +17396,12 @@ components:
           format: uuid
           readOnly: true
           nullable: true
+        local_login_enabled:
+          type: boolean
+          readOnly: true
+        mfa_enabled:
+          type: boolean
+          readOnly: true
         roles:
           type: array
           items:
@@ -17345,7 +17481,9 @@ components:
       - is_active
       - is_locked
       - last_login
+      - local_login_enabled
       - locked_until
+      - mfa_enabled
       - modified_at
       - must_change_password
       - password_changed_at

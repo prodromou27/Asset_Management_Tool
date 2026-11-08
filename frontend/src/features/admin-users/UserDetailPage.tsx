@@ -179,6 +179,7 @@ function ProfileForm({
   const roles = useQuery({ queryKey: queryKeys.roles, queryFn: fetchRoles })
   const [displayName, setDisplayName] = useState(user.display_name)
   const [email, setEmail] = useState(user.email)
+  const [localEnabled, setLocalEnabled] = useState(user.local_login_enabled)
   const [selectedRoles, setSelectedRoles] = useState(user.roles.map((role) => role.code))
   const [clientErrors, setClientErrors] = useState<Record<string, string[]>>({})
 
@@ -188,6 +189,7 @@ function ProfileForm({
         display_name: displayName.trim(),
         email: email.trim(),
         roles: selectedRoles,
+        local_login_enabled: localEnabled,
       }),
     onSuccess: (updated) => {
       queryClient.setQueryData(queryKeys.user(user.id), updated)
@@ -274,6 +276,12 @@ function ProfileForm({
         {isSelf && (
           <p className="field__help">You cannot remove the System Admin role from your own account.</p>
         )}
+        <label className="checkbox">
+          <input type="checkbox" checked={localEnabled}
+            onChange={(event) => setLocalEnabled(event.target.checked)} />
+          <span>Allow local password sign-in</span>
+        </label>
+        <p className="field__help">Local MFA: {user.mfa_enabled ? 'Enabled' : 'Not enabled (optional)'}.</p>
         <div className="form-actions">
           <Button type="submit" variant="primary" busy={mutation.isPending}>
             Save changes

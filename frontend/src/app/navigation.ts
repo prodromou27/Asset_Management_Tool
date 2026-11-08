@@ -103,7 +103,10 @@ export const SECTIONS: NavSection[] = [
   },
 ]
 
-const ACCOUNT_CONTEXT: Record<string, string> = { '/account/password': 'Change password' }
+const ACCOUNT_CONTEXT: Record<string, string> = {
+  '/account/password': 'Change password',
+  '/account/security': 'Local account MFA',
+}
 
 /** Section and page for the top bar, from the longest matching navigation entry. */
 export function locate(pathname: string): { section?: string; page?: string } {

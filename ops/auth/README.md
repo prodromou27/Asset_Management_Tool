@@ -1,8 +1,48 @@
-# Entra MFA and emergency access
+# Local accounts, optional MFA and Entra
 
-Task 022g implements the owner's Entra choice. Fixture tests do not commission a
-tenant or prove Conditional Access. Keep the pilot internal until all steps below
-have evidence. No real tenant or host has been changed by this task.
+Owner clarification (2026-11-08, Task 022g1): local accounts are available with
+optional MFA, including named admins. Entra is optional; when enabled it retains
+its required IdP MFA policy. No real tenant or host has been changed by this task.
+
+## Local users and optional MFA
+
+Existing unbound local accounts can continue using their passwords. In the account
+menu, choose **Local account MFA** to enroll an authenticator. Enter the current
+local password, add the displayed setup key to a compatible authenticator (TOTP,
+6 digits, 30 seconds), and verify its code within ten minutes. Enrollment is not
+active until confirmation. Save the ten recovery codes securely: shown once, each
+works once **with your password**. Wait for the next authenticator code after a
+successful confirmation/login; an already-used code cannot authenticate again.
+
+The local login form accepts an authenticator or recovery code when MFA is enrolled;
+otherwise leave it blank. Missing/incorrect factors cannot establish a session and
+use existing lockout/throttling. To disable MFA, verify the current local password
+and an unused authenticator/recovery code on the same account page. This revokes
+other sessions. Admin password reset preserves enrolled MFA; it cancels pending setup.
+
+System Admins control **Allow local password sign-in** on user profiles. Linking or
+replacing an Entra identity disables local login by default. To intentionally allow
+both methods, explicitly enable that checkbox after linking. Disabling local access
+requires a ready linked Entra route and revokes sessions. Local MFA is independent
+of the Entra policy; existing linked users remain local-disabled on upgrade.
+
+For lost factors and exhausted recovery codes, verify the person's identity through
+the approved operator procedure, then use the protected shell:
+
+```sh
+docker compose -f infra/compose.yaml exec api python manage.py reset_local_mfa \
+  --username <named-user> --reason <incident-reference>
+```
+
+The reset audits the operator/reference and revokes sessions; it does not enable
+local access, unlock/enable the account, change its password or change Entra identity.
+The user can re-enroll. There is no public admin MFA-reset endpoint.
+
+Seeds use the existing Fernet primitive with a local-factor purpose, using the
+configured `ITAM_IMPORT_ENCRYPTION_KEY` if present, otherwise a key derived from
+`DJANGO_SECRET_KEY`. Preserve that key with restricted backups. Do not rotate keys
+without a tested re-encryption/recovery plan. Neither setup keys, OTPs, passwords nor
+recovery codes belong in logs, URLs, tickets, screenshots or persistent browser storage.
 
 ## Configure and stage
 
@@ -27,24 +67,24 @@ have evidence. No real tenant or host has been changed by this task.
    System Admins using the existing protected-shell `bootstrap_admin` command. In
    Users & roles → account → Microsoft Entra sign-in, explicitly bind the tenant
    UUID and the person's user **object ID**, not app object ID, email or device ID.
-   Bind two separate admins and an ordinary test user. Application roles and site
-   scope must already be assigned; Entra claims do not create privileges.
-5. After reviewing the actual MFA policy, set `ITAM_ENTRA_MFA_POLICY_VERIFIED=true`,
-   `ITAM_ENTRA_ENABLED=true` and **temporarily** `ITAM_ENTRA_ENFORCE=false` in isolated
-   staging. Restart the API. This test mode deliberately retains local pilot login
-   so a second SSO account can be tested before enforcement. Deployment checks
-   reject it; never expose it publicly or release it.
+   Initially link one admin and retain an independent named local admin. Linking
+   revokes that user's sessions and disables local sign-in. After enabling Entra
+   and testing the first linked admin, use that session to link the second admin
+   and an ordinary test user. Roles/site scope stay local; claims do not grant them.
+5. After reviewing the actual MFA policy, set `ITAM_ENTRA_MFA_POLICY_VERIFIED=true`
+   and `ITAM_ENTRA_ENABLED=true` in isolated staging. Restart the API. Retain an
+   independent named local admin while testing the second SSO account. The former
+   `ITAM_ENTRA_ENFORCE` flag is retired and no longer controls local login.
 6. Test both admins and an ordinary user in separate browsers. Confirm sign-in logs
    show the required Conditional Access MFA policy applied, app/site authorization
    matches existing grants, unmapped/disabled/wrong-tenant users are rejected, and
    failure/cancel/expired requests reveal no tokens. Record evidence without codes,
    passwords or tokens. Confirm the recovery procedure below independently.
-7. Set `ITAM_ENTRA_ENFORCE=true`, restart and run the deployment check through the
-   normal release settings (`python manage.py check --deploy`). It checks required
-   configuration, the operator acknowledgement, two admins and a linked admin.
-   Production (`ITAM_ENV=production`) rejects disabled Entra. The check cannot
-   inspect your live Conditional Access policy. Verify ordinary local login and
-   old pilot sessions fail; do not disable enforcement to work around an outage.
+7. Run `python manage.py check --deploy` through normal release settings. When
+   Entra is enabled it checks configuration, policy acknowledgement, two admins
+   and a linked admin. Local-only production is permitted. This check cannot
+   inspect live Conditional Access. Test each account's intended methods and MFA;
+   local-disabled accounts must reject local passwords, including old sessions.
 
 Read-only `/api/v1/auth/providers/` advertises Entra only when configuration and
 admin prerequisites are ready. Its availability is not tenant sign-off. Browser
@@ -71,7 +111,7 @@ Before commissioning, approve independently protected SSH/console access (MFA or
 equivalent), named operator custody for **two** admins, incident handling, audit
 export and an observed recovery drill. Docker/host access is privileged. This is a
 protected operator procedure, **not local TOTP** or an automatic password fallback.
-Entra does not need to be reachable. Keep Enabled and Enforce true during recovery.
+Entra does not need to be reachable or enabled for protected local recovery.
 
 From the approved host, using the normal protected Compose environment:
 
@@ -86,20 +126,30 @@ pipe; never use a literal `echo`, argument, environment variable or recorded she
 session for the password. No password argument is supported. The command validates
 active System Admin status and policy, rotates the hash, revokes old sessions,
 clears lockout and opens one sign-in opportunity ending **15 minutes after opening**.
+It disables ordinary local login, so the emergency password cannot become a normal
+password-only fallback after the window. Re-enable local login deliberately through
+another authorized admin after completing recovery, if that method is intended.
 The resulting emergency session has that same deadline; a second login fails.
 An existing grant cannot be extended through the browser. The CLI records the
 operator label and incident reference, so exclude credentials from the reason.
 
-Use the local emergency form over approved internal HTTPS. Confirm
+Use the local sign-in form over approved internal HTTPS. Confirm
 `auth.emergency_opened` and `auth.emergency_login` events, perform the needed repair,
 then sign out. Rebinding, password reset, Entra sign-in and disable cancel pending
 windows; expiration terminates the emergency session. If recovery expires, the
 authorized operator must explicitly run the command again with a new password.
 If fewer than two active admins survive, use `bootstrap_admin` from that same
 protected shell to create a new **named** admin, then open its recovery window.
-Never create a shared default account or weaken Entra enforcement.
+Never create a shared default account or weaken the configured Entra MFA policy.
 
 ## Restore and rollback
+
+0018 adds local-access/MFA fields and preserves linked accounts as local-disabled.
+Use a maintenance window: stop old API/workers, migrate, then run only the new code
+before anyone enrolls. An old binary does not enforce the new local MFA fields, so
+mixed versions or exposing a password-only rollback after enrollment are unsafe.
+Reverse migration loses local MFA state. Recover using compatible backup/code and
+revoke sessions before exposure; validate local access, MFA and key custody again.
 
 Keep identity configuration/secret custody with the restricted deployment backup.
 Before exposing a restored database, clear restored Django sessions, OIDC attempt

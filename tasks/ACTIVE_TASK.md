@@ -1,4 +1,22 @@
-# Current task: 022g | MFA authentication policy and implementation (complete)
+# Current task: 022g1 | Local users with optional MFA
+
+Owner clarified policy on 2026-11-08: local accounts remain available alongside
+Entra, with optional MFA. This supersedes the Entra-only local-emergency restriction
+in 022g and postpones 022h until this bounded change is complete.
+Read: AGENTS.md, docs/00, docs/07, docs/09, docs/14 and docs/17.
+Files: accounts model/services/auth endpoints/tests/migration, login/account/user
+UI, generated API types, deployment checks and operator/policy documentation.
+Acceptance: password-only local login; optional verified TOTP enrollment/removal;
+no protected session before enrolled MFA; OTP/recovery replay rejection, encryption,
+secret-free audit, CSRF/throttling, recovery and explicit Entra/local coexistence.
+Existing linked accounts stay local-disabled on migration; new links disable local
+by default. Admins can explicitly enable both. No live host/tenant changes.
+Status: implemented; 224 frontend tests, lint/types/build/API generation and 136
+production-browser CSP screenshots pass. Full local SQLite suite: 894 passed,
+seven PostgreSQL/restore skips; the additional migration-preservation test is
+covered by focused validation. Await full PostgreSQL/runtime/security CI proof.
+Stop after validation and handoff. Historical
+022g evidence below remains evidence of its original policy, not the revised one.
 
 Owner requested next task on 2026-11-07. Baseline b4ef54b; CSP is complete
 (TASK022E_REPORT.md). Address G02 from TASK022C_REPORT.md; preserve approved UI.

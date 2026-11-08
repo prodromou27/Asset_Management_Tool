@@ -5,6 +5,8 @@ import type {
   Authorization,
   AuditEvent,
   Me,
+  MfaSetup,
+  MfaRecovery,
   Paginated,
   Role,
   SecuritySettings,
@@ -39,14 +41,23 @@ export async function fetchMe() {
   return me
 }
 
-export async function login(username: string, password: string): Promise<Me> {
+export async function login(username: string, password: string, otp_code = ''): Promise<Me> {
   await fetchCsrf()
-  const me = await apiRequest<Me>('POST', '/auth/local/login/', { body: { username, password } })
+  const me = await apiRequest<Me>('POST', '/auth/local/login/', {
+    body: { username, password, ...(otp_code ? { otp_code } : {}) },
+  })
   configureDisplay(me.display_preferences)
   return me
 }
 
 export const logout = () => apiRequest<void>('POST', '/auth/logout/')
+
+export const setupMfa = (password: string) =>
+  apiRequest<MfaSetup>('POST', '/auth/mfa/setup/', { body: { password } })
+export const confirmMfa = (password: string, otp_code: string) =>
+  apiRequest<MfaRecovery>('POST', '/auth/mfa/confirm/', { body: { password, otp_code } })
+export const disableMfa = (password: string, otp_code: string) =>
+  apiRequest<void>('POST', '/auth/mfa/disable/', { body: { password, otp_code } })
 
 export const changePassword = (current_password: string, new_password: string) =>
   apiRequest<void>('POST', '/auth/password/change/', { body: { current_password, new_password } })

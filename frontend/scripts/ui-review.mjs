@@ -17,7 +17,7 @@ const capture = async (page, name, fullPage = true) => {
 
 const source = await fs.readFile('src/test/api.tsx', 'utf8')
 const permissions = JSON.parse(source.match(/const ALL_ADMIN = (\[[\s\S]*?\])/)[1].replaceAll("'", '"').replace(/,\s*]/, ']'))
-const me = { id: 'fixture-admin', username: 'fixture.admin', display_name: 'Fixture Admin', email: '', roles: [{ code: 'system_admin', name: 'System Admin' }], permissions, all_sites: true, must_change_password: false }
+const me = { id: 'fixture-admin', username: 'fixture.admin', display_name: 'Fixture Admin', email: '', roles: [{ code: 'system_admin', name: 'System Admin' }], permissions, all_sites: true, must_change_password: false, local_login_enabled: true, mfa_enabled: false, auth_method: 'local' }
 const policy = { enabled: false, hour_utc: 2, rpo_hours: 24, rto_hours: 4, keep_daily: 30, keep_weekly: 8, keep_monthly: 12, retention_enabled: false, version: 1, modified_at: '2026-11-05T00:00:00Z' }
 const general = { organization_name: 'ITAM', timezone: 'Asia/Nicosia', date_format: 'day_month_year', language: 'en', support_contact: '', version: 1, modified_at: '2026-11-05T00:00:00Z', modified_by: null }
 me.display_preferences = { ...general }
@@ -55,12 +55,15 @@ const fixtureIntegration = {
   active_links: 0, stale_links: 0, open_candidates: 0,
 }
 const routes = {
+  '/auth/mfa/setup/': { secret: 'JBSWY3DPEHPK3PXP', provisioning_uri: 'otpauth://totp/fixture' },
+  '/auth/mfa/confirm/': { recovery_codes: ['a'.repeat(32), 'b'.repeat(32)] },
   '/auth/providers/': [
     { id: 'local', kind: 'local', label: 'Local account', status: 'available' },
     { id: 'entra', kind: 'oidc', label: 'Microsoft Entra ID', status: 'planned' },
   ],
   '/roles/': [{ code: 'system_admin', name: 'System Admin', description: '', is_system: true, permissions: [] }],
   '/users/fixture-user/': {
+    local_login_enabled: true, mfa_enabled: false,
     id: 'fixture-user', username: 'fixture.user', display_name: 'Fixture User', email: '',
     roles: [{ code: 'system_admin', name: 'System Admin' }], all_sites: true, sites: [],
     is_active: true, is_locked: false, locked_until: null, must_change_password: false,
@@ -275,6 +278,7 @@ try {
     ['/software', 'software'], ['/domains', 'domains'], ['/admin/sites', 'sites'],
     ['/admin/categories', 'categories'], ['/admin/security', 'security-settings'],
     ['/admin/users/fixture-user', 'user-entra-binding'],
+    ['/account/security', 'local-mfa-settings'],
     ['/admin/smtp', 'smtp-settings'],
     ['/admin/general', 'general-settings'], ['/', 'operational-health'], ['/admin/integrations?tab=catalogue', 'provider-catalogue'],
     ...['inventory', 'lifecycle', 'coverage', 'groups'].map((kind) => [`/reports?report=${kind}`, `report-${kind}`]),
@@ -395,6 +399,31 @@ try {
     if (await page.locator('iframe[title="HTML preview"]').getAttribute('sandbox') !== '') throw new Error('Email preview sandbox changed')
     await capture(page, 'smtp-sandboxed-preview-csp')
   }
+  for (const width of [1440, 390]) {
+    responses.set('/auth/me/', { body: { ...me, local_login_enabled: true, mfa_enabled: false } })
+    await page.setViewportSize({ width, height: width === 390 ? 844 : 900 })
+    await page.goto('http://127.0.0.1:5197/account/security')
+    await page.getByLabel('Current local password').fill('synthetic-fixture-password')
+    await page.getByRole('button', { name: 'Set up authenticator' }).click()
+    await page.getByLabel('Authenticator setup key').waitFor()
+    for (const theme of ['light', 'dark']) {
+      if (theme === 'dark') await page.getByRole('button', { name: 'Switch to dark theme' }).click()
+      if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)) throw new Error('MFA setup overflows')
+      await capture(page, `local-mfa-setup-${width}-${theme}`)
+    }
+    await page.getByRole('button', { name: 'Switch to light theme' }).click()
+    await page.getByLabel('Authenticator code').fill('123456')
+    await page.getByRole('button', { name: 'Verify and enable MFA' }).click()
+    await page.getByRole('heading', { name: 'Save your recovery codes' }).waitFor()
+    for (const theme of ['light', 'dark']) {
+      if (theme === 'dark') await page.getByRole('button', { name: 'Switch to dark theme' }).click()
+      if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)) throw new Error('MFA recovery codes overflow')
+      await capture(page, `local-mfa-recovery-${width}-${theme}`)
+    }
+    await page.getByRole('button', { name: 'Switch to light theme' }).click()
+    await page.getByRole('button', { name: 'I have saved these codes' }).click()
+    if (await page.getByText('a'.repeat(32), { exact: true }).count()) throw new Error('MFA codes remain after dismissal')
+  }
   responses.set('/auth/providers/', { body: [
     { id: 'local', kind: 'local', label: 'Local account', status: 'available' },
     { id: 'entra', kind: 'oidc', label: 'Microsoft Entra ID', status: 'planned' },
@@ -414,7 +443,7 @@ try {
   await page.getByText('Enter your username.', { exact: true }).waitFor()
   await capture(page, 'sign-in-validation-mobile')
   responses.set('/auth/providers/', { body: [
-    { id: 'local', kind: 'local', label: 'Local emergency access', status: 'available' },
+    { id: 'local', kind: 'local', label: 'Local account', status: 'available' },
     { id: 'entra', kind: 'oidc', label: 'Microsoft Entra ID', status: 'available' },
   ] })
   for (const width of [1440, 390]) {

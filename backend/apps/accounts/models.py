@@ -68,6 +68,12 @@ class User(AbstractBaseUser):
     entra_tenant_id = models.UUIDField(null=True, blank=True)
     entra_object_id = models.UUIDField(null=True, blank=True)
     emergency_access_until = models.DateTimeField(null=True, blank=True)
+    local_login_enabled = models.BooleanField(default=True)
+    mfa_secret = models.BinaryField(default=bytes, blank=True)
+    mfa_pending_secret = models.BinaryField(default=bytes, blank=True)
+    mfa_pending_until = models.DateTimeField(null=True, blank=True)
+    mfa_last_step = models.BigIntegerField(default=-1)
+    mfa_recovery_hashes = models.JSONField(default=list, blank=True)
 
     disabled_at = models.DateTimeField(null=True, blank=True)
     disabled_reason = models.CharField(max_length=500, blank=True)
@@ -118,6 +124,10 @@ class User(AbstractBaseUser):
             secret=secret,
             algorithm="sha256",
         ).hexdigest()
+
+    @property
+    def mfa_enabled(self):
+        return bool(self.mfa_secret)
 
     @property
     def is_locked(self) -> bool:

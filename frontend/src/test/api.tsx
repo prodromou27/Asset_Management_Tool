@@ -130,6 +130,9 @@ const ALL_ADMIN = [
 
 export function makeMe(overrides: Partial<Me> = {}): Me {
   return {
+    local_login_enabled: true,
+    mfa_enabled: false,
+    auth_method: 'local',
     display_preferences: { organization_name: 'ITAM', timezone: 'Asia/Nicosia', date_format: 'day_month_year', language: 'en', support_contact: '' },
     id: '00000000-0000-4000-8000-000000000001',
     username: 'admin.one',
@@ -163,6 +166,8 @@ export const operatorMe = () =>
 
 export function makeUser(overrides: Partial<User> = {}): User {
   return {
+    local_login_enabled: true,
+    mfa_enabled: false,
     entra_tenant_id: null,
     entra_object_id: null,
     id: '11111111-1111-4111-8111-111111111111',

@@ -8,13 +8,6 @@ def entra_deployment_policy(app_configs, **kwargs):
 
     errors = []
     if settings.ITAM_ENTRA_ENABLED:
-        if not settings.ITAM_ENTRA_ENFORCE:
-            errors.append(
-                Error(
-                    "Entra test mode permits local pilot sign-in; enforce it before release.",
-                    id="accounts.E001",
-                )
-            )
         if not ready():
             errors.append(
                 Error(
@@ -23,8 +16,4 @@ def entra_deployment_policy(app_configs, **kwargs):
                     id="accounts.E002",
                 )
             )
-    elif settings.ITAM_ENV == "production":
-        errors.append(
-            Error("Production sign-in requires the approved Entra MFA policy.", id="accounts.E003")
-        )
     return errors

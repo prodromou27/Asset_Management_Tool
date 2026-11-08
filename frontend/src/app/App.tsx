@@ -35,6 +35,7 @@ import { UserDetailPage } from '../features/admin-users/UserDetailPage'
 import { UsersListPage } from '../features/admin-users/UsersListPage'
 import { ChangePasswordPage } from '../features/auth/ChangePasswordPage'
 import { LoginPage } from '../features/auth/LoginPage'
+import { LocalMfaPage } from '../features/auth/LocalMfaPage'
 import { SystemHealthPage } from '../features/system-health/SystemHealthPage'
 import { PERMISSIONS } from '../shared/api/types'
 import { EmptyState } from '../shared/ui/States'
@@ -78,6 +79,7 @@ function AppRouteContent() {
       <Route path="/admin/general" element={<Protected permission={PERMISSIONS.generalView} what="general settings"><GeneralSettingsPage /></Protected>} />
       <Route path="/admin/backups" element={<Protected permission={PERMISSIONS.backupsView} what="backups and recovery"><BackupsPage /></Protected>} />
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/account/security" element={<Protected><LocalMfaPage /></Protected>} />
       <Route path="/" element={<Protected><SystemHealthPage /></Protected>} />
       <Route path="/account/password" element={<Protected><ChangePasswordPage /></Protected>} />
       <Route

@@ -56,6 +56,13 @@ export function ChangePasswordPage() {
   const set = (field: keyof typeof values) => (event: { target: { value: string } }) =>
     setValues((current) => ({ ...current, [field]: event.target.value }))
 
+  if (me?.auth_method === 'entra') return (
+    <div className="page page--narrow">
+      <PageHeader title="Change password" />
+      <p className="section-help">Your sign-in password is managed by Microsoft Entra. Use your organization’s Microsoft account password settings.</p>
+    </div>
+  )
+
   return (
     <div className="page page--narrow">
       <PageHeader

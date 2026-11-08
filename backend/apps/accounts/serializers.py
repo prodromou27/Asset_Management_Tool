@@ -35,6 +35,7 @@ class SiteGrantSerializer(serializers.Serializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
+    mfa_enabled = serializers.BooleanField(read_only=True)
     roles = RoleSummarySerializer(many=True, read_only=True)
     sites = SiteGrantSerializer(source="site_grants", many=True, read_only=True)
     is_locked = serializers.BooleanField(read_only=True)
@@ -54,6 +55,8 @@ class UserSerializer(serializers.ModelSerializer):
             "email",
             "entra_tenant_id",
             "entra_object_id",
+            "local_login_enabled",
+            "mfa_enabled",
             "roles",
             "all_sites",
             "sites",
@@ -91,6 +94,7 @@ class UserCreateSerializer(serializers.Serializer):
 
 
 class UserUpdateSerializer(serializers.Serializer):
+    local_login_enabled = serializers.BooleanField(required=False)
     display_name = serializers.CharField(max_length=150, required=False)
     email = serializers.EmailField(max_length=254, required=False, allow_blank=True)
     roles = serializers.ListField(
@@ -109,6 +113,7 @@ class ResetPasswordSerializer(serializers.Serializer):
 
 
 class LoginSerializer(serializers.Serializer):
+    otp_code = serializers.CharField(max_length=64, required=False, default="", allow_blank=True)
     username = serializers.CharField(max_length=150)
     password = serializers.CharField(trim_whitespace=False, max_length=128)
 
@@ -119,6 +124,8 @@ class ChangePasswordSerializer(serializers.Serializer):
 
 
 class MeSerializer(serializers.ModelSerializer):
+    mfa_enabled = serializers.BooleanField(read_only=True)
+    auth_method = serializers.SerializerMethodField()
     must_change_password = serializers.SerializerMethodField()
     roles = RoleSummarySerializer(many=True, read_only=True)
     permissions = serializers.SerializerMethodField()
@@ -135,12 +142,19 @@ class MeSerializer(serializers.ModelSerializer):
             "permissions",
             "all_sites",
             "must_change_password",
+            "local_login_enabled",
+            "mfa_enabled",
+            "auth_method",
             "display_preferences",
         ]
         read_only_fields = fields
 
     def get_permissions(self, obj) -> list[str]:
         return sorted(obj.permission_codes())
+
+    def get_auth_method(self, obj) -> str:
+        request = self.context.get("request")
+        return request.session.get("itam_auth_method", "local") if request else "local"
 
     def get_must_change_password(self, obj) -> bool:
         request = self.context.get("request")

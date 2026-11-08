@@ -54,9 +54,7 @@ class LocalLoginView(APIView):
     def post(self, request):
         data = LoginSerializer(data=request.data)
         data.is_valid(raise_exception=True)
-        user = services.login_local(
-            request, data.validated_data["username"], data.validated_data["password"]
-        )
+        user = services.login_local(request, **data.validated_data)
         return Response(MeSerializer(user, context={"request": request}).data)
 
 
@@ -98,17 +96,13 @@ class ProvidersView(APIView):
 
     @extend_schema(responses=AuthProviderSerializer(many=True))
     def get(self, request):
-        from django.conf import settings
-
         from .oidc import ready
 
         providers = [
             {
                 "id": "local",
                 "kind": "local",
-                "label": "Local emergency access"
-                if settings.ITAM_ENTRA_ENABLED and settings.ITAM_ENTRA_ENFORCE
-                else "Local account",
+                "label": "Local account",
                 "status": "available",
             },
             {

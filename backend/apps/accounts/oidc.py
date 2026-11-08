@@ -45,7 +45,6 @@ def policy_digest():
                 settings.ITAM_ENTRA_AUTH_CONTEXT,
                 settings.ITAM_ENTRA_MFA_POLICY_VERIFIED,
                 settings.ITAM_ENTRA_ENABLED,
-                settings.ITAM_ENTRA_ENFORCE,
             ]
         )
     )

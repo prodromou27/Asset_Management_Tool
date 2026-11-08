@@ -334,6 +334,7 @@ def test_snapshot_never_contains_password_material(operator_user):
         "all_sites",
         "sites",
         "is_active",
+        "local_login_enabled",
     }
 
 

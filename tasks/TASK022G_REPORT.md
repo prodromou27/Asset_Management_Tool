@@ -1,5 +1,9 @@
 # Task 022g - Entra MFA and controlled emergency access
 
+**Policy update 2026-11-08:** Task 022g1 supersedes the Entra-only/local-emergency
+restriction recorded below. Local users with optional MFA are now owner-approved;
+see ASM-73, ACTIVE_TASK.md and TASK022G1_REPORT.md for current behavior/evidence.
+
 Work began 7 November; final validation/handoff continued on 8 November 2026
 (Asia/Nicosia).
 
