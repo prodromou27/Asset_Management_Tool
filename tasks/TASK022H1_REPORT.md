@@ -49,6 +49,10 @@ compiled but abuild rejected uncompressed main-package man pages. The correction
 uses normal Alpine static/doc/dev/libs splits (only libs enters the release),
 without disabling postchecks. Coverage validation also rejects malformed version
 labels; the probe explicitly selects UID/GID 10001 and the application interpreter.
+Candidate 648fbbe then produced all subpackages but index creation rejected its
+temporary signing key. Install that public key in the disposable builder only;
+no signing key/trust store is copied into release targets. Rebuilt version smoke
+checks are also network-disabled (e658530). These corrections retain validation.
 
 Paths: `backend/Dockerfile`, `backend/runtime/`, `ops/security/{scan,gate,test_*}.py`,
 CI timeout and operator docs. No app migration/RBAC/API/UI changes are needed.

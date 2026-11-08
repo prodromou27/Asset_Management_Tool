@@ -4,7 +4,7 @@ WORKDIR /build/sqlite
 ADD --checksum=sha256:926ef8d3eab93fbf6e06011901273eec076b25594a4e1cdadd50c987f4f6d64e https://www.sqlite.org/2026/sqlite-autoconf-3540100.tar.gz ./sqlite-autoconf-3540100.tar.gz
 COPY runtime/sqlite/APKBUILD ./APKBUILD
 ENV REPODEST=/packages
-RUN abuild-keygen -a -n
+RUN abuild-keygen -a -n -i
 RUN --network=none abuild -F -d \
     && mkdir /out \
     && find /packages -name 'sqlite-libs-3.54.1-r0.apk' -exec cp '{}' /out/ \; \
