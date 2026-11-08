@@ -55,6 +55,10 @@ no signing key/trust store is copied into release targets. Rebuilt version smoke
 checks are also network-disabled (e658530). These corrections retain validation.
 The keygen install shortcut in 3bd8073 required absent `doas`; the root-only builder
 now copies its newly generated public key directly, without adding a privilege helper.
+Candidate 98be2b1 successfully built/installed SQLite and production images, then
+the backup's offline `go install @version` attempted a deprecation metadata lookup
+that GOPROXY=off forbids. Use Go's cached-download directory as a file-only proxy;
+compilation remains network-disabled and module checksum checks remain enabled.
 
 Paths: `backend/Dockerfile`, `backend/runtime/`, `ops/security/{scan,gate,test_*}.py`,
 CI timeout and operator docs. No app migration/RBAC/API/UI changes are needed.
