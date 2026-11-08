@@ -12,11 +12,16 @@ Legacy SONAME and FTS3/4/5, RTree/session options are retained. Compilers, keys 
 headers do not enter the release image. Provenance JSON/recipe are retained in
 `/usr/local/share/itam/`; the exact-image probe records actual linkage/options/hash.
 
-The backup candidate builds unchanged restic 0.18.1 using the same pinned Go 1.27.3
+The backup candidate builds restic 0.19.1 using the same pinned Go 1.27.3
 toolchain as gosu, with CGO disabled, module checksum verification, symbols/build info
 retained and compilation network-disabled after dependency download. Only the binary,
 license and build metadata enter the backup image; the APK-owned old restic is no
-longer installed. Public module checksums authenticate versioned source/dependencies.
+longer installed. Source tag commit `6aa3a516ce654808a1f28f9fa21e9b7c8e6e90bf`
+is checked explicitly. `backend/runtime/restic/dependencies.txt` pins security updates
+within existing dependency major versions; public module checksums authenticate them.
+Go's native VCS metadata retains the source revision and modified-build marker;
+the CLI identifies `0.19.1-itam.1`. Effective go.mod/go.sum and build info remain in
+the image. No build-info rewriting hides the dependency changes.
 SFTP/CLI/format behavior must pass the existing runtime and encrypted restore proofs.
 
 Forward/rollback: no application schema or PostgreSQL major/layout changes. Prove

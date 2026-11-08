@@ -457,7 +457,10 @@ Preserve Python 3.12/Alpine 3.24 and PostgreSQL data formats. Build reviewed SQL
 3.54.1 from the official archive as an APK upgrade with origin sqlite and legacy
 SONAME, retaining required compile options. Source SHA-256/SHA-512 were derived
 after verifying the publisher's SHA3-256; Docker and abuild independently check
-their pins. Build the existing restic 0.18.1 module with pinned Go 1.27.3, retaining
+their pins. Build stable restic 0.19.1 with explicit same-major security dependency
+pins and Go 1.27.3, retaining native VCS revision/modified metadata, effective module
+files and the `0.19.1-itam.1` CLI identity. CI 42519471978 exposed 1 CRITICAL/29 HIGH
+in unchanged 0.18.1 dependencies; compiler replacement alone was insufficient. Retain
 symbols, checksum-verified dependencies and metadata. No edge repository or old
 library shadowing. Source package/key/compiler stages never enter release targets.
 
@@ -475,7 +478,8 @@ components require future pinned-source updates, compatibility proof and fresh s
 G02 stays held until candidate evidence is reviewed in TASK022H1_REPORT.md.
 
 Sources: [SQLite publisher hashes](https://sqlite.org/download.html),
-[restic source](https://github.com/restic/restic/tree/v0.18.1),
+[restic source](https://github.com/restic/restic/tree/v0.19.1),
+[native Go VCS version metadata](https://go.dev/doc/go1.24),
 [Trivy detection policy](https://trivy.dev/docs/latest/scanner/vulnerability/#detection-priority).
 
 ## GLPI licensing note

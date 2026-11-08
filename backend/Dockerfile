@@ -12,14 +12,18 @@ RUN --network=none abuild -F -d \
 
 FROM golang:1.27.3-alpine3.24@sha256:fa3d596898d9f126af7c01d14ee7597bab3f39cccf392ef36b69fe77cd681f18 AS restic-build
 ENV CGO_ENABLED=0 GOTOOLCHAIN=local GOMAXPROCS=2 GOSUMDB=sum.golang.org GOPROXY=https://proxy.golang.org
-RUN go mod download -json github.com/restic/restic@v0.18.1
-RUN cd /go/pkg/mod/github.com/restic/restic@v0.18.1 \
-    && go mod download all && go mod verify \
-    && go list -m -f '{{if not .Main}}{{.Path}}@{{.Version}}{{end}}' all > /tmp/restic-modules \
-    && cd /tmp && xargs go mod download < /tmp/restic-modules \
-    && rm /tmp/restic-modules
-RUN --network=none GOPROXY=file:///go/pkg/mod/cache/download go install -p 2 -trimpath -ldflags '-X main.version=0.18.1' github.com/restic/restic/cmd/restic@v0.18.1 \
-    && cp /go/pkg/mod/github.com/restic/restic@v0.18.1/LICENSE /go/bin/restic.LICENSE \
+RUN apk add --no-cache git
+WORKDIR /build/restic
+RUN git init && git remote add origin https://github.com/restic/restic.git \
+    && git fetch --depth=1 origin refs/tags/v0.19.1:refs/tags/v0.19.1 \
+    && git checkout --detach v0.19.1 \
+    && test "$(git rev-parse HEAD)" = 6aa3a516ce654808a1f28f9fa21e9b7c8e6e90bf
+COPY runtime/restic/dependencies.txt /build/restic-dependencies.txt
+RUN xargs go get < /build/restic-dependencies.txt && go mod download all && go mod verify
+RUN --network=none GOPROXY=off go build -mod=readonly -buildvcs=true -p 2 -trimpath \
+    -ldflags '-X main.version=0.19.1-itam.1' -o /go/bin/restic ./cmd/restic \
+    && cp LICENSE /go/bin/restic.LICENSE \
+    && cp go.mod /go/bin/restic.go.mod && cp go.sum /go/bin/restic.go.sum \
     && go version -m /go/bin/restic > /go/bin/restic-buildinfo.txt
 
 FROM python:3.12.16-alpine3.24@sha256:e064671ca452259bab50e8e2c7bd896e39e9a343bb06ca25234adf6fe18d0fc7 AS base
@@ -66,6 +70,8 @@ RUN apk add --no-cache openssh-client-default postgresql16-client
 COPY --from=restic-build /go/bin/restic /usr/local/bin/restic
 COPY --from=restic-build /go/bin/restic.LICENSE /usr/local/share/licenses/restic/LICENSE
 COPY --from=restic-build /go/bin/restic-buildinfo.txt /usr/local/share/itam/restic-buildinfo.txt
+COPY --from=restic-build /go/bin/restic.go.mod /go/bin/restic.go.sum /usr/local/share/itam/
+COPY runtime/restic/dependencies.txt /usr/local/share/itam/restic-dependencies.txt
 USER itam
 RUN --network=none pg_dump --version && pg_restore --version && restic version
 

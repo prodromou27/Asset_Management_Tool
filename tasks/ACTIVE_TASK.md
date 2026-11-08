@@ -5,7 +5,8 @@ format, SFTP backups, approved UI and all security gates.
 Read: AGENTS.md, docs/00, docs/14 and docs/17; TASK022H_REPORT.md acceptance applies.
 
 Candidate: backend/Dockerfile and runtime source inputs build SQLite 3.54.1 as a
-normal replacement APK, and unchanged restic 0.18.1 with pinned Go 1.27.3. No edge
+normal replacement APK, and restic 0.19.1 with pinned Go 1.27.3 and explicit patched
+dependencies (runtime/restic/dependencies.txt). No edge
 repository, package shadowing, schema change or host deployment. Preserve metadata.
 Scanner retains vendor scans plus separate comprehensive library scans; require
 restic/gosu exact-path main-module and stdlib versions. Missing data fails closed;
@@ -19,8 +20,10 @@ wrong-pin/password, deploy/import, Nginx, Redis recovery, restore and six image 
 Compose job bounded to 30 minutes; SQLite probe is empty-env/nonroot/read-only,
 network-disabled/scratch-only and resource/time bounded. Windows lacks local Docker.
 
-Evidence/outcome: TASK022H1_REPORT.md (candidate pending). G02 remains held until
-actual CI findings and exact-image/provenance results are reviewed.
+Evidence/outcome: CI 42519471978 proved 902 native + 902 rebuilt-runtime tests,
+restore, SQLite 3.54.1 actual linkage/FTS and complete Go coverage, but correctly
+held restic 0.18.1 dependencies (1 CRITICAL/29 HIGH). TASK022H1_REPORT.md records
+artifact digests. G02 stays held while the stable-source dependency update is validated.
 Next: finish this candidate, remediate any new compiler/module findings, record
 real outcome and next action. Do not waive findings, relax gates, deploy, change
 existing volumes or silently start another epic. Host/TLS/recovery/key custody,

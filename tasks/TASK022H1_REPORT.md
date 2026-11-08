@@ -1,8 +1,8 @@
 # Task 022h1 - SQLite remediation and compiler coverage
 
 Owner continuation, 8 November 2026. Baseline `123bdf4`; findings in TASK022H_REPORT.md.
-Candidate implementation: source-built SQLite 3.54.1 APK upgrade, unchanged restic
-0.18.1 rebuilt with pinned Go 1.27.3, required exact-binary module/compiler evidence,
+Candidate implementation: source-built SQLite 3.54.1 APK upgrade, stable restic
+0.19.1 with pinned Go 1.27.3 and security dependency updates, required exact-binary module/compiler evidence,
 and an isolated actual-linked-library probe. No DB, UI, authentication or live host change.
 
 Source inputs: SQLite official archive 3,332,984 bytes, publisher SHA3-256
@@ -44,6 +44,36 @@ The 30-minute Compose CI limit bounds the new source-build/runtime job.
 G02 remains held while candidate validation is pending. Final source/CI/artifact
 evidence, findings and dispositions will be recorded after the complete gates run.
 
+CI [42519471978](https://github.com/prodromou27/Asset_Management_Tool/actions/runs/42519471978),
+source `7812f7f8162f821f465e801cce93f6ce73d47614`, passed all functional gates:
+902 native and 902 rebuilt-runtime backend tests, 224 frontend, 14 browser scenarios,
+136 CSP screenshots, 22 Nginx response checks, Redis recovery and isolated encrypted
+restore after source/storage removal (7.564447 seconds retrieval+restore). Both
+SQLite probes passed at UID 10001 with FTS3/4/5/RTree/session options, source ID
+`2026-10-16 14:45:20 555e07ef33f69a0957d24d8e555b702464a131d6f1607f4c3c1e4551e8e6ca76`,
+library `/usr/lib/libsqlite3.so.3.54.1`; API library SHA-256
+`23aba9d8edea4636952c4eb148c5188355746de50e4dbca3481c73d4c2173050`.
+Scanner coverage was complete, with zero evidence errors. However restic 0.18.1's
+dependencies had **1 CRITICAL/29 HIGH** in each vendor/upstream report (overlap,
+not additive); all other images passed. Keep G02 held. Compiler is verified Go
+1.27.3, demonstrating why compiler updates alone do not fix bundled modules.
+
+Digest-verified image artifact `13633375965` SHA-256
+`82b53de80be9544ff497da9d28925d1dc24460d47144aed86eef226e5bed4d5a`;
+restore artifact `13632882189` SHA-256
+`3c279436611790eb11f383367649f4bdc2d4e79dd70b3ae42b751e63cf12ed33`.
+Reports were inspected as bounded JSON in memory without extraction/execution.
+
+Remediation: stable restic 0.19.1 tag is explicitly checked against upstream commit
+`6aa3a516ce654808a1f28f9fa21e9b7c8e6e90bf`. Its shipped module versions still leave
+some findings, so `backend/runtime/restic/dependencies.txt` pins same-major updates
+for go-jose, compress, x/crypto, x/net, x/text and grpc. Versions checked against
+official Go proxy metadata on 8 November. SumDB verification remains enabled;
+offline readonly-module compilation uses native Go VCS metadata (including the
+modified marker) rather than synthesizing scan versions. CLI `0.19.1-itam.1`,
+effective module/sum files and build info disclose the custom dependency build.
+All SFTP, older-fixture restore and strict scan gates must pass again.
+
 Initial candidate `2437d38`, CI 42515643237: all five non-image jobs passed; SQLite
 compiled but abuild rejected uncompressed main-package man pages. The correction
 uses normal Alpine static/doc/dev/libs splits (only libs enters the release),
@@ -77,5 +107,7 @@ need maintained source/compiler/checksum pins and equivalent compatibility proof
 References: [SQLite source/hashes](https://sqlite.org/download.html),
 [fixed SQLite release](https://sqlite.org/releaselog/3_54_0.html),
 [restic source version](https://github.com/restic/restic/tree/v0.18.1),
+[stable update source](https://github.com/restic/restic/tree/v0.19.1),
+[Go native VCS version metadata](https://go.dev/doc/go1.24),
 [Go security releases](https://go.dev/doc/devel/release),
 [Trivy upstream detection](https://trivy.dev/docs/latest/scanner/vulnerability/#detection-priority).
