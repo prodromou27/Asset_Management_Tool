@@ -28,6 +28,7 @@ Behavior:
   now disable ordinary local login, preventing their password from outliving the grant.
 
 Paths: `backend/apps/accounts/` (services/endpoints/models/migration/tests/command),
+readiness wording in `backend/apps/health/operations.py`,
 `frontend/src/features/auth/`, user profile/menu, generated API types, deployment
 checks/configuration and [operator instructions](../ops/auth/README.md). Decisions:
 docs/00, docs/09, docs/14 and docs/17 ASM-73.
@@ -45,7 +46,37 @@ Local proof:
   setup/recovery/settings and sign-in on desktop/mobile in both themes. No overflow,
   browser errors, missing fixtures or normal-use CSP violations; negative probes pass.
 
-CI status and exact-commit evidence will be recorded after the full gates complete.
+Implementation: `57122a9`, branch `DEV`; readiness wording correction `0b21447`
+also passed 10 focused health tests. Initial feature CI
+[42473972064](https://github.com/prodromou27/Asset_Management_Tool/actions/runs/42473972064)
+passed all six jobs for the core implementation. Final CI
+[42474781375](https://github.com/prodromou27/Asset_Management_Tool/actions/runs/42474781375)
+is **green: all six jobs** for `0b21447`.
+
+Final proof: native PostgreSQL/Redis and production-derived runtime each report
+**902 passed, no skips**. Migration 0018 forward/reverse/reapply, production checks,
+224 frontend tests, 14 real API/browser scenarios, 136 production CSP screenshots,
+synthetic reference load and both isolated restore checks pass. Real isolated Nginx
+verifies 22 response cases with callback parameters absent from logs. Redis nonroot
+startup and network-disabled AOF/RDB recovery pass. No security gate was bypassed.
+
+Dependency artifact **13614708949**, SHA-256
+`5feb28c6ea7755851794ab1e18e49b770cdf7e808cb81411e2a3df6d9a876274`,
+was verified before parsing its JSON summary in memory without extraction. It
+records source `0b214478b576e0eae9653c4b3097e791827dcba0`, Trivy 0.76.2,
+DB update `2026-11-08T06:39:21.614725497Z`, and zero findings in both lock reports.
+
+Image artifact **13615495768**, SHA-256
+`a398d94a2b653a9aebffb4cd51511a2d97bda696b2a61a94a69930d677342a45`,
+and restore artifact **13615495715**, SHA-256
+`464d910e7898f59cf935f1c6badf624fb1bbe4f06b2712b75db6c6ed76683b4c`,
+were likewise hash-verified before JSON parsing in memory without extraction.
+All six exact-image reports identify the final source and have **zero HIGH/CRITICAL**.
+Lower findings remain: API/backup each eight MEDIUM/seven LOW; frontend, proxy,
+PostgreSQL and Redis each one MEDIUM, plus one PostgreSQL UNKNOWN. Manual G02
+applicability remains open. Restore proves synthetic PostgreSQL 16.15 recovery,
+relationship/audit continuity, network isolation, source removal and target cleanup;
+it does not sign off production factor/key custody or host RPO/RTO.
 
 Operational limits:
 
@@ -56,6 +87,9 @@ Operational limits:
   mixed versions or a password-only rollback after enrollment would bypass policy.
   Reversing 0018 drops factor state/local flags. Restore compatible backup/code and
   revoke sessions before exposure; no live migration occurred here.
+- Older database restores can resurrect consumed recovery-code hashes. Maintain
+  isolation and verify/re-enroll affected factors with new recovery codes before
+  resuming normal access; do not silently expose cleared-MFA password-only accounts.
 - Preserve the configured import Fernet key or deriving Django secret in restricted
   key custody. Do not rotate without a tested re-encryption/recovery plan. TOTP fails
   closed on key loss; recovery codes/protected operator recovery remain separate.
@@ -66,4 +100,5 @@ Operational limits:
   actual TLS, backup/key custody, host capacity, G02 manual applicability and G6
   still require commissioning/review. No live IdP/host/service was contacted.
 
-Next after validation: return to 022h G02 source/compiler applicability review.
+Outcome: requested local-account/optional-MFA implementation and automated proof
+complete, pushed to DEV. Next: return to 022h G02 source/compiler applicability review.

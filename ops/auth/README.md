@@ -13,6 +13,8 @@ local password, add the displayed setup key to a compatible authenticator (TOTP,
 active until confirmation. Save the ten recovery codes securely: shown once, each
 works once **with your password**. Wait for the next authenticator code after a
 successful confirmation/login; an already-used code cannot authenticate again.
+Use automatic time on the authenticator and verify host clock synchronization;
+the verifier permits only one 30-second step of clock drift in either direction.
 
 The local login form accepts an authenticator or recovery code when MFA is enrolled;
 otherwise leave it blank. Missing/incorrect factors cannot establish a session and
@@ -156,6 +158,10 @@ Before exposing a restored database, clear restored Django sessions, OIDC attemp
 receipts and pending emergency deadlines from the protected operator shell. Recheck
 bindings against the approved tenant, two-admin custody, MFA policy and audit
 continuity; do not replay an old recovery window. Test recovery after restoration.
+Restoring an older backup can also resurrect already-consumed recovery-code hashes.
+Keep recovery isolated and have enrolled users verify/re-enroll their factors and
+replace recovery codes before normal access resumes. Do not clear MFA and expose
+password-only accounts as a shortcut. Record factor/key custody checks in the drill.
 
 Migration `accounts.0017_entra_oidc` is additive. Validate forward migration on a
 backup clone before deployment. A rollback must be isolated and clear sessions,
