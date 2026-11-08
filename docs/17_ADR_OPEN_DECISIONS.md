@@ -430,6 +430,27 @@ before recovery. No live migration/host/tenant change is performed by this task.
 
 Source: [PyOTP security guidance](https://pyauth.github.io/pyotp/).
 
+### ASM-74 - Task 022h component applicability review (2026-11-08)
+
+Retained exact-image evidence (0b21447, CI 42474781375, artifact 13615495768,
+SHA-256 a398d94a2b653a9aebffb4cd51511a2d97bda696b2a61a94a69930d677342a45)
+shows SQLite 3.53.4-r0 in API/backup, restic 0.18.1-r9 without a Go-binary result,
+and gosu with its pinned upstream module and Go stdlib 1.27.3 result. The build log
+identifies restic's compiler as Go 1.26.9. SQLite's matching stable recipe enables
+FTS5; upstream CVE-2026-119373 fixes appear in 3.54.0. No request-to-SQLite-FTS5
+path was found: application DB/backup paths use PostgreSQL, but this is not an
+installed-library exemption or proof of downstream patch provenance.
+
+Keep G02 manually held for SQLite patch/runtime proof and exact restic compiler/
+module coverage. Trivy's default OS-owned-package behavior can omit upstream binary
+results; require a separate verified coverage check, without discarding vendor
+backports or waiving findings. SFTP-only, host-pinned backup transport narrows an
+X.509 path but does not exempt all Go/restic issues. Gosu compiler coverage is
+present for the retained build, without a permanent non-applicability claim.
+See [Task 022h report](../tasks/TASK022H_REPORT.md) for sources/dispositions and
+bounded Task 022h1 acceptance.
+Review is source/evidence-only: no runtime, host, image, schema or threshold change.
+
 ## GLPI licensing note
 
 GLPI repository is GPLv3. Use product concepts and independently written code. Forking or copying GLPI source is a **separate** licensing/product strategy requiring owner approval. Do not casually mix GPL files into a differently licensed custom codebase.

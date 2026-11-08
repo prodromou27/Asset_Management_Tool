@@ -1,31 +1,32 @@
-# Current task: 022g1 | Local users with optional MFA (complete)
+# Current task: 022h | Runtime source/compiler applicability review (complete)
 
-Owner clarified on 2026-11-08 that local users remain available with optional MFA,
-alongside Entra. This supersedes the Entra-only/local-emergency restriction in 022g.
-Read: AGENTS.md, docs/00, docs/07, docs/09, docs/14 and docs/17.
+Owner continuation 2026-11-08. Baseline 7f86cf3; preserve optional local MFA and the
+approved UI. Read: AGENTS.md, docs/00, docs/14 and docs/17; prior evidence in
+TASK022F2_REPORT.md, TASK022F3_REPORT.md and TASK022G1_REPORT.md.
 
-Outcome: local-only and combined deployments are supported. Optional authenticator
-enrollment/removal lives under Account menu -> Local account MFA. Enrolled accounts
-require a TOTP/recovery code at local login. Admins explicitly control per-account
-local sign-in; linked accounts remain local-disabled unless deliberately enabled.
-Entra keeps its IdP MFA checks. Migration 0018, recovery CLI, session revocation,
-encryption, one-use recovery, RBAC/CSRF/throttling, audit and operator docs included.
+Outcome: reviewed exact retained image artifact 13615495768 from green CI
+42474781375 (runtime source 0b21447); SHA-256 verified before bounded in-memory JSON
+inspection. Only docs changed between that source and the review baseline.
+- API/backup include SQLite 3.53.4-r0; matching vendor recipe enables FTS5.
+  No application SQLite/FTS5 request path found, but upstream patch/provenance and
+  linked runtime flags remain unverified. Keep held, not blanket-exempt.
+- Backup restic 0.18.1-r9 logs Go 1.26.9; no gobinary/module/stdlib result is present.
+  Approved SFTP/OpenSSH path narrows X.509 exposure, not all Go/restic applicability.
+- PostgreSQL gosu's pinned module and Go 1.27.3 result are present. Prior compiler
+  coverage gap is resolved for this retained build, without a permanent exemption.
 
-Source: 57122a9 plus readiness wording correction 0b21447. Final CI 42474781375:
-all six jobs green. Native and production-derived backend each 902 passed/no skips;
-224 frontend tests, three CSP fixture tests, schema/types/lint/build/deploy checks,
-migration forward/reverse, 14 real browser scenarios, 136 CSP screenshots, 22 real
-Nginx responses/log privacy, reference load, Redis persistence and isolated restore
-checks pass. Six exact images have zero HIGH/CRITICAL; lower findings stay visible.
-Evidence: TASK022G1_REPORT.md; policy: docs/17 ASM-73; operator: ops/auth/README.md.
-Prior 022g evidence: TASK022G_REPORT.md (its policy is superseded).
+Evidence/dispositions: TASK022H_REPORT.md; docs/17 ASM-74; ops/security/README.md
+explicitly records the manual release hold. G02 remains held despite green automated
+vendor scans. No source/runtime/image, dependency, schema, UI or gate change.
+Checks: artifact hash/JSON, targeted source/config and primary-source review,
+git diff --check. No target code/PoC/build/test or live service was run. Prior green
+902+902 backend /224 frontend CI is referenced, not claimed as rerun for this review.
 
-Issue/rollout: no host/tenant/live service changed. Maintenance deployment required:
-stop old auth servers before migration/new code and enrollment. Preserve factor
-encryption keys; old binaries/older restore codes require isolated recovery review.
-Live TLS/host/recovery/backup custody and Entra policy (when enabled) still need
-commissioning. Optional local enrollment is an approved choice, not a blocker.
-
-Next bounded task: 022h, remaining G02 source/compiler applicability review
-(including SQLite/Go coverage). Do not silently start another epic or deploy.
-Actual host capacity, live integration/SMTP/backup commissioning and G6 stay open.
+Next bounded task: 022h1, exact-image upstream Go coverage and patched SQLite proof,
+following TASK022H_REPORT.md acceptance. Require restic/gosu module+stdlib coverage,
+preserve raw vendor and upstream findings, verify library version/flags/patches and
+retain PostgreSQL/Redis/SFTP, restore, Nginx and strict image regression gates.
+Use controlled isolated Linux execution; local Docker is unavailable here.
+Do not waive findings, remove required libraries blindly, deploy, touch existing
+volumes or silently start another epic. Host/TLS/recovery/key custody, live sources/
+SMTP/backup commissioning and G6 remain separate open gates.

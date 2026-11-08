@@ -1,5 +1,13 @@
 # Locked dependencies and production-image vulnerability gate
 
+**Manual release hold (022h, 2026-11-08):** a passing vendor image scan does not close
+G02. Retained evidence still has SQLite 3.53.4-r0 in API/backup and lacks the APK-owned
+restic binary's Go module/stdlib result. PostgreSQL gosu's Go coverage is present.
+See [Task 022h dispositions and next proof](../../tasks/TASK022H_REPORT.md).
+Until patched-library provenance and exact-binary compiler/module coverage are
+validated, do not promote these images as security-signed-off builds. This is a
+manual release hold, not an added automated gate or a suppression of findings.
+
 The scanner reads static artifacts only. It does not scan networks, execute image
 contents, send application source to a hosted scanner or add an application feature.
 Runtime-base changes have a separate bounded, network-disabled Django import/deploy
