@@ -21,7 +21,7 @@ RUN git init && git remote add origin https://github.com/restic/restic.git \
 COPY runtime/restic/dependencies.txt /build/restic-dependencies.txt
 RUN xargs go get < /build/restic-dependencies.txt && go mod download all && go mod verify
 RUN --network=none GOPROXY=off go build -mod=readonly -buildvcs=true -p 2 -trimpath \
-    -ldflags '-X main.version=0.19.1-itam.1' -o /go/bin/restic ./cmd/restic \
+    -o /go/bin/restic ./cmd/restic \
     && cp LICENSE /go/bin/restic.LICENSE \
     && cp go.mod /go/bin/restic.go.mod && cp go.sum /go/bin/restic.go.sum \
     && go version -m /go/bin/restic > /go/bin/restic-buildinfo.txt

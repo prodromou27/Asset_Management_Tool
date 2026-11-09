@@ -20,7 +20,8 @@ longer installed. Source tag commit `6aa3a516ce654808a1f28f9fa21e9b7c8e6e90bf`
 is checked explicitly. `backend/runtime/restic/dependencies.txt` pins security updates
 within existing dependency major versions; public module checksums authenticate them.
 Go's native VCS metadata retains the source revision and modified-build marker;
-the CLI identifies `0.19.1-itam.1`. Effective go.mod/go.sum and build info remain in
+the CLI reports upstream `0.19.1`, while the main-module identity is `v0.19.1+dirty`.
+Effective go.mod/go.sum and build info remain in
 the image. No build-info rewriting hides the dependency changes.
 SFTP/CLI/format behavior must pass the existing runtime and encrypted restore proofs.
 

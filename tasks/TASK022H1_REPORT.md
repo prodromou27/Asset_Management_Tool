@@ -70,9 +70,29 @@ some findings, so `backend/runtime/restic/dependencies.txt` pins same-major upda
 for go-jose, compress, x/crypto, x/net, x/text and grpc. Versions checked against
 official Go proxy metadata on 8 November. SumDB verification remains enabled;
 offline readonly-module compilation uses native Go VCS metadata (including the
-modified marker) rather than synthesizing scan versions. CLI `0.19.1-itam.1`,
+modified marker) rather than synthesizing scan versions. CLI reports `0.19.1`;
+the native main-module identity is `v0.19.1+dirty`. The
 effective module/sum files and build info disclose the custom dependency build.
 All SFTP, older-fixture restore and strict scan gates must pass again.
+
+Candidate `8b4a9a3`, CI 42520724709, passed all six jobs and all six image gates,
+including both comprehensive Go scans and both SQLite runtime proofs. HIGH and
+CRITICAL counts are zero. Digest-verified artifact `13633716552` SHA-256
+`b266ca2b68429d14d81d8ef59e3c72f47c8353823e3ef0b050dedc50c2170613`;
+restore `13633204703` SHA-256
+`1364c653fba747e5d754c58152263edf4b81e2352e590437c172abcc46a45ae4`
+confirms recovery after source/storage removal in 6.898983 seconds. Evidence review
+caught an ineffective legacy `main.version` linker override: upstream now exposes
+a constant in internal/global. Remove the unused option and correct CLI documentation;
+native VCS/main-module/compiler/dependency evidence was already correct.
+
+Remaining UNKNOWN records stay visible: restic's GO-2026-5932 concerns the deprecated
+`x/crypto/openpgp` package, not an assertion that all of x/crypto is unsafe. The app
+invokes fixed backup/repository/SFTP commands, not restic self-update. This narrows
+exposure but does not prove symbol absence or exempt future invocations. Keep its
+record for focused package/symbol review; the default threshold is unchanged.
+Gosu's retained x/sys CVE-2026-39824 and lower pip/rustls/zlib findings also remain
+tracked. Automated threshold success is not complete security/release sign-off.
 
 Initial candidate `2437d38`, CI 42515643237: all five non-image jobs passed; SQLite
 compiled but abuild rejected uncompressed main-package man pages. The correction

@@ -459,7 +459,8 @@ SONAME, retaining required compile options. Source SHA-256/SHA-512 were derived
 after verifying the publisher's SHA3-256; Docker and abuild independently check
 their pins. Build stable restic 0.19.1 with explicit same-major security dependency
 pins and Go 1.27.3, retaining native VCS revision/modified metadata, effective module
-files and the `0.19.1-itam.1` CLI identity. CI 42519471978 exposed 1 CRITICAL/29 HIGH
+files and the `v0.19.1+dirty` main-module identity (CLI reports `0.19.1`).
+CI 42519471978 exposed 1 CRITICAL/29 HIGH
 in unchanged 0.18.1 dependencies; compiler replacement alone was insufficient. Retain
 symbols, checksum-verified dependencies and metadata. No edge repository or old
 library shadowing. Source package/key/compiler stages never enter release targets.
