@@ -1,30 +1,32 @@
-# Current task: 022h1 | SQLite remediation and Go coverage
+# Current task: 022h1 | Complete — SQLite remediation and Go coverage
 
-Owner continuation 2026-11-08. Baseline 123bdf4; preserve optional local MFA, app DB
-format, SFTP backups, approved UI and all security gates.
-Read: AGENTS.md, docs/00, docs/14 and docs/17; TASK022H_REPORT.md acceptance applies.
+Completed 2026-11-09. Source `17f72dd08239ca870195d6e058a4e1dc9dc6749c`.
+CI 42580535491: all six jobs passed; initial browser/scanner download HTTP 504s
+cleared on failed-job retry. No skipped/reduced checks or security waivers.
 
-Candidate: backend/Dockerfile and runtime source inputs build SQLite 3.54.1 as a
-normal replacement APK, and restic 0.19.1 with pinned Go 1.27.3 and explicit patched
-dependencies (runtime/restic/dependencies.txt). No edge
-repository, package shadowing, schema change or host deployment. Preserve metadata.
-Scanner retains vendor scans plus separate comprehensive library scans; require
-restic/gosu exact-path main-module and stdlib versions. Missing data fails closed;
-HIGH/CRITICAL in either result holds the target. API/backup must show reviewed
-SQLite metadata plus isolated actual-linkage/options/source/library-hash/FTS proof.
+Outcome: SQLite 3.54.1 replaces the old APK normally, preserving metadata, SONAME
+and FTS options. Restic 0.19.1 uses explicit security dependency pins and Go 1.27.3;
+native identity `v0.19.1+dirty` discloses the custom build. Scanner retains six vendor
+reports plus comprehensive restic/gosu library reports, requires versioned exact-
+binary coverage and isolated actual SQLite linkage proof. All reports have zero
+HIGH/CRITICAL and zero evidence errors.
 
-Status: 18 focused gate/scanner tests and Ruff/format pass locally. Published SQLite
-SHA3-256 verified before deriving pinned SHA-256/SHA-512; no source was run locally.
-Linux CI must prove source builds, actual linkage, full PostgreSQL/Redis/SFTP,
-wrong-pin/password, deploy/import, Nginx, Redis recovery, restore and six image gates.
-Compose job bounded to 30 minutes; SQLite probe is empty-env/nonroot/read-only,
-network-disabled/scratch-only and resource/time bounded. Windows lacks local Docker.
+Proof: 18 scanner tests and Ruff/format; 902 native + 902 rebuilt-runtime backend
+tests; 224 frontend; 14 browser scenarios; 136 CSP screenshots; 22 real Nginx
+responses; PostgreSQL/Redis/SFTP, wrong-pin/password, deploy/import, Redis recovery
+and isolated encrypted restore after source/storage removal. Retrieval+restore
+9.771648 seconds. Image/restore artifact digests and identities: TASK022H1_REPORT.md.
+Windows lacks Docker; Linux runtime proof ran in CI. No existing host/volume changed.
 
-Evidence/outcome: CI 42519471978 proved 902 native + 902 rebuilt-runtime tests,
-restore, SQLite 3.54.1 actual linkage/FTS and complete Go coverage, but correctly
-held restic 0.18.1 dependencies (1 CRITICAL/29 HIGH). TASK022H1_REPORT.md records
-artifact digests. G02 stays held while the stable-source dependency update is validated.
-Next: finish this candidate, remediate any new compiler/module findings, record
-real outcome and next action. Do not waive findings, relax gates, deploy, change
-existing volumes or silently start another epic. Host/TLS/recovery/key custody,
-live-source/SMTP/backup commissioning and G6 remain separate.
+G02's SQLite/compiler coverage gap and discovered HIGH/CRITICAL findings are resolved.
+Manual release sign-off remains open for retained UNKNOWN/lower-severity review,
+plus host/TLS/recovery/key custody and live-source/SMTP/backup commissioning. Optional
+local MFA, PostgreSQL formats, SFTP workflow and approved UI remain intact.
+
+Next bounded task: 022h2 — review retained Go UNKNOWN records (GO-2026-5932 in restic,
+CVE-2026-39824 in gosu) and lower pip/rustls/zlib findings. Establish exact package/
+symbol applicability and approved-command exposure; record remediation or evidence-
+based dispositions. No blanket exemption, threshold change or host deployment.
+Read AGENTS.md, docs/00_MASTER_DECISIONS.md, docs/14_SECURITY_NFR.md,
+docs/17_ADR_OPEN_DECISIONS.md, TASK022H_REPORT.md and TASK022H1_REPORT.md.
+Do not silently start that task or another epic in this run.

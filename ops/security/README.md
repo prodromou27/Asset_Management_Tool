@@ -1,13 +1,14 @@
 # Locked dependencies and production-image vulnerability gate
 
-**Manual release hold (022h, 2026-11-08):** a passing vendor image scan does not close
-G02. Task 022h1 CI proved patched SQLite linkage/provenance and complete restic/gosu
-module/stdlib coverage, but exposed 1 CRITICAL/29 HIGH in restic 0.18.1 dependencies.
-The stable-source dependency update must pass fresh runtime/restore and image gates.
+**Task 022h1 validated (2026-11-09):** CI 42580535491 proved SQLite 3.54.1 linkage/
+provenance and exact restic/gosu module/stdlib coverage. Updated restic dependencies
+resolved the discovered 1 CRITICAL/29 HIGH findings; all six images and both upstream
+scans pass the unchanged threshold with zero evidence errors. Runtime/SFTP, Redis
+recovery, Nginx and encrypted restore proofs passed too.
 See [Task 022h1 evidence](../../tasks/TASK022H1_REPORT.md).
-Until those findings are remediated and candidate evidence is validated, do not
-promote these images as security-signed-off builds. This is a
-manual release hold, not an added automated gate or a suppression of findings.
+Manual G02 release review remains open for retained Go UNKNOWN and lower-severity
+records (next bounded task 022h2). Passing this threshold does not approve host/live
+commissioning or establish that every retained advisory is inapplicable.
 
 The scanner reads static artifacts and runs a bounded SQLite identity/compatibility
 probe on API/backup images. It does not scan networks, send application source to

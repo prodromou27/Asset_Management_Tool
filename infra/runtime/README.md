@@ -1,6 +1,6 @@
 # Production runtime images
 
-Task 022h1 candidate: `backend/Dockerfile` builds upstream SQLite 3.54.1 into a normal
+Task 022h1 validated runtime: `backend/Dockerfile` builds upstream SQLite 3.54.1 into a normal
 Alpine `sqlite-libs` APK (origin `sqlite`) using `backend/runtime/sqlite/APKBUILD`.
 The official source archive is pinned with Docker SHA-256 and recipe SHA-512, derived
 only after verifying SQLite's published SHA3-256. Compilation/package assembly is
@@ -12,7 +12,7 @@ Legacy SONAME and FTS3/4/5, RTree/session options are retained. Compilers, keys 
 headers do not enter the release image. Provenance JSON/recipe are retained in
 `/usr/local/share/itam/`; the exact-image probe records actual linkage/options/hash.
 
-The backup candidate builds restic 0.19.1 using the same pinned Go 1.27.3
+The backup image builds restic 0.19.1 using the same pinned Go 1.27.3
 toolchain as gosu, with CGO disabled, module checksum verification, symbols/build info
 retained and compilation network-disabled after dependency download. Only the binary,
 license and build metadata enter the backup image; the APK-owned old restic is no
@@ -23,7 +23,8 @@ Go's native VCS metadata retains the source revision and modified-build marker;
 the CLI reports upstream `0.19.1`, while the main-module identity is `v0.19.1+dirty`.
 Effective go.mod/go.sum and build info remain in
 the image. No build-info rewriting hides the dependency changes.
-SFTP/CLI/format behavior must pass the existing runtime and encrypted restore proofs.
+SFTP/CLI/format behavior passed runtime and encrypted restore proofs in CI 42580535491;
+future changes must retain those gates. Evidence: `tasks/TASK022H1_REPORT.md`.
 
 Forward/rollback: no application schema or PostgreSQL major/layout changes. Prove
 both API/backup Python imports and the full PostgreSQL/Redis/SFTP suite on Linux,

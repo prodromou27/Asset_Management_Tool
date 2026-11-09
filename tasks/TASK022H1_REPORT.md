@@ -1,8 +1,9 @@
 # Task 022h1 - SQLite remediation and compiler coverage
 
 Owner continuation, 8 November 2026. Baseline `123bdf4`; findings in TASK022H_REPORT.md.
-Candidate implementation: source-built SQLite 3.54.1 APK upgrade, stable restic
-0.19.1 with pinned Go 1.27.3 and security dependency updates, required exact-binary module/compiler evidence,
+Implemented and validated 9 November 2026: source-built SQLite 3.54.1 APK upgrade,
+stable restic 0.19.1 with pinned Go 1.27.3 and security dependency updates,
+required exact-binary module/compiler evidence,
 and an isolated actual-linked-library probe. No DB, UI, authentication or live host change.
 
 Source inputs: SQLite official archive 3,332,984 bytes, publisher SHA3-256
@@ -19,7 +20,7 @@ The restic Go stage uses the existing reviewed Go image pin, CGO disabled, bound
 build parallelism and public module checksum verification. Dependency downloads
 precede network-disabled compilation; module version/build metadata and license
 are retained. No stripping hides compiler/modules from the scanner. The backup
-keeps the same command/SFTP workflow and must prove encrypted roundtrips/restore.
+keeps the same command/SFTP workflow and passed encrypted roundtrips/restore.
 
 Scanner changes preserve the original six-image vendor reports. Backup/PostgreSQL
 also get comprehensive library results with exact path, main-module and stdlib
@@ -37,12 +38,74 @@ containers are cleaned up on success/failure/timeout. No production DB is touche
 
 Local proof: **18 scanner/gate unit tests passed**, including missing compiler/module,
 wrong binary, missing/stale SQLite metadata, HIGH despite complete coverage, and
-probe isolation/timeout cleanup. Ruff/format pass. Linux candidate build, linkage,
-runtime/restore and advisory proof remain required in CI; Windows has no local Docker.
+probe isolation/timeout cleanup. Ruff/format pass. Linux source build, linkage,
+runtime/restore and advisory proof passed in CI; Windows has no local Docker.
 The 30-minute Compose CI limit bounds the new source-build/runtime job.
 
-G02 remains held while candidate validation is pending. Final source/CI/artifact
-evidence, findings and dispositions will be recorded after the complete gates run.
+## Final validation — 9 November 2026
+
+Source `17f72dd08239ca870195d6e058a4e1dc9dc6749c`,
+[CI 42580535491](https://github.com/prodromou27/Asset_Management_Tool/actions/runs/42580535491):
+all six jobs passed. Initial pinned scanner/setup-uv downloads returned HTTP 504;
+failed-job retry cleared both without source/gate changes. Connector rerun permission
+was unavailable; authenticated repository CLI performed the retry.
+
+Passed: **902 native + 902 rebuilt-runtime backend tests**, **224 frontend tests**,
+18 gate tests, lint/format/type/schema/migration/deploy checks, reference load,
+14 real browser scenarios, 136 CSP screenshots (zero normal-UI violations), 22
+isolated Nginx responses, Redis AOF/RDB recovery, SFTP wrong-pin/password tests and
+encrypted restore after removal of synthetic source database/storage. Retrieval+
+restore **9.771648 seconds**, with counts and representative relationships verified.
+No live tenant/SMTP/network inventory/host or existing volumes were touched.
+
+Digest-verified final artifacts (bounded JSON in memory, no extraction):
+
+| Artifact | ID | ZIP SHA-256 |
+|---|---|---|
+| Image security evidence | 13657915441 | `1717d6f7e7d129cd7eab8d8c4f289412477480669f4fb1936d4b4e83969ba116` |
+| Isolated restore report | 13656434820 | `42605cdd86b28150670e6dacd8f536433e7b48384714fcac6d15dae503adbefc` |
+
+Trivy 0.76.2, DB updated `2026-11-09T06:57:06.372182267Z`, zero evidence errors.
+Every vendor/upstream report has **zero HIGH/CRITICAL**. Counts below are per report;
+overlapping vendor/upstream records must not be added as unique vulnerabilities.
+
+| Report | MEDIUM | LOW | UNKNOWN |
+|---|---:|---:|---:|
+| API vendor | 8 | 7 | 0 |
+| Backup vendor | 8 | 7 | 1 |
+| Backup comprehensive library | 7 | 7 | 1 |
+| Frontend vendor | 1 | 0 | 0 |
+| Nginx vendor | 1 | 0 | 0 |
+| PostgreSQL vendor | 1 | 0 | 1 |
+| PostgreSQL comprehensive library | 0 | 0 | 1 |
+| Redis vendor | 1 | 0 | 0 |
+
+Both SQLite proofs ran as UID 10001, reported 3.54.1 and required FTS3/4/5/RTree/
+session options, and passed the in-memory FTS5 prefix/negative-rowid check. Both
+loaded the same `/usr/lib/libsqlite3.so.3.54.1`, SHA-256
+`23aba9d8edea4636952c4eb148c5188355746de50e4dbca3481c73d4c2173050`;
+recipe SHA-256 `277a2a913e08d8bf3267ef93fabddbf3a252bf5727077ad248262bffe6d20c4a`.
+Source manifests matched the reviewed archive hashes. Exact binary coverage:
+`usr/local/bin/restic`: `github.com/restic/restic v0.19.1+dirty`, stdlib `v1.27.3`;
+`usr/local/bin/gosu`: main `v0.0.0-20261025094355-29b939aa5bd4`, stdlib `v1.27.3`.
+
+| Target | Exact image ID (sha256) |
+|---|---|
+| API | `d43e38c1665436bdef3c12781d0e9c0263172e4484534bdaa0ee666fc2debf26` |
+| Backup worker | `1d21f4896e6035cf40c25199f6fd42698d9b0c35f640c822a09c704b15b24e0f` |
+| Frontend | `2bfdfd1444e71acc6e5afad1f1a67dd3c52c2e6678a2585620efb30731951afb` |
+| Nginx | `583b7f2fce1cdb8da5ad5c39ebd3c33b98b87d493190e548bdee1fa8c619c311` |
+| PostgreSQL | `341175db19df9469d625d1a1546190e45b449fed699190f23880fe2b10c2f18e` |
+| Redis | `bd3bc284ab84a669a5668b6747b8a15541cb44d24d24c950aef3c9fcbec34032` |
+
+Task 022h1 is complete. Its SQLite/compiler gaps and discovered restic HIGH/CRITICAL
+findings are resolved. Manual G02 security sign-off remains open for the retained
+UNKNOWN/lower records described below; no blanket exemption or full release claim.
+Next bounded task **022h2**: exact package/symbol and approved-command applicability
+review of GO-2026-5932, gosu CVE-2026-39824 and lower pip/rustls/zlib advisories.
+Host/TLS/recovery-key custody and live source/SMTP/backup commissioning remain separate.
+
+## Candidate evidence and corrections
 
 CI [42519471978](https://github.com/prodromou27/Asset_Management_Tool/actions/runs/42519471978),
 source `7812f7f8162f821f465e801cce93f6ce73d47614`, passed all functional gates:
@@ -73,7 +136,8 @@ offline readonly-module compilation uses native Go VCS metadata (including the
 modified marker) rather than synthesizing scan versions. CLI reports `0.19.1`;
 the native main-module identity is `v0.19.1+dirty`. The
 effective module/sum files and build info disclose the custom dependency build.
-All SFTP, older-fixture restore and strict scan gates must pass again.
+At that stage, all SFTP, older-fixture restore and strict scan gates required a rerun;
+their completed results are recorded in the final validation section above.
 
 Candidate `8b4a9a3`, CI 42520724709, passed all six jobs and all six image gates,
 including both comprehensive Go scans and both SQLite runtime proofs. HIGH and
@@ -129,5 +193,6 @@ References: [SQLite source/hashes](https://sqlite.org/download.html),
 [restic source version](https://github.com/restic/restic/tree/v0.18.1),
 [stable update source](https://github.com/restic/restic/tree/v0.19.1),
 [Go native VCS version metadata](https://go.dev/doc/go1.24),
+[OpenPGP advisory](https://vuln.go.dev/ID/GO-2026-5932.json),
 [Go security releases](https://go.dev/doc/devel/release),
 [Trivy upstream detection](https://trivy.dev/docs/latest/scanner/vulnerability/#detection-priority).

@@ -451,7 +451,7 @@ See [Task 022h report](../tasks/TASK022H_REPORT.md) for sources/dispositions and
 bounded Task 022h1 acceptance.
 Review is source/evidence-only: no runtime, host, image, schema or threshold change.
 
-### ASM-75 - Task 022h1 SQLite/compiler remediation candidate (2026-11-08)
+### ASM-75 - Task 022h1 SQLite/compiler remediation (validated 2026-11-09)
 
 Preserve Python 3.12/Alpine 3.24 and PostgreSQL data formats. Build reviewed SQLite
 3.54.1 from the official archive as an APK upgrade with origin sqlite and legacy
@@ -476,7 +476,13 @@ Forward proof retains full candidate PostgreSQL/Redis/SFTP, wrong-pin/password,
 deploy/import, Nginx and restore gates. Isolated image/source reversal preserves
 data layout; old vulnerable builds remain unapproved release fallbacks. Source-built
 components require future pinned-source updates, compatibility proof and fresh scans.
-G02 stays held until candidate evidence is reviewed in TASK022H1_REPORT.md.
+CI 42580535491 passed all six jobs: 902 native + 902 candidate backend tests, full
+runtime/restore/CSP checks, six vendor image gates, both comprehensive Go gates and
+both SQLite proofs. Zero HIGH/CRITICAL and zero evidence errors. Digest-verified
+artifacts/source identities are in TASK022H1_REPORT.md. The specific SQLite/compiler
+coverage gap and discovered restic HIGH/CRITICAL findings are resolved. Manual G02
+sign-off still requires retained UNKNOWN/lower-severity dispositions (022h2), and
+host/live commissioning remains separate. No blanket advisory exemptions.
 
 Sources: [SQLite publisher hashes](https://sqlite.org/download.html),
 [restic source](https://github.com/restic/restic/tree/v0.19.1),
